@@ -2,6 +2,8 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLoadScript, Libraries } from '@react-google-maps/api';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { debugGoogleMapsLoading, getGoogleMapsApiUrl } from '@/lib/utils/googleMapsDebug';
+import { Loader2 } from 'lucide-react';
 
 // Define the type for the structured address expected by the parent component
 export interface StructuredAddress {
@@ -41,6 +43,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [showPredictions, setShowPredictions] = useState(false);
   const [sessionToken, setSessionToken] = useState<google.maps.places.AutocompleteSessionToken | undefined>(undefined);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [scriptError, setScriptError] = useState<string | null>(null);
   // Track if the last interaction was a selection
   const wasJustSelected = useRef(false);
 
@@ -50,20 +53,23 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
   // Load Google Maps script
   const { isLoaded, loadError } = useLoadScript({
-    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY!,
+    googleMapsApiKey: getGoogleMapsApiUrl()?.split('key=')[1].split('&')[0] || '',
     libraries,
   });
 
-  // Initialize services once the script is loaded
+  // Initialize services and debug once the script is loaded
   useEffect(() => {
     if (isLoaded && window.google) {
-      autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
-      // Need a DOM element for PlacesService (can be hidden)
-      const mapDiv = document.createElement('div'); 
-      placesServiceRef.current = new window.google.maps.places.PlacesService(mapDiv);
-      console.log('AddressAutocomplete: Google services initialized.');
-    } else {
-      console.log('AddressAutocomplete: Waiting for Google script...');
+      try {
+        autocompleteServiceRef.current = new window.google.maps.places.AutocompleteService();
+        const mapDiv = document.createElement('div');
+        placesServiceRef.current = new window.google.maps.places.PlacesService(mapDiv);
+        debugGoogleMapsLoading();
+        setScriptError(null);
+      } catch (error) {
+        console.error('Error initializing Google Maps services:', error);
+        setScriptError('Failed to initialize Google Maps services. Please refresh the page.');
+      }
     }
   }, [isLoaded]);
 
@@ -195,39 +201,79 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
 
   if (loadError) {
     console.error("Google Maps script load error:", loadError);
-    return <div className="text-red-500 text-sm">Error loading Google Maps. Check API key/config.</div>;
+    return (
+      <div className="space-y-2">
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn("w-full", inputClassName)}
+          placeholder="Enter address manually"
+        />
+        <div className="text-red-500 text-sm">
+          Google Maps failed to load. Please check your internet connection or try again later.
+        </div>
+      </div>
+    );
+  }
+
+  if (scriptError) {
+    return (
+      <div className="space-y-2">
+        <Input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className={cn("w-full", inputClassName)}
+          placeholder="Enter address manually"
+        />
+        <div className="text-red-500 text-sm">{scriptError}</div>
+      </div>
+    );
   }
 
   if (!isLoaded) {
-    return <div className="h-12 flex items-center justify-center text-sm text-gray-500">Loading address search...</div>;
+    return (
+      <div className="relative">
+        <Input
+          type="text"
+          value={value}
+          disabled
+          className={cn("w-full bg-gray-50", inputClassName)}
+          placeholder="Loading address search..."
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className={cn("relative w-full", className)} ref={inputRef}>
-      <Input
-        type="text"
-        className={cn(
-          "h-12",
-          inputClassName,
-          error ? "border-red-500 focus-visible:ring-red-500" : ""
+    <div className={cn("relative", className)} ref={inputRef}>
+      <div className="relative">
+        <Input
+          type="text"
+          value={value}
+          onChange={handleInputChange}
+          onFocus={handleFocus}
+          className={cn(
+            "w-full pr-8",
+            error && "border-red-500 focus-visible:ring-red-500",
+            isLoadingDetails && "bg-gray-50",
+            inputClassName
+          )}
+          placeholder={placeholder}
+          disabled={isLoadingDetails}
+        />
+        {isLoadingDetails && (
+          <div className="absolute right-3 top-1/2 -translate-y-1/2">
+            <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
+          </div>
         )}
-        placeholder={placeholder}
-        value={value}
-        onChange={handleInputChange} // Use the new handler for input changes
-        onFocus={handleFocus} // Use handleFocus to ensure token exists
-        disabled={isLoadingDetails} // Disable input while loading details
-        aria-invalid={!!error}
-        aria-describedby={error ? "address-error" : undefined}
-        aria-autocomplete="list"
-        aria-expanded={showPredictions}
-        aria-controls="address-predictions"
-      />
-
-      {isLoadingDetails && (
-        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-gray-900"></div>
-        </div>
-      )}
+      </div>
+      
+      {error && <div className="mt-1 text-sm text-red-500">{error}</div>}
 
       {showPredictions && !isLoadingDetails && predictions.length > 0 && (
         <ul 
@@ -249,10 +295,6 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
             </li>
           ))}
         </ul>
-      )}
-
-      {error && (
-        <p id="address-error" className="text-xs text-red-600 pt-1">{error}</p>
       )}
     </div>
   );
