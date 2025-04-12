@@ -1,31 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Mail } from 'lucide-react';
-import { FormData } from '@/types/onboarding';
+import { useSessionStore } from '@/lib/sessionStore';
 
 interface SaveProgressModalProps {
   open: boolean;
   onClose: () => void;
-  formData: FormData;
-  onSaveProgress: (email: string, data: FormData) => Promise<boolean>;
   setLastSavedTime: React.Dispatch<React.SetStateAction<Date | null>>;
 }
 
 const SaveProgressModal: React.FC<SaveProgressModalProps> = ({ 
   open,
   onClose, 
-  formData,
-  onSaveProgress,
   setLastSavedTime
 }) => {
-  const [email, setEmail] = useState('');
+  const { session, saveSessionProgress } = useSessionStore();
+  
+  const [email, setEmail] = useState(session.purchaser?.email || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   
-  // Simple email validation
+  useEffect(() => {
+    setEmail(session.purchaser?.email || session.email || '');
+  }, [session.purchaser?.email, session.email]);
+  
   const isValidEmail = (email: string) => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   };
@@ -33,7 +34,6 @@ const SaveProgressModal: React.FC<SaveProgressModalProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate the email
     if (!email || !isValidEmail(email)) {
       setError('Please enter a valid email address');
       return;
@@ -43,16 +43,13 @@ const SaveProgressModal: React.FC<SaveProgressModalProps> = ({
     setError('');
     
     try {
-      const success = await onSaveProgress(email, formData);
+      saveSessionProgress(email);
       
-      if (success) {
-        setLastSavedTime(new Date());
-        onClose();
-      } else {
-        setError('Failed to save progress. Please try again.');
-      }
+      setLastSavedTime(new Date());
+      onClose();
+      
     } catch (err) {
-      console.error('Error saving progress:', err);
+      console.error('Error saving progress via store:', err);
       setError('An error occurred while saving your progress. Please try again.');
     } finally {
       setIsSubmitting(false);

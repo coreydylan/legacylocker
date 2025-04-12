@@ -1,11 +1,11 @@
-
 import React from 'react';
 import { cn } from "@/lib/utils";
+import { MonthlyCardData } from '@/lib/sessionManager';
 
 interface MonthsIndicatorProps {
   months: string[];
   selectedMonth: string;
-  monthlyData: Record<string, { personalMessage?: string; celebration?: string; customDate?: Date; }>;
+  monthlyData: Record<string, MonthlyCardData>;
 }
 
 const MonthsIndicator: React.FC<MonthsIndicatorProps> = ({ 
@@ -18,7 +18,8 @@ const MonthsIndicator: React.FC<MonthsIndicatorProps> = ({
       <div className="flex space-x-2">
         {months.map((month, index) => {
           const isActive = month === selectedMonth;
-          const isComplete = Boolean(monthlyData?.[month]?.personalMessage);
+          const monthData = monthlyData?.[month];
+          const isComplete = Boolean(monthData?.personalMessage || monthData?.celebration || monthData?.title);
           
           return (
             <div 

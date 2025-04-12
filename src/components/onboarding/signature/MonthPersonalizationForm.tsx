@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -21,24 +20,28 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import TextStyleToggle from './TextStyleToggle';
+import { MonthlyCardData } from '@/lib/sessionManager';
 
 interface MonthPersonalizationFormProps {
   selectedMonth: string;
-  currentMonthData: {
-    personalMessage?: string;
-    celebration?: string;
-    customDate?: Date;
-    useExactText?: boolean;
-    useExactTitle?: boolean;
-    artworkOption?: string;
-    photoUrl?: string;
-  };
+  currentMonthData: MonthlyCardData;
   handleMonthDataChange: (field: string, value: any) => void;
   openCalendars: Record<string, boolean>;
   handleCalendarToggle: (month: string, isOpen: boolean) => void;
   celebrationTypes: string[];
   handlePhotoUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
+
+const parseDate = (dateString?: string): Date | undefined => {
+  if (!dateString) return undefined;
+  try {
+    const date = new Date(dateString);
+    return isNaN(date.getTime()) ? undefined : date;
+  } catch (error) {
+    console.error("Error parsing date string:", dateString, error);
+    return undefined;
+  }
+};
 
 const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
   selectedMonth,
@@ -49,19 +52,20 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
   celebrationTypes,
   handlePhotoUpload
 }) => {
-  // Set defaults if not already set
   const useExactText = currentMonthData.useExactText === undefined ? false : currentMonthData.useExactText;
   const useExactTitle = currentMonthData.useExactTitle === undefined ? false : currentMonthData.useExactTitle;
   const artworkOption = currentMonthData.artworkOption || 'from-story';
   
+  const customDateString: string | undefined = currentMonthData.customDate;
+  const selectedDateForCalendar: Date | undefined = parseDate(customDateString);
+
   return (
     <div className="p-4 space-y-5">
-      {/* Section 1: Card Title - Moved to the top */}
+      {/* Section 1: Card Title */}
       <div className="space-y-3">
         <div className="pb-1 border-b border-legacy-cream/50 flex items-center justify-between">
           <h3 className="font-medium text-sm text-legacy-green uppercase tracking-wide">Card Title</h3>
         </div>
-
         <div className="space-y-2.5">
           <div className="flex items-center gap-2">
             <Label htmlFor="cardTitle" className="text-base font-medium">Title</Label>
@@ -76,21 +80,18 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
               </Tooltip>
             </TooltipProvider>
           </div>
-          
           <Input 
             id="cardTitle"
             className="h-10 text-base"
             placeholder='e.g., "The First Snowfall" or "You Always Knew"'
-            value={currentMonthData.celebration || ''}
-            onChange={(e) => handleMonthDataChange('celebration', e.target.value)}
+            value={currentMonthData.title || currentMonthData.celebration || ''}
+            onChange={(e) => handleMonthDataChange('title', e.target.value)}
           />
-          
           <TextStyleToggle 
             value={useExactTitle} 
             onChange={(checked) => handleMonthDataChange('useExactTitle', checked)}
             type="title"
           />
-          
           <p className="text-xs text-muted-foreground italic">
             Short and sweet titles work best — or just jot the idea and we'll finesse it.
           </p>
@@ -102,7 +103,6 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
         <div className="pb-1 border-b border-legacy-cream/50 flex items-center justify-between">
           <h3 className="font-medium text-sm text-legacy-green uppercase tracking-wide">Your Memory</h3>
         </div>
-
         <div className="space-y-2.5">
           <div className="flex items-center gap-2">
             <Label htmlFor="personalMessage" className="text-base font-medium">Tell us the moment</Label>
@@ -117,7 +117,6 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
               </Tooltip>
             </TooltipProvider>
           </div>
-          
           <Textarea 
             id="personalMessage"
             className="min-h-[100px] max-h-[200px] text-base p-3"
@@ -248,7 +247,7 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
         </RadioGroup>
       </div>
       
-      {/* Optional Special Delivery Date - with fixed calendar */}
+      {/* Optional Special Delivery Date */}
       <div className="space-y-2.5 pt-1">
         <div className="flex justify-between items-center">
           <Label className="text-base font-medium">Custom Delivery Date</Label>
@@ -265,8 +264,8 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
               className="w-full h-9 justify-start text-left font-normal text-base"
             >
               <CalendarIcon className="mr-2 h-5 w-5" />
-              {currentMonthData.customDate ? 
-                format(currentMonthData.customDate, "PPP") : 
+              {selectedDateForCalendar ? 
+                format(selectedDateForCalendar, "PPP") : 
                 <span className="text-muted-foreground">Select delivery date</span>
               }
             </Button>
@@ -306,9 +305,10 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
                 <div className="pt-3 border-t">
                   <Calendar
                     mode="single"
-                    selected={currentMonthData.customDate}
-                    onSelect={(date) => {
-                      handleMonthDataChange('customDate', date);
+                    selected={selectedDateForCalendar}
+                    onSelect={(date: Date | undefined) => {
+                      const dateStringToStore: string | undefined = date ? date.toISOString() : undefined;
+                      handleMonthDataChange('customDate', dateStringToStore);
                       handleCalendarToggle(selectedMonth, false);
                     }}
                     className="p-3 pointer-events-auto"

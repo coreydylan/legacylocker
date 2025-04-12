@@ -14,6 +14,7 @@ interface OnboardingContentProps {
   formData: FormData;
   updateFormData: (key: keyof FormData, value: any) => void;
   handleSubmit: () => void;
+  onNextStep: () => void;
 }
 
 const OnboardingContent: React.FC<OnboardingContentProps> = ({
@@ -21,7 +22,8 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
   selectedSeries,
   formData,
   updateFormData,
-  handleSubmit
+  handleSubmit,
+  onNextStep
 }) => {
   // Style transitions between steps
   const getStepStyles = (step: number) => {
@@ -41,6 +43,7 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
             selectedSeries={selectedSeries} 
             formData={formData}
             updateFormData={updateFormData}
+            onNext={onNextStep}
           />
         </div>
 

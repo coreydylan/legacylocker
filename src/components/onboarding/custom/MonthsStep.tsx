@@ -1,59 +1,61 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
 import MonthCarousel from '../signature/MonthCarousel';
 import CardProgressIndicator from './CardProgressIndicator';
+import { useSignatureEditionFlow } from '@/hooks/useSignatureEditionFlow';
+import { useSessionStore } from '@/lib/sessionStore';
+import { SessionData, CustomCardData } from '@/lib/sessionManager';
 
 interface MonthsStepProps {
-  selectedMonth: string;
-  prevMonth: string | null;
-  nextMonth: string | null;
-  currentMonthData: {
-    personalMessage?: string;
-    celebration?: string;
-    customDate?: Date;
-    useExactText?: boolean;
-    useExactTitle?: boolean;
-    artworkOption?: string;
-    photoUrl?: string;
-  };
-  months: string[];
-  direction: 'left' | 'right';
-  containerHeight: number | string;
-  openCalendars: Record<string, boolean>;
-  celebrationTypes: string[];
-  handleMonthDataChange: (field: string, value: any) => void;
-  handlePrevMonth: () => void;
-  handleNextMonth: () => void;
-  handleMonthChange: (month: string) => void;
-  handleCalendarToggle: (month: string, isOpen: boolean) => void;
   handlePreviousStep: () => void;
-  setContainerHeight: (height: number | string) => void;
-  getCardCompletionStatus: (monthIndex: number) => boolean;
-  handlePhotoUpload?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const MonthsStep: React.FC<MonthsStepProps> = ({
+const MonthsStep: React.FC<MonthsStepProps> = ({ handlePreviousStep }) => {
+  const { session, updateSession } = useSessionStore();
+  const typedSession = session as SessionData;
+  
+  const {
   selectedMonth,
-  prevMonth,
-  nextMonth,
-  currentMonthData,
   months,
   direction,
   containerHeight,
+    setContainerHeight,
+    prevMonth,
+    nextMonth,
+    celebrationTypes,
   openCalendars,
-  celebrationTypes,
-  handleMonthDataChange,
+    handleMonthChange,
   handlePrevMonth,
   handleNextMonth,
-  handleMonthChange,
   handleCalendarToggle,
-  handlePreviousStep,
-  setContainerHeight,
-  getCardCompletionStatus,
-  handlePhotoUpload
-}) => {
+  } = useSignatureEditionFlow();
+
+  const currentCardIndex = months.indexOf(selectedMonth);
+  const currentCustomCardData: CustomCardData = 
+    typedSession.editionFlow?.customEditionData?.cards?.[currentCardIndex] || 
+    { id: currentCardIndex + 1, title: '', story: '' };
+
+  const handleCustomDataChange = (field: keyof CustomCardData, value: any) => {
+    if (currentCardIndex < 0) return;
+    const fieldName = String(field);
+    updateSession(`editionFlow.customEditionData.cards.${currentCardIndex}.${fieldName}`, value);
+  };
+  
+  const handleCustomPhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    if (event.target.files && event.target.files[0]) {
+      const file = event.target.files[0];
+      const filePath = `uploads/custom/${typedSession.sessionId}/${currentCardIndex + 1}-${file.name}`;
+      handleCustomDataChange('photoUrl', filePath);
+      console.log(`Custom photo selected: ${file.name}`);
+    }
+  };
+
+  const getCardCompletionStatus = (monthIndex: number) => {
+    const card = typedSession.editionFlow?.customEditionData?.cards?.[monthIndex];
+    return Boolean(card?.title || card?.story);
+  };
+
   return (
     <>
       <CardProgressIndicator
@@ -67,8 +69,15 @@ const MonthsStep: React.FC<MonthsStepProps> = ({
         selectedMonth={selectedMonth}
         prevMonth={prevMonth}
         nextMonth={nextMonth}
-        currentMonthData={currentMonthData}
-        handleMonthDataChange={handleMonthDataChange}
+        currentMonthData={{
+          personalMessage: currentCustomCardData.story, 
+          celebration: currentCustomCardData.title,
+          useExactText: currentCustomCardData.useExactText,
+          useExactTitle: currentCustomCardData.useExactTitle,
+          artworkOption: currentCustomCardData.artworkOption,
+          photoUrl: currentCustomCardData.photoUrl
+        }}
+        handleMonthDataChange={handleCustomDataChange}
         handlePrevMonth={handlePrevMonth}
         handleNextMonth={handleNextMonth}
         openCalendars={openCalendars}
@@ -79,7 +88,7 @@ const MonthsStep: React.FC<MonthsStepProps> = ({
         celebrationTypes={celebrationTypes}
         months={months}
         handleMonthChange={handleMonthChange}
-        handlePhotoUpload={handlePhotoUpload}
+        handlePhotoUpload={handleCustomPhotoUpload}
       />
 
       <div className="mt-6">
@@ -89,7 +98,7 @@ const MonthsStep: React.FC<MonthsStepProps> = ({
           className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
         >
           <ChevronLeft className="h-4 w-4 mr-2" />
-          Back to Story Tips
+          Back to Intro
         </Button>
       </div>
     </>

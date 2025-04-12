@@ -1,32 +1,35 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { FormData, SeriesType } from '@/types/onboarding';
+import { useSessionStore } from '@/lib/sessionStore';
+import { SessionData } from '@/lib/sessionManager';
 
-interface OnboardingFooterProps {
-  currentStep: number;
-  totalSteps: number;
-  canProceed: boolean;
-  handleBack: () => void;
-  handleNext: () => void;
-  handleSubmit: () => void;
-  formData: FormData;
-}
+const OnboardingFooter: React.FC = () => {
+  const {
+    session,
+    prevStep,
+    nextStep,
+  } = useSessionStore();
 
-const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
-  currentStep,
-  totalSteps,
-  canProceed,
-  handleBack,
-  handleNext,
-  handleSubmit,
-  formData
-}) => {
+  const typedSession = session as SessionData;
+  const currentStep = typedSession.currentStep;
+  const lastCompletedStep = typedSession.lastCompletedStep;
+  const editionFlowType = typedSession.editionFlow?.type || 'signature';
+
+  const totalSteps = 5;
+
+  const canProceed = currentStep <= lastCompletedStep;
+
+  const handleSubmit = () => {
+    console.log("Footer: Handle Submit Clicked");
+    alert("Submit Clicked - Implement Submission Logic");
+  };
+
   return (
     <div className="px-4 sm:px-6 py-4 bg-white border-t shadow-sm">
       <div className="flex justify-between items-center max-w-3xl mx-auto w-full">
         <Button
           variant="outline"
-          onClick={handleBack}
+          onClick={prevStep}
           disabled={currentStep === 1}
           className="border-legacy-green text-legacy-green hover:bg-legacy-green/10"
         >
@@ -35,8 +38,7 @@ const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
 
         {currentStep < totalSteps ? (
           <Button 
-            onClick={handleNext}
-            disabled={!canProceed}
+            onClick={nextStep}
             className="bg-legacy-green hover:bg-legacy-green/90 text-white"
           >
             Continue
@@ -44,9 +46,9 @@ const OnboardingFooter: React.FC<OnboardingFooterProps> = ({
         ) : (
           <Button 
             onClick={handleSubmit}
-            className={`${formData.editionFlow.type === 'concierge' ? 'bg-legacy-gold hover:bg-legacy-gold/90' : 'bg-legacy-green hover:bg-legacy-green/90'} text-white`}
+            className={`${editionFlowType === 'concierge' ? 'bg-legacy-gold hover:bg-legacy-gold/90' : 'bg-legacy-green hover:bg-legacy-green/90'} text-white`}
           >
-            {formData.editionFlow.type === 'concierge' ? 'Submit Request' : 'Complete Subscription'}
+            {editionFlowType === 'concierge' ? 'Submit Request' : 'Complete Subscription'}
           </Button>
         )}
       </div>

@@ -1,25 +1,30 @@
-
 import React, { useState, useEffect } from 'react';
-import { FormData } from '@/types/onboarding';
-import { useSignatureEditionFlow } from '@/hooks/useSignatureEditionFlow';
+// import { FormData } from '@/types/onboarding'; // Not needed
+import { useSignatureEditionFlow } from '@/hooks/useSignatureEditionFlow'; // Refactored hook
 import IntroStep from './custom/IntroStep';
 import CoachingStep from './custom/CoachingStep';
 import MonthsStep from './custom/MonthsStep';
 import ThemeDisplay from './custom/ThemeDisplay';
 import InfoSection from './custom/InfoSection';
+import { useSessionStore } from '@/lib/sessionStore'; // Import store hook
+import { SessionData } from '@/lib/sessionManager'; // Import SessionData for typing
 
-interface CustomEditionFlowProps {
-  formData: FormData;
-  updateFormData: (key: keyof FormData, value: any) => void;
-}
+// interface CustomEditionFlowProps { ... } // Remove props interface
 
 // Define the step types for the custom edition flow
 type CustomFlowStep = 'coaching' | 'intro' | 'months';
 
-const CustomEditionFlow: React.FC<CustomEditionFlowProps> = ({ formData, updateFormData }) => {
-  // Starting with coaching step instead of intro
+// Remove props from component signature
+const CustomEditionFlow: React.FC = () => { 
+  // Get store state/actions
+  const { session, updateSession } = useSessionStore();
+  const typedSession = session as SessionData;
+  
+  // Internal step management
+  // TODO: Initialize based on session if resuming?
   const [currentStep, setCurrentStep] = useState<CustomFlowStep>('coaching');
   
+  // Use the refactored hook (no args needed)
   const {
     selectedMonth,
     months,
@@ -37,14 +42,13 @@ const CustomEditionFlow: React.FC<CustomEditionFlowProps> = ({ formData, updateF
     handleMonthDataChange,
     handleCalendarToggle,
     handlePhotoUpload
-  } = useSignatureEditionFlow(formData, updateFormData);
+  } = useSignatureEditionFlow();
   
-  // Initialize custom edition data if it doesn't exist
+  // Initialize custom edition data in session if it doesn't exist
   useEffect(() => {
-    if (!formData.editionFlow.customEditionData) {
-      updateFormData('editionFlow', { 
-        ...formData.editionFlow,
-        customEditionData: {
+    if (!typedSession.editionFlow?.customEditionData) {
+      // Initialize the custom data structure
+      const initialCustomData = {
           cards: Array.from({ length: 12 }, (_, i) => ({
             id: i + 1,
             title: '',
@@ -54,24 +58,21 @@ const CustomEditionFlow: React.FC<CustomEditionFlowProps> = ({ formData, updateF
             artworkOption: 'from-story',
             photoUrl: undefined
           })),
-          theme: formData.selectedSeries?.display || 'Custom Story',
-          currentCard: 1
-        }
-      });
+        theme: typedSession.selectedSeries?.display || 'Custom Story',
+        currentCard: 1 // Default to the first card
+      };
+      updateSession('editionFlow.customEditionData', initialCustomData);
     }
+  }, [typedSession.editionFlow, typedSession.selectedSeries, updateSession]);
     
-    // Set the selected card/month in formData
+  // Sync the hook's selectedMonth with the custom data's currentCard in session
+  useEffect(() => {
     const monthIndex = months.indexOf(selectedMonth);
-    if (monthIndex >= 0) {
-      updateFormData('editionFlow', { 
-        ...formData.editionFlow, 
-        customEditionData: {
-          ...formData.editionFlow.customEditionData,
-          currentCard: monthIndex + 1
-        }
-      });
+    const currentCardInSession = typedSession.editionFlow?.customEditionData?.currentCard;
+    if (monthIndex >= 0 && currentCardInSession !== monthIndex + 1) {
+      updateSession('editionFlow.customEditionData.currentCard', monthIndex + 1);
     }
-  }, [formData.editionFlow, updateFormData, selectedMonth, months, formData.selectedSeries]);
+  }, [selectedMonth, months, typedSession.editionFlow?.customEditionData?.currentCard, updateSession]);
 
   // Handle navigating between intro, coaching, and month cards
   const handleNextStep = () => {
@@ -80,6 +81,7 @@ const CustomEditionFlow: React.FC<CustomEditionFlowProps> = ({ formData, updateF
     } else if (currentStep === 'intro') {
       setCurrentStep('months');
     }
+    // TODO: Should this call the main `nextStep` from useSessionStore when finishing 'months'?
   };
   
   const handlePreviousStep = () => {
@@ -88,18 +90,19 @@ const CustomEditionFlow: React.FC<CustomEditionFlowProps> = ({ formData, updateF
     } else if (currentStep === 'intro') {
       setCurrentStep('coaching');
     }
+    // TODO: Should this call the main `prevStep` if going back from 'coaching'?
   };
   
-  // Get completion for progress indicators
+  // Get completion for progress indicators (using session data)
   const getCardCompletionStatus = (monthIndex: number) => {
-    const card = formData.editionFlow.customEditionData?.cards?.[monthIndex];
+    const card = typedSession.editionFlow?.customEditionData?.cards?.[monthIndex];
     if (!card) return false;
     return Boolean(card.title || card.story);
   };
   
-  // Get theme from form data
-  const theme = formData.selectedSeries?.display || 
-                formData.editionFlow.customEditionData?.theme || 
+  // Get theme from session data
+  const theme = typedSession.selectedSeries?.display || 
+                typedSession.editionFlow?.customEditionData?.theme || 
                 'Custom Story';
 
   return (
@@ -112,47 +115,53 @@ const CustomEditionFlow: React.FC<CustomEditionFlowProps> = ({ formData, updateF
       </div>
       
       <div className="space-y-8">
-        {/* Theme Display */}
+        {/* Theme Display - Check if props needed or use store */}
         <ThemeDisplay theme={theme} />
 
         {/* Render the appropriate content based on the current step */}
         {currentStep === 'coaching' && (
+          // CoachingStep likely needs refactoring
           <CoachingStep 
             handleNextStep={handleNextStep} 
-            handlePreviousStep={() => {}} // No previous step from coaching
+            handlePreviousStep={handlePreviousStep} // Pass prev handler
           />
         )}
         
         {currentStep === 'intro' && (
+          // IntroStep likely needs refactoring
           <IntroStep 
             handleNextStep={handleNextStep} 
+            // Add handlePreviousStep if needed
           />
         )}
         
         {currentStep === 'months' && (
+          // MonthsStep likely needs refactoring
           <MonthsStep 
             selectedMonth={selectedMonth}
             prevMonth={prevMonth}
             nextMonth={nextMonth}
-            currentMonthData={currentMonthData}
+            // Pass currentMonthData from the *custom* structure in session
+            currentMonthData={typedSession.editionFlow?.customEditionData?.cards?.[months.indexOf(selectedMonth)] || {}}
             months={months}
             direction={direction}
             containerHeight={containerHeight}
             openCalendars={openCalendars}
-            celebrationTypes={celebrationTypes}
-            handleMonthDataChange={handleMonthDataChange}
-            handlePrevMonth={handlePrevMonth}
-            handleNextMonth={handleNextMonth}
-            handleMonthChange={handleMonthChange}
+            celebrationTypes={celebrationTypes} // This might be specific to signature?
+            // Update handler needs to target the custom data structure
+            handleMonthDataChange={(field, value) => updateSession(`editionFlow.customEditionData.cards.${months.indexOf(selectedMonth)}.${field}`, value)}
+            handlePrevMonth={handlePrevMonth} // Hook handles month change
+            handleNextMonth={handleNextMonth} // Hook handles month change
+            handleMonthChange={handleMonthChange} // Hook handles month change
             handleCalendarToggle={handleCalendarToggle}
-            handlePreviousStep={handlePreviousStep}
+            handlePreviousStep={handlePreviousStep} // Back to intro step
             setContainerHeight={setContainerHeight}
             getCardCompletionStatus={getCardCompletionStatus}
-            handlePhotoUpload={handlePhotoUpload}
+            handlePhotoUpload={handlePhotoUpload} // Hook handles photo upload (needs custom path)
           />
         )}
         
-        {/* Info Section - only show in months step */}
+        {/* Info Section - Check if props needed */}
         {currentStep === 'months' && <InfoSection />}
       </div>
     </div>

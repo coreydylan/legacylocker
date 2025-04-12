@@ -1,34 +1,30 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { X, Edit3 } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { FormData } from '@/types/onboarding';
+import { useSessionStore } from '@/lib/sessionStore';
+import { SessionData } from '@/lib/sessionManager';
 
 interface SessionPillProps {
-  formData: FormData;
-  onContinue: () => void;
-  onAbandon: () => void;
   isOpen: boolean;
 }
 
-const SessionPill: React.FC<SessionPillProps> = ({ 
-  formData,
-  onContinue, 
-  onAbandon,
-  isOpen
-}) => {
+const SessionPill: React.FC<SessionPillProps> = ({ isOpen }) => {
+  const { session, resetSession } = useSessionStore();
+  const typedSession = session as SessionData;
+  
   const [showConfirmAbandon, setShowConfirmAbandon] = React.useState(false);
   const { toast } = useToast();
 
   if (!isOpen) return null;
 
-  // Get appropriate edition name text based on form data
   const getEditionText = () => {
-    if (!formData) return "your edition";
+    const editionType = typedSession.editionFlow?.type;
+    const seriesName = typedSession.selectedSeries?.display;
     
-    const editionType = formData.editionFlow?.type;
+    if (seriesName) return `your ${seriesName} series`;
+    
     if (editionType === 'signature') return "your signature series";
     if (editionType === 'custom') return "your custom edition";
     if (editionType === 'concierge') return "your concierge edition";
@@ -37,7 +33,7 @@ const SessionPill: React.FC<SessionPillProps> = ({
   };
 
   const handleAbandon = () => {
-    onAbandon();
+    resetSession();
     toast({
       title: "Progress cleared",
       description: "Your draft has been cleared. You can now start fresh."
@@ -45,11 +41,15 @@ const SessionPill: React.FC<SessionPillProps> = ({
     setShowConfirmAbandon(false);
   };
 
+  const handleContinue = () => {
+    console.log("SessionPill: Continue clicked - parent should handle showing flow.");
+  };
+
   return (
     <>
       <div className="fixed bottom-5 right-5 z-50 flex flex-col gap-2">
         <Button
-          onClick={onContinue}
+          onClick={handleContinue}
           className="bg-legacy-green hover:bg-legacy-green/90 text-white shadow-md rounded-full pl-4 pr-5 py-6"
         >
           <Edit3 className="mr-2 h-4 w-4" />

@@ -1,17 +1,18 @@
-
 import React from 'react';
-import { FormData } from '@/types/onboarding';
-import { useSignatureEditionFlow } from '@/hooks/useSignatureEditionFlow';
+// import { FormData } from '@/types/onboarding'; // No longer needed
+import { useSignatureEditionFlow } from '@/hooks/useSignatureEditionFlow'; // Import refactored hook
 import MonthsIndicator from './signature/MonthsIndicator';
 import MonthCarousel from './signature/MonthCarousel';
 import SignatureEditionInfo from './signature/SignatureEditionInfo';
+import { useSessionStore } from '@/lib/sessionStore'; // Import store hook for session data
+import { SessionData } from '@/lib/sessionManager'; // Import SessionData for typing
 
-interface SignatureEditionFlowProps {
-  formData: FormData;
-  updateFormData: (key: keyof FormData, value: any) => void;
-}
+// Remove props interface
+// interface SignatureEditionFlowProps { ... }
 
-const SignatureEditionFlow: React.FC<SignatureEditionFlowProps> = ({ formData, updateFormData }) => {
+// Remove props from component signature
+const SignatureEditionFlow: React.FC = () => {
+  // Call the refactored hook (no arguments needed)
   const {
     selectedMonth,
     openCalendars,
@@ -20,7 +21,7 @@ const SignatureEditionFlow: React.FC<SignatureEditionFlowProps> = ({ formData, u
     setContainerHeight,
     months,
     celebrationTypes,
-    currentMonthData,
+    currentMonthData, // Data now comes directly from hook (derived from store)
     prevMonth,
     nextMonth,
     handleMonthChange,
@@ -29,7 +30,12 @@ const SignatureEditionFlow: React.FC<SignatureEditionFlowProps> = ({ formData, u
     handleNextMonth,
     handleCalendarToggle,
     handlePhotoUpload
-  } = useSignatureEditionFlow(formData, updateFormData);
+  } = useSignatureEditionFlow();
+
+  // Get session data for passing to MonthsIndicator
+  const { session } = useSessionStore();
+  const typedSession = session as SessionData;
+  const monthlyData = typedSession.editionFlow?.monthlyData || {};
 
   return (
     <div className="space-y-5 pb-8">
@@ -40,13 +46,15 @@ const SignatureEditionFlow: React.FC<SignatureEditionFlowProps> = ({ formData, u
         </p>
       </div>
       
+      {/* Pass necessary data from hook and store */}
       <MonthsIndicator 
         months={months} 
         selectedMonth={selectedMonth} 
-        monthlyData={formData.editionFlow.monthlyData || {}} 
+        monthlyData={monthlyData} // Pass monthlyData from session
       />
 
       <div className="space-y-8">
+        {/* Pass all necessary props from the hook */}
         <MonthCarousel
           selectedMonth={selectedMonth}
           prevMonth={prevMonth}
@@ -67,6 +75,7 @@ const SignatureEditionFlow: React.FC<SignatureEditionFlowProps> = ({ formData, u
         />
 
         <div className="pt-10">
+          {/* SignatureEditionInfo might need refactoring if it uses props */}
           <SignatureEditionInfo />
         </div>
       </div>

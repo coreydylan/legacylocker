@@ -1,21 +1,13 @@
-
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import MonthCard from './MonthCard';
+import { MonthlyCardData } from '@/lib/sessionManager';
 
 interface MonthCarouselProps {
   selectedMonth: string;
   prevMonth: string | null;
   nextMonth: string | null;
-  currentMonthData: {
-    personalMessage?: string;
-    celebration?: string;
-    customDate?: Date;
-    useExactText?: boolean;
-    useExactTitle?: boolean;
-    artworkOption?: string;
-    photoUrl?: string;
-  };
+  currentMonthData: MonthlyCardData;
   openCalendars: Record<string, boolean>;
   direction: 'left' | 'right';
   containerHeight: number | string;

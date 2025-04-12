@@ -1,20 +1,20 @@
-
 import React from 'react';
 import { cn } from "@/lib/utils";
+import { useSessionStore } from '@/lib/sessionStore';
+import { SessionData } from '@/lib/sessionManager';
+import { useSignatureEditionFlow } from '@/hooks/useSignatureEditionFlow';
 
-interface CardProgressIndicatorProps {
-  months: string[];
-  selectedMonth: string;
-  getCardCompletionStatus: (monthIndex: number) => boolean;
-  handleMonthChange: (month: string) => void;
-}
+const CardProgressIndicator: React.FC = () => {
+  const { session } = useSessionStore();
+  const typedSession = session as SessionData;
+  
+  const { months, selectedMonth, handleMonthChange } = useSignatureEditionFlow();
+  
+  const getCardCompletionStatus = (monthIndex: number) => {
+    const card = typedSession.editionFlow?.customEditionData?.cards?.[monthIndex];
+    return Boolean(card?.title || card?.story);
+  };
 
-const CardProgressIndicator: React.FC<CardProgressIndicatorProps> = ({ 
-  months, 
-  selectedMonth, 
-  getCardCompletionStatus,
-  handleMonthChange 
-}) => {
   return (
     <div className="flex justify-center items-center mb-6">
       <div className="flex space-x-2">

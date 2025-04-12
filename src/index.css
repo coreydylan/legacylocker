@@ -32,6 +32,7 @@
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
+    --font-sans: "Source Sans Pro", sans-serif;
   }
 
   .dark {
@@ -68,11 +69,11 @@
   }
 
   body {
-    @apply bg-legacy-cream text-legacy-dark font-sourcesans;
+    @apply bg-legacy-cream text-legacy-dark font-sans;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-playfair;
+    @apply font-serif;
   }
 }
 

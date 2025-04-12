@@ -2,20 +2,14 @@ import React from 'react';
 import MonthPersonalizationForm from './MonthPersonalizationForm';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { MonthlyCardData } from '@/lib/sessionManager';
+import { useSessionStore } from '@/lib/sessionStore';
 
 interface MonthCardProps {
   selectedMonth: string;
   prevMonth: string | null;
   nextMonth: string | null;
-  currentMonthData: {
-    personalMessage?: string;
-    celebration?: string;
-    customDate?: Date;
-    useExactText?: boolean;
-    useExactTitle?: boolean;
-    artworkOption?: string;
-    photoUrl?: string;
-  };
+  currentMonthData: MonthlyCardData;
   handleMonthDataChange: (field: string, value: any) => void;
   handlePrevMonth: () => void;
   handleNextMonth: () => void;
@@ -42,6 +36,10 @@ const MonthCard: React.FC<MonthCardProps> = ({
   handleMonthChange,
   handlePhotoUpload
 }) => {
+  const { nextStep } = useSessionStore();
+
+  const canComplete = true;
+
   return (
     <div className="max-w-lg mx-auto bg-white rounded-xl shadow-md overflow-hidden border border-legacy-cream">
       <div className="bg-legacy-green/10 p-3 border-b border-legacy-cream/30">
@@ -70,7 +68,7 @@ const MonthCard: React.FC<MonthCardProps> = ({
             {prevMonth}
           </Button>
         ) : (
-          <div className="w-20" />
+          <div className="w-auto min-w-[80px]" />
         )}
         
         {nextMonth ? (
@@ -84,10 +82,12 @@ const MonthCard: React.FC<MonthCardProps> = ({
           </Button>
         ) : (
           <Button 
+            onClick={nextStep}
             className="bg-legacy-green text-white hover:bg-legacy-green/90"
             size="sm"
+            disabled={!canComplete}
           >
-            Complete
+            Continue to Review
           </Button>
         )}
       </div>

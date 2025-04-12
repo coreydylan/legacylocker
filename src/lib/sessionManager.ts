@@ -1,11 +1,78 @@
 import { v4 as uuidv4 } from 'uuid';
 import get from 'lodash.get';
 import set from 'lodash.set';
+import { SeriesType } from '@/types/onboarding';
+
+export interface MonthlyCardData { /* ... */ }
+export interface CustomCardData { /* ... */ }
+export interface CustomEditionData { /* ... */ }
+
+// Define structure for Concierge Edition specific data
+interface ConciergeContactData {
+  method?: 'email' | 'phone';
+  phoneNumber?: string;
+  availability?: string;
+}
+
+interface ConciergeEditionData {
+  openEndedStory?: string;
+  preferredContact?: ConciergeContactData;
+  // Add other concierge-flow specific fields if needed
+}
+
+// Define the structure for the shipping address
+export interface ShippingAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  full?: string;
+}
+
+// Define the structure for the recipient
+export interface Recipient {
+  type: 'individual' | 'couple';
+  firstName?: string;
+  lastName?: string;
+  relationship?: string;
+  birthday?: string;
+  includeWelcomeCard?: boolean;
+  welcomeMessage?: string;
+  recipient1FirstName?: string;
+  recipient1LastName?: string;
+  recipient2FirstName?: string;
+  recipient2LastName?: string;
+  anniversary?: string;
+  shippingAddress?: ShippingAddress;
+  
+  // Fields for Shipping Label
+  shippingName?: string;            // Potentially overridden name for shipping
+  shippingNameOverridden?: boolean; // Tracks if user manually edited shipping name
+  
+  // Fields for Envelope
+  cardAddresseeName?: string;       // Potentially overridden name for envelope
+  cardAddresseeNameOverridden?: boolean; // Tracks if user manually edited envelope name
+}
+
+// Define the structure for the purchaser
+export interface Purchaser {
+  fullName?: string;
+  email?: string;
+}
+
+// Define the structure for the selected series
+export interface SelectedSeries {
+  type: 'signature' | 'custom' | 'concierge';
+  name?: string;
+  edition?: string;
+}
 
 export interface SessionData {
   sessionId: string;
   email?: string;
   recipientType: 'myself' | 'individual' | 'couple' | null;
+  selectedSeries: SeriesType | null;
   purchaser: {
     fullName: string;
     email: string;
@@ -18,7 +85,6 @@ export interface SessionData {
     birthday?: string;
     includeWelcomeCard?: boolean;
     welcomeMessage?: string;
-    // Couple-specific fields
     recipient1FirstName?: string;
     recipient1LastName?: string;
     recipient2FirstName?: string;
@@ -26,6 +92,8 @@ export interface SessionData {
     recipient1Birthday?: string;
     recipient2Birthday?: string;
     anniversary?: string;
+    shippingAddress?: ShippingAddress;
+    cardAddresseeName?: string;
   };
   cards: {
     [month: string]: {
@@ -40,14 +108,73 @@ export interface SessionData {
   updatedAt: string;
   currentStep: number;
   lastCompletedStep: number;
+  editionFlow: { 
+    type: 'signature' | 'custom' | 'concierge';
+    // Signature specific
+    currentMonth?: string; 
+    monthlyData?: Record<string, MonthlyCardData>;
+    // Custom specific
+    customEditionData?: CustomEditionData;
+    // Concierge specific
+    conciergeData?: ConciergeEditionData; 
+  };
 }
 
 const LOCAL_STORAGE_KEY = 'legacy_locker_session';
+
+// Define MONTHS constant needed by createDefaultMonthlyData
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June", 
+  "July", "August", "September", "October", "November", "December"
+];
+
+// Function to create default monthly data (Re-add this function)
+const createDefaultMonthlyData = (): Record<string, MonthlyCardData> => {
+  return MONTHS.reduce((acc, month) => {
+    acc[month] = { 
+      personalMessage: '', 
+      celebration: '', 
+      customDate: undefined,
+      useExactText: false,
+      useExactTitle: false,
+      artworkOption: 'from-story',
+      photoUrl: undefined,
+      isLocked: false, 
+      title: '', 
+      story: '' 
+    };
+    return acc;
+  }, {} as Record<string, MonthlyCardData>);
+};
+
+// Function to create default concierge data
+const createDefaultConciergeData = (): ConciergeEditionData => ({
+  openEndedStory: '',
+  preferredContact: {
+    method: 'email' // Default contact method
+  }
+});
+
+// Function to create default custom edition data
+const createDefaultCustomEditionData = (): CustomEditionData => ({
+  cards: Array.from({ length: 12 }, (_, i) => ({
+    id: i + 1,
+    title: '',
+    story: '',
+    useExactText: false,
+    useExactTitle: false,
+    artworkOption: 'from-story',
+    photoUrl: undefined
+  })),
+  theme: 'Custom Story',
+  currentCard: 1
+});
 
 // Create default session data structure
 const createDefaultSession = (): SessionData => ({
   sessionId: uuidv4(),
   recipientType: null,
+  selectedSeries: null,
   purchaser: {
     fullName: '',
     email: '',
@@ -73,6 +200,13 @@ const createDefaultSession = (): SessionData => ({
   updatedAt: new Date().toISOString(),
   currentStep: 1,
   lastCompletedStep: 0,
+  editionFlow: { 
+    type: 'signature', 
+    currentMonth: 'January', 
+    monthlyData: createDefaultMonthlyData(),
+    customEditionData: undefined, 
+    conciergeData: undefined
+  }, 
 });
 
 // Create a new session

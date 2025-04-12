@@ -1,11 +1,14 @@
-
 import React from 'react';
+import { useSessionStore } from '@/lib/sessionStore';
+import { SessionData } from '@/lib/sessionManager';
 
-interface ThemeDisplayProps {
-  theme: string;
-}
+const ThemeDisplay: React.FC = () => {
+  const { session } = useSessionStore();
+  const typedSession = session as SessionData;
+  const theme = typedSession.selectedSeries?.display || 
+                typedSession.editionFlow?.customEditionData?.theme || 
+                'Custom Story';
 
-const ThemeDisplay: React.FC<ThemeDisplayProps> = ({ theme }) => {
   return (
     <div className="max-w-lg mx-auto">
       <div className="flex items-center justify-between bg-white rounded-lg shadow-sm p-4 border border-legacy-cream/50">

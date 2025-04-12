@@ -1,43 +1,59 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
-import { User, Mail } from 'lucide-react';
+import { User, Mail, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useSessionStore } from '@/lib/sessionStore';
 
-interface PurchaserInfoProps {
-  formData: {
-    fullName: string;
-    email: string;
+const PurchaserInfo: React.FC = () => {
+  const { session, updateSession, nextStep, prevStep } = useSessionStore();
+  const purchaser = session.purchaser || { fullName: '', email: '' };
+
+  const [errors, setErrors] = useState<{ fullName?: string; email?: string }>({});
+
+  const validateForm = () => {
+    const newErrors: { fullName?: string; email?: string } = {};
+    if (!purchaser.fullName?.trim()) {
+      newErrors.fullName = 'Full name is required.';
+    }
+    if (!purchaser.email?.trim()) {
+      newErrors.email = 'Email is required.';
+    } else if (!/^\S+@\S+\.\S+$/.test(purchaser.email)) {
+      newErrors.email = 'Please enter a valid email address.';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
-  onUpdate: (key: string, value: any) => void;
-  onNext: () => void;
-}
-
-const PurchaserInfo: React.FC<PurchaserInfoProps> = ({ formData, onUpdate, onNext }) => {
-  const purchaser = formData || { fullName: '', email: '' };
-
-  const isEmailValid = purchaser.email?.trim() !== '' &&
-                       /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(purchaser.email || '');
-  const isNameValid = purchaser.fullName?.trim() !== '';
-  const isValid = isNameValid && isEmailValid;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    onUpdate(id, value);
+    updateSession(`purchaser.${id}`, value);
+    if (errors[id as keyof typeof errors]) {
+      setErrors(prev => ({ ...prev, [id]: undefined }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (isValid) {
-      onNext();
+    if (validateForm()) {
+      console.log('PurchaserInfo: Form validated, moving to next step');
+      nextStep();
+    } else {
+      console.log('PurchaserInfo: Form validation failed');
     }
   };
+  
+  useEffect(() => {
+    if (purchaser.fullName || purchaser.email) {
+      validateForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
-    <div className="max-w-lg mx-auto py-12">
+    <div className="max-w-xl mx-auto py-8">
       <div className="text-center mb-10">
         <h1 className="text-3xl font-semibold text-legacy-green mb-4">
           Your Information
@@ -60,7 +76,7 @@ const PurchaserInfo: React.FC<PurchaserInfoProps> = ({ formData, onUpdate, onNex
               Full Name
             </Label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                 <User className="h-5 w-5 text-gray-400" />
               </div>
               <Input
@@ -70,15 +86,16 @@ const PurchaserInfo: React.FC<PurchaserInfoProps> = ({ formData, onUpdate, onNex
                 value={purchaser.fullName || ''}
                 onChange={handleInputChange}
                 className={cn(
-                  "pl-10 h-12",
-                  !isNameValid && purchaser.fullName?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
+                  "!px-0 !pl-12 h-12 w-full",
+                  errors.fullName && purchaser.fullName?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
                 )}
                 required
-                aria-invalid={!isNameValid}
+                aria-invalid={!!errors.fullName}
+                aria-describedby={errors.fullName ? "fullName-error" : undefined}
               />
             </div>
-            {!isNameValid && purchaser.fullName?.length > 0 && (
-              <p className="text-xs text-red-600 pt-1">Please enter your full name.</p>
+            {errors.fullName && purchaser.fullName?.length > 0 && (
+              <p id="fullName-error" className="text-xs text-red-600 pt-1">{errors.fullName}</p>
             )}
           </div>
           
@@ -88,7 +105,7 @@ const PurchaserInfo: React.FC<PurchaserInfoProps> = ({ formData, onUpdate, onNex
               Email Address
             </Label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                 <Mail className="h-5 w-5 text-gray-400" />
               </div>
               <Input
@@ -98,15 +115,16 @@ const PurchaserInfo: React.FC<PurchaserInfoProps> = ({ formData, onUpdate, onNex
                 value={purchaser.email || ''}
                 onChange={handleInputChange}
                 className={cn(
-                  "pl-10 h-12",
-                  !isEmailValid && purchaser.email?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
+                  "!px-0 !pl-12 h-12 w-full",
+                  errors.email && purchaser.email?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
                 )}
                 required
-                aria-invalid={!isEmailValid}
+                aria-invalid={!!errors.email}
+                aria-describedby={errors.email ? "email-error" : undefined}
               />
             </div>
-            {!isEmailValid && purchaser.email?.length > 0 && (
-              <p className="text-xs text-red-600 pt-1">Please enter a valid email address.</p>
+            {errors.email && purchaser.email?.length > 0 && (
+              <p id="email-error" className="text-xs text-red-600 pt-1">{errors.email}</p>
             )}
             <p className="text-xs text-gray-500 pt-1">
               We'll use this to save your progress and contact you about your order.
@@ -114,15 +132,24 @@ const PurchaserInfo: React.FC<PurchaserInfoProps> = ({ formData, onUpdate, onNex
           </div>
         </div>
 
-        <div className="pt-8 text-center">
+        <div className="flex justify-between items-center pt-8">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={prevStep}
+            className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
           <Button
             type="submit"
-            disabled={!isValid}
             className={cn(
               "px-8 py-2 text-base font-medium",
               "bg-legacy-green hover:bg-legacy-green/90 text-white",
               "disabled:bg-gray-300 disabled:cursor-not-allowed"
             )}
+            disabled={Object.keys(errors).some(key => errors[key as keyof typeof errors])}
           >
             Continue
           </Button>

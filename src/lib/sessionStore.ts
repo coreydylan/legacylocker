@@ -9,6 +9,35 @@ import {
   initializeSession 
 } from './sessionManager';
 
+interface ShippingAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zip?: string;
+  country?: string;
+}
+
+interface Recipient {
+  type: 'individual' | 'couple';
+  firstName?: string;
+  lastName?: string;
+  relationship?: string;
+  birthday?: string;
+  includeWelcomeCard?: boolean;
+  welcomeMessage?: string;
+  recipient1FirstName?: string;
+  recipient1LastName?: string;
+  recipient2FirstName?: string;
+  recipient2LastName?: string;
+  anniversary?: string;
+  shippingAddress?: ShippingAddress;
+  cardAddresseeName?: string;
+}
+
+interface Purchaser {
+  // ... existing code ...
+}
+
 interface SessionStore {
   // State
   session: SessionData;
@@ -23,6 +52,7 @@ interface SessionStore {
   setLastCompletedStep: (step: number) => void;
   saveSessionProgress: (email?: string) => void;
   resetSession: () => void;
+  submitSession: () => Promise<boolean>;
 }
 
 export const useSessionStore = create<SessionStore>((set, get) => ({
@@ -118,5 +148,24 @@ export const useSessionStore = create<SessionStore>((set, get) => ({
     const newSession = createNewSession();
     saveSession(newSession);
     set({ session: newSession, isLoading: false });
+  },
+  
+  // Placeholder for submitting the final session data
+  submitSession: async (): Promise<boolean> => {
+    const { session } = get();
+    console.log("Submitting session:", session);
+    
+    // TODO: Implement actual API submission logic here
+    // Example: const success = await api.submitOnboarding(session);
+    const success = true; // Placeholder
+    
+    if (success) {
+      console.log("Session submitted successfully!");
+      // Optionally reset session after successful submission
+      // get().resetSession(); 
+    } else {
+      console.error("Session submission failed.");
+    }
+    return success;
   },
 })); 

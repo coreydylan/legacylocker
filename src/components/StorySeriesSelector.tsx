@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
@@ -134,7 +133,7 @@ const StorySeriesSelector = () => {
                   <span className="ml-2 h-5 w-5 shrink-0 opacity-50">▼</span>
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
+              <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-white">
                 <DialogHeader>
                   <DialogTitle className="text-xl font-playfair text-center">Select Your Story Series</DialogTitle>
                 </DialogHeader>

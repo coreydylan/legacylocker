@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,22 +8,23 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { ImageIcon, Lock, Unlock, CheckCircle } from 'lucide-react';
+import { useSessionStore } from '@/lib/sessionStore'; // Import Zustand store hook
 
-interface CardInfo {
-  title: string;
-  story: string;
-  imageType: 'ai' | 'upload' | 'none';
-  imageUrl?: string;
-  isLocked?: boolean;
-}
+// interface CardInfo {             // Remove interfaces, data comes from store type
+//   title: string;
+//   story: string;
+//   imageType: 'ai' | 'upload' | 'none';
+//   imageUrl?: string;
+//   isLocked?: boolean;
+// }
 
-interface CardCustomizationProps {
-  cards: {
-    [month: string]: CardInfo;
-  };
-  onUpdate: (month: string, field: string, value: any) => void;
-  onNext: () => void;
-}
+// interface CardCustomizationProps {
+//   cards: {
+//     [month: string]: CardInfo;
+//   };
+//   onUpdate: (month: string, field: string, value: any) => void;
+//   onNext: () => void;
+// }
 
 const MONTHS = [
   'jan', 'feb', 'mar', 'apr', 'may', 'jun', 
@@ -45,24 +46,36 @@ const MONTH_NAMES = {
   dec: 'December'
 };
 
-const CardCustomization: React.FC<CardCustomizationProps> = ({ 
-  cards, 
-  onUpdate,
-  onNext
-}) => {
-  const [activeMonth, setActiveMonth] = useState('jan');
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+// Remove props from component signature
+const CardCustomization: React.FC = () => { 
+  // Get state and actions from Zustand store
+  const { session, updateSession, nextStep } = useSessionStore();
+  const cards = session.cards || {}; // Get cards from session, provide default empty object
   
-  // Calculate progress - how many cards have content
-  const completedCards = Object.entries(cards).filter(
-    ([_, card]) => card.title.trim() !== '' && card.story.trim() !== ''
-  ).length;
+  const [activeMonth, setActiveMonth] = useState(MONTHS[0]); // Keep local state for active month
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false); // Keep local state for image modal
   
-  const progress = Math.round((completedCards / 12) * 100);
+  // Calculate progress based on session cards
+  const completedCards = useMemo(() => 
+    Object.values(cards).filter(
+      (card: any) => card?.title?.trim() !== '' && card?.story?.trim() !== ''
+    ).length
+  , [cards]);
   
-  // Handle card locking - prevents further edits
+  const progress = useMemo(() => 
+    Math.round((completedCards / 12) * 100)
+  , [completedCards]);
+  
+  // Handle card locking using updateSession
   const toggleLock = (month: string) => {
-    onUpdate(month, 'isLocked', !cards[month].isLocked);
+    const currentCard = cards[month]; // Get the card directly
+    const currentIsLocked = currentCard?.isLocked || false; // Safely access isLocked, default to false
+    updateSession(`cards.${month}.isLocked`, !currentIsLocked); // Update with the toggled value
+  };
+  
+  // Helper to safely access card data, initializing if needed
+  const getCardData = (month: string) => {
+    return cards[month] || { title: '', story: '', imageType: 'none', isLocked: false };
   };
 
   return (
@@ -93,162 +106,175 @@ const CardCustomization: React.FC<CardCustomizationProps> = ({
         className="w-full"
       >
         <TabsList className="grid grid-cols-6 md:grid-cols-12 mb-6">
-          {MONTHS.map((month) => (
-            <TabsTrigger 
-              key={month} 
-              value={month}
-              className="relative"
-            >
-              {month.substring(0, 1).toUpperCase()}
-              {cards[month].isLocked && (
-                <Lock className="w-3 h-3 absolute -top-1 -right-1 text-legacy-green" />
-              )}
-              {cards[month].title && cards[month].story && !cards[month].isLocked && (
-                <CheckCircle className="w-3 h-3 absolute -top-1 -right-1 text-legacy-green" />
-              )}
-            </TabsTrigger>
-          ))}
+          {MONTHS.map((month) => {
+            const card = getCardData(month);
+            return (
+              <TabsTrigger 
+                key={month} 
+                value={month}
+                className="relative"
+              >
+                {month.substring(0, 1).toUpperCase()}
+                {card.isLocked && (
+                  <Lock className="w-3 h-3 absolute -top-1 -right-1 text-legacy-green" />
+                )}
+                {card.title && card.story && !card.isLocked && (
+                  <CheckCircle className="w-3 h-3 absolute -top-1 -right-1 text-legacy-green" />
+                )}
+              </TabsTrigger>
+            );
+          })}
         </TabsList>
 
-        {MONTHS.map((month) => (
-          <TabsContent key={month} value={month}>
-            <Card>
-              <CardHeader>
-                <div className="flex justify-between items-center">
-                  <CardTitle>{MONTH_NAMES[month as keyof typeof MONTH_NAMES]}</CardTitle>
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={`lock-${month}`}>
-                      {cards[month].isLocked ? 'Unlock' : 'Lock'}
-                    </Label>
-                    <Switch
-                      id={`lock-${month}`}
-                      checked={!!cards[month].isLocked}
-                      onCheckedChange={() => toggleLock(month)}
+        {MONTHS.map((month) => {
+          const card = getCardData(month);
+          return (
+            <TabsContent key={month} value={month}>
+              <Card>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle>{MONTH_NAMES[month as keyof typeof MONTH_NAMES]}</CardTitle>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor={`lock-${month}`}>
+                        {card.isLocked ? 'Unlock' : 'Lock'}
+                      </Label>
+                      <Switch
+                        id={`lock-${month}`}
+                        checked={!!card.isLocked}
+                        onCheckedChange={() => toggleLock(month)}
+                      />
+                    </div>
+                  </div>
+                  <CardDescription>
+                    Personalize your {MONTH_NAMES[month as keyof typeof MONTH_NAMES]} card
+                  </CardDescription>
+                </CardHeader>
+                
+                <CardContent className="space-y-6">
+                  {/* Title input */}
+                  <div className="space-y-2">
+                    <Label htmlFor={`title-${month}`}>Card Title</Label>
+                    <Input
+                      id={`title-${month}`}
+                      placeholder="Enter a title for this card"
+                      value={card.title}
+                      // Use updateSession for changes
+                      onChange={(e) => updateSession(`cards.${month}.title`, e.target.value)}
+                      disabled={card.isLocked}
                     />
                   </div>
-                </div>
-                <CardDescription>
-                  Personalize your {MONTH_NAMES[month as keyof typeof MONTH_NAMES]} card
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="space-y-6">
-                {/* Title input */}
-                <div className="space-y-2">
-                  <Label htmlFor={`title-${month}`}>Card Title</Label>
-                  <Input
-                    id={`title-${month}`}
-                    placeholder="Enter a title for this card"
-                    value={cards[month].title}
-                    onChange={(e) => onUpdate(month, 'title', e.target.value)}
-                    disabled={cards[month].isLocked}
-                  />
-                </div>
-                
-                {/* Story input */}
-                <div className="space-y-2">
-                  <Label htmlFor={`story-${month}`}>Your Story</Label>
-                  <Textarea
-                    id={`story-${month}`}
-                    placeholder="Share your memory or story for this month..."
-                    rows={6}
-                    value={cards[month].story}
-                    onChange={(e) => onUpdate(month, 'story', e.target.value)}
-                    disabled={cards[month].isLocked}
-                    className="resize-none"
-                  />
-                </div>
-                
-                {/* Image selection */}
-                <div className="space-y-2">
-                  <Label>Card Image</Label>
-                  <div className="grid grid-cols-3 gap-4">
-                    <Button
-                      variant="outline"
-                      className={`flex flex-col h-24 items-center justify-center ${
-                        cards[month].imageType === 'ai' ? 'border-2 border-legacy-green' : ''
-                      }`}
-                      onClick={() => onUpdate(month, 'imageType', 'ai')}
-                      disabled={cards[month].isLocked}
-                    >
-                      <div className="text-legacy-green mb-1">
-                        <ImageIcon className="h-6 w-6" />
-                      </div>
-                      <span className="text-xs">AI Generated</span>
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      className={`flex flex-col h-24 items-center justify-center ${
-                        cards[month].imageType === 'upload' ? 'border-2 border-legacy-green' : ''
-                      }`}
-                      onClick={() => onUpdate(month, 'imageType', 'upload')}
-                      disabled={cards[month].isLocked}
-                    >
-                      <div className="text-legacy-green mb-1">
-                        <ImageIcon className="h-6 w-6" />
-                      </div>
-                      <span className="text-xs">Upload Photo</span>
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      className={`flex flex-col h-24 items-center justify-center ${
-                        cards[month].imageType === 'none' ? 'border-2 border-legacy-green' : ''
-                      }`}
-                      onClick={() => onUpdate(month, 'imageType', 'none')}
-                      disabled={cards[month].isLocked}
-                    >
-                      <div className="text-legacy-green mb-1">
-                        <ImageIcon className="h-6 w-6" />
-                      </div>
-                      <span className="text-xs">No Image</span>
-                    </Button>
+                  
+                  {/* Story input */}
+                  <div className="space-y-2">
+                    <Label htmlFor={`story-${month}`}>Your Story</Label>
+                    <Textarea
+                      id={`story-${month}`}
+                      placeholder="Share your memory or story for this month..."
+                      rows={6}
+                      value={card.story}
+                      // Use updateSession for changes
+                      onChange={(e) => updateSession(`cards.${month}.story`, e.target.value)}
+                      disabled={card.isLocked}
+                      className="resize-none"
+                    />
                   </div>
-                </div>
-              </CardContent>
-              
-              <CardFooter className="flex justify-between">
-                <Button 
-                  variant="outline"
-                  onClick={() => {
-                    const prevIndex = MONTHS.indexOf(activeMonth) - 1;
-                    if (prevIndex >= 0) {
-                      setActiveMonth(MONTHS[prevIndex]);
-                    }
-                  }}
-                  disabled={activeMonth === MONTHS[0]}
-                >
-                  Previous
-                </Button>
+                  
+                  {/* Image selection */}
+                  <div className="space-y-2">
+                    <Label>Card Image</Label>
+                    <div className="grid grid-cols-3 gap-4">
+                      <Button
+                        variant="outline"
+                        className={`flex flex-col h-24 items-center justify-center ${
+                          card.imageType === 'ai' ? 'border-2 border-legacy-green' : ''
+                        }`}
+                        // Use updateSession for changes
+                        onClick={() => updateSession(`cards.${month}.imageType`, 'ai')}
+                        disabled={card.isLocked}
+                      >
+                        <div className="text-legacy-green mb-1">
+                          <ImageIcon className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs">AI Generated</span>
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        className={`flex flex-col h-24 items-center justify-center ${
+                          card.imageType === 'upload' ? 'border-2 border-legacy-green' : ''
+                        }`}
+                        // Use updateSession for changes
+                        onClick={() => updateSession(`cards.${month}.imageType`, 'upload')}
+                        disabled={card.isLocked}
+                      >
+                        <div className="text-legacy-green mb-1">
+                          <ImageIcon className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs">Upload Photo</span>
+                      </Button>
+                      
+                      <Button
+                        variant="outline"
+                        className={`flex flex-col h-24 items-center justify-center ${
+                          card.imageType === 'none' ? 'border-2 border-legacy-green' : ''
+                        }`}
+                        // Use updateSession for changes
+                        onClick={() => updateSession(`cards.${month}.imageType`, 'none')}
+                        disabled={card.isLocked}
+                      >
+                        <div className="text-legacy-green mb-1">
+                          <ImageIcon className="h-6 w-6" />
+                        </div>
+                        <span className="text-xs">No Image</span>
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
                 
-                {activeMonth !== MONTHS[MONTHS.length - 1] ? (
+                <CardFooter className="flex justify-between">
                   <Button 
+                    variant="outline"
                     onClick={() => {
-                      const nextIndex = MONTHS.indexOf(activeMonth) + 1;
-                      if (nextIndex < MONTHS.length) {
-                        setActiveMonth(MONTHS[nextIndex]);
+                      const prevIndex = MONTHS.indexOf(activeMonth) - 1;
+                      if (prevIndex >= 0) {
+                        setActiveMonth(MONTHS[prevIndex]);
                       }
                     }}
+                    disabled={activeMonth === MONTHS[0]}
                   >
-                    Next Card
+                    Previous
                   </Button>
-                ) : (
-                  <Button onClick={onNext}>
-                    Continue to Review
-                  </Button>
-                )}
-              </CardFooter>
-            </Card>
-          </TabsContent>
-        ))}
+                  
+                  {activeMonth !== MONTHS[MONTHS.length - 1] ? (
+                    <Button 
+                      onClick={() => {
+                        const nextIndex = MONTHS.indexOf(activeMonth) + 1;
+                        if (nextIndex < MONTHS.length) {
+                          setActiveMonth(MONTHS[nextIndex]);
+                        }
+                      }}
+                    >
+                      Next Card
+                    </Button>
+                  ) : (
+                    // Use nextStep from store
+                    <Button onClick={nextStep}> 
+                      Continue to Review
+                    </Button>
+                  )}
+                </CardFooter>
+              </Card>
+            </TabsContent>
+          );
+        })}
       </Tabs>
       
       <div className="mt-8 text-center">
         <Button
           variant="default"
           size="lg"
-          onClick={onNext}
+          // Use nextStep from store
+          onClick={nextStep} 
           className="px-8"
         >
           Review All Cards

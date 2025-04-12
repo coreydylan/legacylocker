@@ -1,13 +1,17 @@
-
 import { useState, useEffect } from 'react';
-import { FormData } from '@/types/onboarding';
+// import { FormData } from '@/types/onboarding'; // No longer needed as arg
 import { useToast } from './use-toast';
+import { useSessionStore } from '@/lib/sessionStore'; // Import store hook
+import { SessionData } from '@/lib/sessionManager'; // Import SessionData for typing
 
-export const useSignatureEditionFlow = (
-  formData: FormData,
-  updateFormData: (key: keyof FormData, value: any) => void
-) => {
-  const [selectedMonth, setSelectedMonth] = useState("January");
+// Remove formData and updateFormData from arguments
+export const useSignatureEditionFlow = () => {
+  // Get session and update action from the store
+  const { session, updateSession } = useSessionStore();
+  const typedSession = session as SessionData;
+  
+  // Use state for UI control, derived from session where possible
+  const [selectedMonth, setSelectedMonth] = useState(typedSession.editionFlow?.currentMonth || "January");
   const [openCalendars, setOpenCalendars] = useState<Record<string, boolean>>({});
   const [direction, setDirection] = useState<'left' | 'right'>('right');
   const [containerHeight, setContainerHeight] = useState<number | string>('auto');
@@ -24,8 +28,9 @@ export const useSignatureEditionFlow = (
     "Holiday", "Other"
   ];
 
+  // Initialize monthly data in the session if it doesn't exist
   useEffect(() => {
-    if (!formData.editionFlow.monthlyData) {
+    if (!typedSession.editionFlow?.monthlyData) {
       const initialMonthlyData = months.reduce((acc, month) => {
         acc[month] = { 
           personalMessage: '', 
@@ -37,29 +42,21 @@ export const useSignatureEditionFlow = (
           photoUrl: undefined
         };
         return acc;
-      }, {} as Record<string, { 
-        personalMessage?: string, 
-        celebration?: string, 
-        customDate?: Date,
-        useExactText?: boolean,
-        useExactTitle?: boolean,
-        artworkOption?: string,
-        photoUrl?: string
-      }>);
+      }, {} as SessionData['editionFlow']['monthlyData']); // Use SessionData type
       
-      updateFormData('editionFlow', { 
-        ...formData.editionFlow, 
-        monthlyData: initialMonthlyData,
-        currentMonth: "January"
-      });
+      // Update the session directly
+      updateSession('editionFlow.monthlyData', initialMonthlyData);
+      updateSession('editionFlow.currentMonth', "January");
     }
     
-    if (formData.editionFlow.currentMonth) {
-      setSelectedMonth(formData.editionFlow.currentMonth);
+    // Sync local selectedMonth state with session
+    if (typedSession.editionFlow?.currentMonth && selectedMonth !== typedSession.editionFlow.currentMonth) {
+      setSelectedMonth(typedSession.editionFlow.currentMonth);
     }
-  }, [formData.editionFlow, updateFormData, months]);
+  }, [typedSession.editionFlow, updateSession, months, selectedMonth]);
 
-  const currentMonthData = formData.editionFlow.monthlyData?.[selectedMonth] || { 
+  // Get current month data safely from session
+  const currentMonthData = typedSession.editionFlow?.monthlyData?.[selectedMonth] || { 
     personalMessage: '', 
     celebration: '', 
     customDate: undefined,
@@ -74,11 +71,8 @@ export const useSignatureEditionFlow = (
     const newIndex = months.indexOf(newMonth);
     
     setDirection(newIndex > currentIndex ? 'right' : 'left');
-    setSelectedMonth(newMonth);
-    updateFormData('editionFlow', { 
-      ...formData.editionFlow, 
-      currentMonth: newMonth
-    });
+    setSelectedMonth(newMonth); // Update local state for UI transition
+    updateSession('editionFlow.currentMonth', newMonth); // Update session state
   };
 
   const handlePrevMonth = () => {
@@ -87,10 +81,7 @@ export const useSignatureEditionFlow = (
       const prevMonth = months[currentIndex - 1];
       setDirection('left');
       setSelectedMonth(prevMonth);
-      updateFormData('editionFlow', { 
-        ...formData.editionFlow, 
-        currentMonth: prevMonth
-      });
+      updateSession('editionFlow.currentMonth', prevMonth);
     }
   };
 
@@ -100,28 +91,13 @@ export const useSignatureEditionFlow = (
       const nextMonth = months[currentIndex + 1];
       setDirection('right');
       setSelectedMonth(nextMonth);
-      updateFormData('editionFlow', { 
-        ...formData.editionFlow, 
-        currentMonth: nextMonth
-      });
+      updateSession('editionFlow.currentMonth', nextMonth);
     }
   };
 
+  // Update specific field for the selected month in the session
   const handleMonthDataChange = (field: string, value: any) => {
-    if (formData.editionFlow.monthlyData) {
-      const updatedMonthlyData = {
-        ...formData.editionFlow.monthlyData,
-        [selectedMonth]: {
-          ...formData.editionFlow.monthlyData[selectedMonth],
-          [field]: value
-        }
-      };
-      
-      updateFormData('editionFlow', { 
-        ...formData.editionFlow, 
-        monthlyData: updatedMonthlyData
-      });
-    }
+    updateSession(`editionFlow.monthlyData.${selectedMonth}.${field}`, value);
   };
 
   const handleCalendarToggle = (month: string, isOpen: boolean) => {
@@ -133,12 +109,13 @@ export const useSignatureEditionFlow = (
   
   const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files && event.target.files[0]) {
-      // In a real implementation, this would handle file upload to a server
-      // For now, we'll just store the file name
-      handleMonthDataChange('photoUrl', event.target.files[0].name);
+      // TODO: Implement actual file upload logic (e.g., to Supabase storage)
+      // For now, store a placeholder or file name
+      const fileName = event.target.files[0].name;
+      handleMonthDataChange('photoUrl', `uploads/${fileName}`); // Example path
       toast({
-        title: "Photo uploaded",
-        description: `${event.target.files[0].name} has been selected for this card.`,
+        title: "Photo selected",
+        description: `${fileName} selected for upload.`,
       });
     }
   };
@@ -149,21 +126,21 @@ export const useSignatureEditionFlow = (
 
   return {
     selectedMonth,
-    setSelectedMonth,
+    // setSelectedMonth, // Usually not needed externally if synced with store
     openCalendars,
     direction,
     containerHeight,
     setContainerHeight,
     months,
     celebrationTypes,
-    currentMonthData,
-    prevMonth,
-    nextMonth,
-    handleMonthChange,
-    handlePrevMonth,
-    handleNextMonth,
-    handleMonthDataChange,
-    handleCalendarToggle,
-    handlePhotoUpload
+    currentMonthData, // Derived from session
+    prevMonth, // Derived locally
+    nextMonth, // Derived locally
+    handleMonthChange, // Updates session
+    handlePrevMonth, // Updates session
+    handleNextMonth, // Updates session
+    handleMonthDataChange, // Updates session
+    handleCalendarToggle, // Local UI state
+    handlePhotoUpload // Updates session (placeholder)
   };
 };

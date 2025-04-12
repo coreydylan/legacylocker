@@ -1,60 +1,61 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSessionStore } from '@/lib/sessionStore';
 import RecipientSelector from './RecipientSelector';
 import PurchaserInfo from './PurchaserInfo';
 import RecipientInfo from './RecipientInfo';
-import CardCustomization from './CardCustomization';
+import ShippingInfoCard from './ShippingInfoCard';
+import EnvelopeAddresseeCard from './EnvelopeAddresseeCard';
+// Import the specific flow components
+import SignatureEditionFlow from './SignatureEditionFlow'; 
+import CustomEditionFlow from './CustomEditionFlow';
+import ConciergeEditionFlow from './ConciergeEditionFlow';
+// CardCustomization might be part of Signature or used differently now
+// import CardCustomization from './CardCustomization'; 
 import ReviewCheckout from './ReviewCheckout';
 import SaveProgressModal from './SaveProgressModal';
-import OnboardingHeader from './OnboardingHeader';
-import { cn } from '@/lib/utils';
+// import OnboardingHeader from './OnboardingHeader'; // <<< Remove Header import
+import { SessionData } from '@/lib/sessionManager'; // Import SessionData for typing
+
 
 // Define steps in our onboarding flow
 const STEPS = {
   RECIPIENT_SELECTION: 1,
   PURCHASER_INFO: 2,
   RECIPIENT_INFO: 3,
-  CARD_CUSTOMIZATION: 4,
-  REVIEW_CHECKOUT: 5
+  SHIPPING_INFO: 4,
+  ENVELOPE_ADDRESSEE: 5,
+  EDITION_DETAILS: 6,
+  REVIEW_CHECKOUT: 7
 } as const;
 
-type Step = typeof STEPS[keyof typeof STEPS];
-
 interface OnboardingFlowProps {
-  editionName?: string;
+  // Removed editionName prop, should be handled by store initialization
   onBack?: () => void;
 }
 
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ 
-  editionName,
   onBack: externalOnBack
 }) => {
-  // Get state and actions from Zustand store
   const {
     session,
     isLoading,
     initialize,
-    updateSession,
+    // updateSession, // No longer needed directly here?
     setCurrentStep,
     nextStep,
     prevStep
   } = useSessionStore();
   
-  const [showSaveModal, setShowSaveModal] = React.useState(false);
-  const [lastSavedTime, setLastSavedTime] = React.useState<Date | null>(null);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   
   // Initialize session on component mount
   useEffect(() => {
-    // Clear console on mount for cleaner debugging
     console.clear();
     console.log("OnboardingFlow: Initializing session...");
     initialize();
-    
-    // If edition name is provided, update the session
-    if (editionName) {
-      updateSession('editionName', editionName);
-    }
-  }, [initialize, editionName, updateSession]);
+    // Initial selectedSeries/editionType should be set when modal opens
+  }, [initialize]);
   
   // Update last saved time display based on session updates
   useEffect(() => {
@@ -68,27 +69,11 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
   }, [session.updatedAt]);
   
-  // Handle saving progress
   const handleSaveProgress = () => {
     console.log("OnboardingFlow: Save progress clicked");
     setShowSaveModal(true);
   };
   
-  // Handle save with email
-  const handleSaveWithEmail = (email: string) => {
-    console.log("OnboardingFlow: Saving session with email -", email);
-    // Persist email directly in session for potential resume link
-    updateSession('email', email);
-    // Also update purchaser email if not already set
-    if (!session.purchaser?.email) {
-      updateSession('purchaser.email', email);
-    }
-    setLastSavedTime(new Date()); // Update display immediately
-    setShowSaveModal(false);
-    // NOTE: updateSession already calls saveSession internally
-  };
-  
-  // Handle back button - use external handler if provided
   const handleBack = () => {
     console.log("OnboardingFlow: Back button clicked");
     if (externalOnBack) {
@@ -98,22 +83,22 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
   };
   
-  // Handle closing onboarding
   const handleClose = () => {
-    console.log('OnboardingFlow: Close button clicked (implement confirmation?)');
-    // TODO: Implement confirmation dialog before closing
-    // Potentially resetSession() or navigate away
+    console.log('OnboardingFlow: Close button clicked (logic handled by OnboardingModal)');
+    // Logic should be in OnboardingModal's onClose handler
   };
   
+  // Explicitly type session for safety
+  const typedSession = session as SessionData;
+
   // Skip recipient info step if gift is for self
   useEffect(() => {
-    if (session.recipientType === 'myself' && session.currentStep === STEPS.RECIPIENT_INFO) {
+    if (typedSession.recipientType === 'myself' && typedSession.currentStep === STEPS.RECIPIENT_INFO) {
       console.log("OnboardingFlow: Skipping recipient info for 'myself' gift type");
-      nextStep(); // Skip to card customization
+      setCurrentStep(STEPS.EDITION_DETAILS);
     }
-  }, [session.recipientType, session.currentStep, nextStep]);
+  }, [typedSession.recipientType, typedSession.currentStep, setCurrentStep]);
   
-  // Display loading state
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-legacy-cream">
@@ -124,71 +109,70 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   
   // Render current step based on session.currentStep
   const renderCurrentStep = () => {
-    console.log(`OnboardingFlow: Rendering step ${session.currentStep}`);
-    switch (session.currentStep) {
+    console.log(`OnboardingFlow: Rendering step ${typedSession.currentStep}`);
+    switch (typedSession.currentStep) {
       case STEPS.RECIPIENT_SELECTION:
-        // RecipientSelector now gets state from store, doesn't need props
         return <RecipientSelector />;
 
       case STEPS.PURCHASER_INFO:
-        // PurchaserInfo now gets state from store
         return <PurchaserInfo />;
 
       case STEPS.RECIPIENT_INFO:
-        // Assuming RecipientInfo will be refactored similarly
-        // TODO: Refactor RecipientInfo to use useSessionStore
-        // @ts-ignore - Temporarily ignore props mismatch until refactored
         return <RecipientInfo />;
 
-      case STEPS.CARD_CUSTOMIZATION:
-        // Assuming CardCustomization will be refactored similarly
-        // TODO: Refactor CardCustomization to use useSessionStore
-        // @ts-ignore - Temporarily ignore props mismatch until refactored
-        return <CardCustomization />;
+      case STEPS.SHIPPING_INFO:
+        return <ShippingInfoCard />;
+
+      case STEPS.ENVELOPE_ADDRESSEE:
+        return <EnvelopeAddresseeCard />;
+
+      case STEPS.EDITION_DETAILS:
+        const editionType = typedSession.editionFlow?.type || 'signature';
+        console.log(`OnboardingFlow: Rendering edition type: ${editionType}`);
+        if (editionType === 'custom') {
+          return <CustomEditionFlow />;
+        } else if (editionType === 'concierge') {
+          return <ConciergeEditionFlow />;
+        } else {
+          // Assume signature is the default
+          return <SignatureEditionFlow />;
+        }
 
       case STEPS.REVIEW_CHECKOUT:
-        // ReviewCheckout might need session data directly or use the store
-        // TODO: Refactor ReviewCheckout to use useSessionStore if possible
-        // @ts-ignore - Temporarily ignore props mismatch until refactored
-        return <ReviewCheckout sessionData={session} />; // Pass session for now
+        return <ReviewCheckout />;
 
       default:
-        console.error(`OnboardingFlow: Unknown step number: ${session.currentStep}`);
-        // Fallback to step 1 if currentStep is invalid
+        console.error(`OnboardingFlow: Unknown step number: ${typedSession.currentStep}`);
         setCurrentStep(STEPS.RECIPIENT_SELECTION);
         return <RecipientSelector />;
     }
   };
 
   return (
-    <div className="min-h-screen bg-legacy-cream flex flex-col">
+    // Remove surrounding div if not needed, just render the step content
+    // The parent (OnboardingModal) provides the main layout now
+    <div className="flex-grow container mx-auto px-4 py-8">
+      {/* <<< Remove OnboardingHeader rendering >>> */}
+      {/* 
       <OnboardingHeader
-        // Pass necessary state and handlers to the header
-        currentStep={session.currentStep}
-        totalSteps={Object.keys(STEPS).length}
         handleBack={handleBack}
-        onClose={handleClose}
-        setCurrentStep={setCurrentStep} // Allow header navigation
-        lastSavedTime={lastSavedTime} // For display in SaveProgressButton
-        onSaveClick={handleSaveProgress} // To trigger the save modal
-      />
+        onClose={handleClose} 
+        lastSavedTime={lastSavedTime}
+        onSaveClick={handleSaveProgress}
+      /> 
+      */}
 
-      {/* Main content area */}
-      <main className="flex-grow container mx-auto px-4 py-8">
-        {/* Render step only when not loading and session is available */}
-        {!isLoading && session ? renderCurrentStep() : null}
-      </main>
+      {/* Render only the current step content */}
+      {!isLoading && session ? renderCurrentStep() : null}
 
+      {/* SaveProgressModal is likely handled by OnboardingModal now */}
+      {/* 
       <SaveProgressModal
         open={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        formData={session}
-        onSaveProgress={async (email, data) => {
-          handleSaveWithEmail(email);
-          return true;
-        }}
         setLastSavedTime={setLastSavedTime}
-      />
+      /> 
+      */}
     </div>
   );
 };

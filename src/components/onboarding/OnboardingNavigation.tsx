@@ -1,18 +1,20 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, X } from 'lucide-react';
+import { useSessionStore } from '@/lib/sessionStore';
 
 interface OnboardingNavigationProps {
-  currentStep: number;
   handleBack: () => void;
   onClose: () => void;
 }
 
 const OnboardingNavigation: React.FC<OnboardingNavigationProps> = ({
-  currentStep,
   handleBack,
   onClose,
 }) => {
+  const { session } = useSessionStore();
+  const currentStep = session.currentStep;
+  
   return (
     <div className="flex items-center space-x-4">
       {currentStep > 1 && (
