@@ -19,7 +19,7 @@ const ShippingInfoCard: React.FC = () => {
   const [structuredAddress, setStructuredAddress] = useState<ShippingAddress>(initialAddress);
   const [errors, setErrors] = useState<Partial<Record<keyof ShippingAddress | 'shippingName', string>>>({});
 
-  const defaultShippingName = formatShipToName(recipient);
+  const defaultShippingName = formatShipToName(session);
   const initialShippingName = recipient?.shippingNameOverridden 
                                  ? (recipient?.shippingName || '') 
                                  : defaultShippingName;
@@ -31,7 +31,7 @@ const ShippingInfoCard: React.FC = () => {
     setStructuredAddress(sessionAddress);
     setAddressString(sessionAddress.full || '');
 
-    const newDefaultName = formatShipToName(currentRecipient);
+    const newDefaultName = formatShipToName(session);
     const currentShippingName = currentRecipient?.shippingNameOverridden
                                  ? (currentRecipient?.shippingName || '')
                                  : newDefaultName;
@@ -40,7 +40,7 @@ const ShippingInfoCard: React.FC = () => {
         updateSession('recipient.shippingName', currentShippingName);    
     }
 
-  }, [session.recipient, updateSession]);
+  }, [session, updateSession]);
 
   const validateForm = () => {
     const newErrors: Partial<Record<keyof ShippingAddress | 'shippingName', string>> = {};

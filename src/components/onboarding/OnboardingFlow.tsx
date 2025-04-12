@@ -40,7 +40,6 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     session,
     isLoading,
     initialize,
-    // updateSession, // No longer needed directly here?
     setCurrentStep,
     nextStep,
     prevStep
@@ -49,15 +48,12 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   
-  // Initialize session on component mount
   useEffect(() => {
     console.clear();
     console.log("OnboardingFlow: Initializing session...");
     initialize();
-    // Initial selectedSeries/editionType should be set when modal opens
   }, [initialize]);
   
-  // Update last saved time display based on session updates
   useEffect(() => {
     if (session.updatedAt) {
       try {
@@ -68,7 +64,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       }
     }
   }, [session.updatedAt]);
-  
+
   const handleSaveProgress = () => {
     console.log("OnboardingFlow: Save progress clicked");
     setShowSaveModal(true);
@@ -85,20 +81,10 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   
   const handleClose = () => {
     console.log('OnboardingFlow: Close button clicked (logic handled by OnboardingModal)');
-    // Logic should be in OnboardingModal's onClose handler
   };
   
-  // Explicitly type session for safety
   const typedSession = session as SessionData;
 
-  // Skip recipient info step if gift is for self
-  useEffect(() => {
-    if (typedSession.recipientType === 'myself' && typedSession.currentStep === STEPS.RECIPIENT_INFO) {
-      console.log("OnboardingFlow: Skipping recipient info for 'myself' gift type");
-      setCurrentStep(STEPS.EDITION_DETAILS);
-    }
-  }, [typedSession.recipientType, typedSession.currentStep, setCurrentStep]);
-  
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-legacy-cream">

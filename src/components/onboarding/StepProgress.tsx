@@ -69,66 +69,63 @@ const StepProgress: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center w-full max-w-md sm:max-w-lg md:max-w-xl lg:max-w-2xl mx-auto">
-      <div className="flex items-center justify-center space-x-1 w-full"> 
+    <div className="flex flex-col items-center w-full max-w-3xl mx-auto">
+      {/* Progress Steps */}
+      <div className="flex items-center justify-between w-full mb-2">
         {visualSteps.map((visualStep, index) => {
-          // A visual step is completed if the LAST actual step mapping to it is completed
           const isCompleted = visualStep <= lastCompletedVisualStep;
           const isActive = visualStep === visualCurrentStep;
-          
-          // A visual step is clickable if the FIRST actual step mapping to it is <= lastCompletedStep + 1
           const firstActualStepForVisual = Number(Object.keys(VISUAL_STEP_MAP).find(key => VISUAL_STEP_MAP[Number(key)] === visualStep)) || 99;
           const isClickable = firstActualStepForVisual <= lastCompletedStep + 1;
 
           return (
             <React.Fragment key={visualStep}>
-              {/* Step Circle Button */}
-              <button
-                onClick={() => handleStepClick(visualStep)}
-                disabled={!isClickable || isActive}
-                className={cn(
-                  "flex items-center justify-center w-6 h-6 rounded-full border-2 text-xs font-medium transition-all duration-150 shrink-0",
-                  isActive
-                    ? "bg-legacy-green border-legacy-green text-white scale-110"
-                    : isCompleted
-                    ? "bg-legacy-green/10 border-legacy-green/50 text-legacy-green/80 hover:bg-legacy-green/30"
-                    : "bg-gray-100 border-gray-300 text-gray-400",
-                  isClickable && !isActive && "hover:border-legacy-green/70 cursor-pointer",
-                  !isClickable && "cursor-not-allowed"
-                )}
-                aria-label={`Step ${visualStep}: ${STEP_LABELS[visualStep]}`}
-                aria-current={isActive ? 'step' : undefined}
-              >
-                {visualStep} 
-              </button>
-              
+              {/* Step Circle */}
+              <div className="flex flex-col items-center relative">
+                <button
+                  onClick={() => handleStepClick(visualStep)}
+                  disabled={!isClickable || isActive}
+                  className={cn(
+                    "flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium transition-all duration-150",
+                    isActive
+                      ? "bg-legacy-green border-legacy-green text-white scale-110"
+                      : isCompleted
+                      ? "bg-legacy-green/10 border-legacy-green/50 text-legacy-green/80 hover:bg-legacy-green/30"
+                      : "bg-gray-100 border-gray-300 text-gray-400",
+                    isClickable && !isActive && "hover:border-legacy-green/70 cursor-pointer",
+                    !isClickable && "cursor-not-allowed"
+                  )}
+                  aria-label={`Step ${visualStep}: ${STEP_LABELS[visualStep]}`}
+                  aria-current={isActive ? 'step' : undefined}
+                >
+                  {visualStep}
+                </button>
+                
+                {/* Step Label */}
+                <span 
+                  className={cn(
+                    "absolute -bottom-6 whitespace-nowrap text-xs",
+                    visualStep === visualCurrentStep ? 'text-legacy-green font-medium' : 'text-gray-500'
+                  )}
+                >
+                  {STEP_LABELS[visualStep]}
+                </span>
+              </div>
+
               {/* Connector Line */}
               {index < totalVisualSteps - 1 && (
                 <div className={cn(
-                  "h-0.5 w-full flex-grow mx-1 transition-colors duration-300 ease-in-out", // Use flex-grow for responsive width
-                  isCompleted ? "bg-legacy-green/50" : "bg-gray-300" 
-                )}></div>
+                  "h-0.5 flex-1 mx-4",
+                  isCompleted ? "bg-legacy-green/50" : "bg-gray-300"
+                )} />
               )}
             </React.Fragment>
           );
         })}
       </div>
       
-      {/* Step Labels - Adjust layout for dynamic spacing */}
-      <div className="flex justify-between w-full mt-1.5 px-1"> 
-        {visualSteps.map((visualStep) => (
-          <span 
-            key={`label-${visualStep}`}
-            className={cn(
-              "text-xs text-center flex-1 min-w-0 px-1 truncate", // Use flex-1 for distribution
-              visualStep === visualCurrentStep ? 'text-legacy-green font-medium' : 'text-gray-500'
-            )}
-            style={{ maxWidth: '20%' }} // Prevent labels from becoming too wide
-          >
-            {STEP_LABELS[visualStep]}
-          </span>
-        ))}
-      </div>
+      {/* Add spacing below the progress bar to account for labels */}
+      <div className="h-6" />
     </div>
   );
 };

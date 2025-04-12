@@ -13,7 +13,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
   const { session, updateSession, nextStep, prevStep } = useSessionStore();
   const recipient: Recipient | undefined = session.recipient;
 
-  const defaultAddresseeName = formatShipToName(recipient);
+  const defaultAddresseeName = formatShipToName(session);
   
   const initialName = recipient?.cardAddresseeNameOverridden 
                         ? (recipient?.cardAddresseeName || '') 
@@ -23,7 +23,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
 
   useEffect(() => {
     const currentRecipient: Recipient | undefined = session.recipient;
-    const newDefaultName = formatShipToName(currentRecipient);
+    const newDefaultName = formatShipToName(session);
     const currentName = currentRecipient?.cardAddresseeNameOverridden
                          ? (currentRecipient?.cardAddresseeName || '')
                          : newDefaultName;
@@ -32,7 +32,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
         updateSession('recipient.cardAddresseeName', currentName);
     }
     setError(undefined); 
-  }, [session.recipient, updateSession]);
+  }, [session, updateSession]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newName = e.target.value;

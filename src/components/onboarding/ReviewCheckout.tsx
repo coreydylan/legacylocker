@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SessionData, Recipient, Purchaser } from '@/lib/sessionManager';
 import { CheckCircle, Edit2, ShoppingCart, ChevronLeft, Home, Mail as MailIcon } from 'lucide-react';
 import { useSessionStore } from '@/lib/sessionStore';
+import { formatShipToName } from '@/lib/utils/formatShipToName';
 
 const MONTH_NAMES = {
   jan: 'January',
@@ -34,7 +35,7 @@ const defaultRecipient: Recipient = { type: 'individual' };
 const defaultPurchaser: Purchaser = {};
 
 const ReviewCheckout: React.FC = () => {
-  const { session, setCurrentStep, prevStep /*, submitSession*/ } = useSessionStore();
+  const { session, setCurrentStep, prevStep } = useSessionStore();
   
   const typedSession = session as SessionData;
   const recipientType = typedSession.recipientType || 'individual'; 
@@ -42,7 +43,7 @@ const ReviewCheckout: React.FC = () => {
   const purchaser: Purchaser = typedSession.purchaser || defaultPurchaser;
   const cards = typedSession.cards || {};
   const shippingAddress = recipient.shippingAddress || {};
-
+  
   const completedCards = Object.values(cards).filter(
     (card: any) => card?.title?.trim() !== '' && card?.story?.trim() !== ''
   ).length;
@@ -53,18 +54,22 @@ const ReviewCheckout: React.FC = () => {
   
   const handleSubmit = () => {
     console.log("ReviewCheckout: Submitting session...");
-    // submitSession();
     alert("Proceed to Checkout! (Implement payment flow)");
   };
+
+  const formattedShipToNameResult = formatShipToName(session);
+  const envelopeName = recipient.cardAddresseeNameOverridden 
+                       ? (recipient.cardAddresseeName || '') 
+                       : formattedShipToNameResult;
 
   const formatAddress = () => {
     const parts = [
       shippingAddress.street,
       shippingAddress.city,
       shippingAddress.state,
-      shippingAddress.zip,
+      shippingAddress.postalCode,
       shippingAddress.country
-    ].filter(Boolean);
+    ].filter(Boolean); 
     return parts.length > 0 ? parts.join(', ') : 'Not specified';
   };
   
@@ -80,16 +85,17 @@ const ReviewCheckout: React.FC = () => {
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
-        {/* Recipient Information */}
         <Card>
           <CardHeader className="bg-legacy-cream/30">
             <div className="flex justify-between items-center">
-              <CardTitle className="text-xl">Recipient</CardTitle>
+              <CardTitle className="text-xl">
+                {recipientType === 'myself' ? 'Your Information' : 'Recipient'}
+              </CardTitle>
               <Button 
                 variant="ghost" 
                 size="sm" 
                 className="text-legacy-green"
-                onClick={() => handleEdit(STEPS.RECIPIENT_INFO)}
+                onClick={() => handleEdit(recipientType === 'myself' ? STEPS.PURCHASER_INFO : STEPS.RECIPIENT_INFO)} 
               >
                 <Edit2 className="h-4 w-4 mr-2" />
                 Edit
@@ -98,19 +104,33 @@ const ReviewCheckout: React.FC = () => {
           </CardHeader>
           <CardContent className="pt-6">
             <dl className="space-y-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Gift Type</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {recipientType === 'myself' 
-                    ? 'For Myself' 
-                    : recipientType === 'individual'
-                      ? 'For an Individual'
-                      : 'For a Couple'}
-                </dd>
-              </div>
-              
+              {recipientType === 'myself' && (
+                <>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Name</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {purchaser.fullName || 'Not provided'} 
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {purchaser.email || 'Not provided'} 
+                    </dd>
+                  </div>
+                </>
+              )}
+
               {recipientType !== 'myself' && (
                 <>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Gift Type</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {recipientType === 'individual'
+                        ? 'For an Individual'
+                        : 'For a Couple'}
+                    </dd>
+                  </div>
                   <div>
                     <dt className="text-sm font-medium text-gray-500">Recipient Name</dt>
                     <dd className="mt-1 text-sm text-gray-900">
@@ -125,69 +145,68 @@ const ReviewCheckout: React.FC = () => {
                       {recipient.relationship || 'Not specified'}
                     </dd>
                   </div>
-
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500 flex items-center">
-                      <Home className="h-4 w-4 mr-2 text-gray-400"/>
-                      Shipping Address
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900 pl-6">
-                      {formatAddress()}
-                    </dd>
-                  </div>
-
-                  <div>
-                    <dt className="text-sm font-medium text-gray-500 flex items-center">
-                      <MailIcon className="h-4 w-4 mr-2 text-gray-400"/>
-                      Name on Envelope
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900 pl-6">
-                      {recipient.cardAddresseeName || 'Not specified'}
-                    </dd>
-                  </div>
                 </>
               )}
+
+              <div>
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <Home className="h-4 w-4 mr-2 text-gray-400"/>
+                  Shipping Address
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 pl-6">
+                  {formatAddress()} 
+                </dd>
+              </div>
+
+              <div>
+                <dt className="text-sm font-medium text-gray-500 flex items-center">
+                  <MailIcon className="h-4 w-4 mr-2 text-gray-400"/>
+                  Name on Envelope
+                </dt>
+                <dd className="mt-1 text-sm text-gray-900 pl-6">
+                  {envelopeName || 'Not specified'} 
+                </dd>
+              </div>
             </dl>
           </CardContent>
         </Card>
         
-        {/* Purchaser Information */}
-        <Card>
-          <CardHeader className="bg-legacy-cream/30">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-xl">Your Information</CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                className="text-legacy-green"
-                onClick={() => handleEdit(STEPS.PURCHASER_INFO)}
-              >
-                <Edit2 className="h-4 w-4 mr-2" />
-                Edit
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="pt-6">
-            <dl className="space-y-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Name</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {purchaser.fullName || 'Not provided'}
-                </dd>
-              </div>
-              
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="mt-1 text-sm text-gray-900">
-                  {purchaser.email || 'Not provided'}
-                </dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+        {recipientType !== 'myself' && (
+            <Card>
+              <CardHeader className="bg-legacy-cream/30">
+                <div className="flex justify-between items-center">
+                  <CardTitle className="text-xl">Your Information</CardTitle>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="text-legacy-green"
+                    onClick={() => handleEdit(STEPS.PURCHASER_INFO)} 
+                  >
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="pt-6">
+                <dl className="space-y-4">
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Name</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {purchaser.fullName || 'Not provided'} 
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Email</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {purchaser.email || 'Not provided'} 
+                    </dd>
+                  </div>
+                </dl>
+              </CardContent>
+            </Card>
+        )}
       </div>
       
-      {/* Card Summary */}
       <Card className="mb-8">
         <CardHeader className="bg-legacy-cream/30">
           <div className="flex justify-between items-center">
@@ -239,7 +258,6 @@ const ReviewCheckout: React.FC = () => {
         </CardContent>
       </Card>
       
-      {/* Footer Navigation */}
       <div className="flex justify-between items-center pt-6 border-t">
          <Button
             type="button"

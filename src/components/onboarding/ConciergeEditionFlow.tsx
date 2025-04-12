@@ -51,7 +51,7 @@ const ConciergeEditionFlow: React.FC = () => {
   // Update contact method in local state and session
   const handleContactMethodChange = (value: string) => {
     // Value is already a string from RadioGroup
-    setContactMethod(value); 
+    setContactMethod(value);
     // Update session, potentially casting to the specific literal type if needed by store
     updateSession('editionFlow.conciergeData.preferredContact.method', value as 'email' | 'phone');
   };

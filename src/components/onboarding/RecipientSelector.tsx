@@ -1,17 +1,15 @@
 import React from 'react';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
-import { User, Users, Gift } from 'lucide-react';
+import { Users, Gift } from 'lucide-react';
 import { useSessionStore } from '@/lib/sessionStore';
 
 const RecipientSelector: React.FC = () => {
   const { session, updateSession, nextStep } = useSessionStore();
 
-  const handleSelect = (type: 'myself' | 'individual' | 'couple') => {
-    // Update recipient type
+  const handleSelect = (type: 'individual' | 'couple') => {
     updateSession('recipientType', type);
 
-    // Update recipient structure based on type
     if (type === 'couple') {
       updateSession('recipient', {
         type: 'couple',
@@ -20,10 +18,15 @@ const RecipientSelector: React.FC = () => {
         recipient2FirstName: '',
         recipient2LastName: '',
         relationship: '',
-        includeWelcomeCard: false,
         firstName: undefined,
         lastName: undefined,
         birthday: undefined,
+        shippingName: undefined,
+        shippingNameOverridden: undefined,
+        cardAddresseeName: undefined,
+        cardAddresseeNameOverridden: undefined,
+        shippingAddress: undefined,
+        anniversary: undefined,
       });
     } else {
       updateSession('recipient', {
@@ -31,28 +34,24 @@ const RecipientSelector: React.FC = () => {
         firstName: '',
         lastName: '',
         relationship: '',
-        includeWelcomeCard: false,
+        birthday: '',
+        shippingName: undefined,
+        shippingNameOverridden: undefined,
+        cardAddresseeName: undefined,
+        cardAddresseeNameOverridden: undefined,
+        shippingAddress: undefined,
         recipient1FirstName: undefined,
         recipient1LastName: undefined,
         recipient2FirstName: undefined,
         recipient2LastName: undefined,
-        recipient1Birthday: undefined,
-        recipient2Birthday: undefined,
         anniversary: undefined,
       });
     }
 
-    // Immediately advance to next step
     nextStep();
   };
 
   const options = [
-    {
-      id: 'myself' as const,
-      label: 'For Myself',
-      description: 'Create a personalized keepsake of your own stories and memories.',
-      icon: <User className="h-8 w-8" />,
-    },
     {
       id: 'individual' as const,
       label: 'For an Individual',
@@ -78,7 +77,7 @@ const RecipientSelector: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-xl mx-auto">
         {options.map((option) => (
           <motion.div
             key={option.id}
