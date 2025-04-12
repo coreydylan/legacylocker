@@ -1,0 +1,352 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { FormData } from '@/types/onboarding';
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { 
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { 
+  Popover,
+  PopoverTrigger,
+  PopoverContent
+} from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { CalendarIcon, ChevronRight, ChevronLeft } from "lucide-react";
+import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+interface SignatureEditionFlowProps {
+  formData: FormData;
+  updateFormData: (key: keyof FormData, value: any) => void;
+}
+
+const months = [
+  "January", "February", "March", "April", "May", "June", 
+  "July", "August", "September", "October", "November", "December"
+];
+
+const celebrationTypes = [
+  "Birthday", "Anniversary", "Graduation", "Retirement",
+  "New Job", "New Home", "Baby Shower", "Wedding",
+  "Holiday", "Other"
+];
+
+const SignatureEditionFlowNew: React.FC<SignatureEditionFlowProps> = ({ formData, updateFormData }) => {
+  const [selectedMonth, setSelectedMonth] = useState("January");
+  const [openCalendars, setOpenCalendars] = useState<Record<string, boolean>>({});
+  const [direction, setDirection] = useState<'left' | 'right'>('right');
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Initialize monthly data if it doesn't exist
+  useEffect(() => {
+    if (!formData.editionFlow.monthlyData) {
+      const initialMonthlyData = months.reduce((acc, month) => {
+        acc[month] = { personalMessage: '', celebration: '', customDate: undefined };
+        return acc;
+      }, {} as Record<string, { personalMessage?: string, celebration?: string, customDate?: Date }>);
+      
+      updateFormData('editionFlow', { 
+        ...formData.editionFlow, 
+        monthlyData: initialMonthlyData,
+        currentMonth: "January"
+      });
+    }
+    
+    // Set the selected month from formData if available
+    if (formData.editionFlow.currentMonth) {
+      setSelectedMonth(formData.editionFlow.currentMonth);
+    }
+  }, [formData.editionFlow, updateFormData]);
+
+  const handleMonthChange = (newMonth: string) => {
+    const currentIndex = months.indexOf(selectedMonth);
+    const newIndex = months.indexOf(newMonth);
+    
+    // Determine direction for animation
+    setDirection(newIndex > currentIndex ? 'right' : 'left');
+    
+    setSelectedMonth(newMonth);
+    updateFormData('editionFlow', { 
+      ...formData.editionFlow, 
+      currentMonth: newMonth
+    });
+  };
+
+  const handlePrevMonth = () => {
+    const currentIndex = months.indexOf(selectedMonth);
+    if (currentIndex > 0) {
+      const prevMonth = months[currentIndex - 1];
+      setDirection('left');
+      setSelectedMonth(prevMonth);
+      updateFormData('editionFlow', { 
+        ...formData.editionFlow, 
+        currentMonth: prevMonth
+      });
+    }
+  };
+
+  const handleNextMonth = () => {
+    const currentIndex = months.indexOf(selectedMonth);
+    if (currentIndex < months.length - 1) {
+      const nextMonth = months[currentIndex + 1];
+      setDirection('right');
+      setSelectedMonth(nextMonth);
+      updateFormData('editionFlow', { 
+        ...formData.editionFlow, 
+        currentMonth: nextMonth
+      });
+    }
+  };
+
+  const handleMonthDataChange = (field: string, value: any) => {
+    if (formData.editionFlow.monthlyData) {
+      const updatedMonthlyData = {
+        ...formData.editionFlow.monthlyData,
+        [selectedMonth]: {
+          ...formData.editionFlow.monthlyData[selectedMonth],
+          [field]: value
+        }
+      };
+      
+      updateFormData('editionFlow', { 
+        ...formData.editionFlow, 
+        monthlyData: updatedMonthlyData
+      });
+    }
+  };
+
+  const handleCalendarToggle = (month: string, isOpen: boolean) => {
+    setOpenCalendars(prev => ({
+      ...prev,
+      [month]: isOpen
+    }));
+  };
+
+  // Get adjacent months for navigation
+  const currentIndex = months.indexOf(selectedMonth);
+  const prevMonth = currentIndex > 0 ? months[currentIndex - 1] : null;
+  const nextMonth = currentIndex < months.length - 1 ? months[currentIndex + 1] : null;
+
+  // Get current month's data
+  const currentMonthData = formData.editionFlow.monthlyData?.[selectedMonth] || { 
+    personalMessage: '', 
+    celebration: '', 
+    customDate: undefined 
+  };
+
+  // Animation variants for the carousel
+  const variants = {
+    enter: (direction: 'left' | 'right') => ({
+      x: direction === 'right' ? 500 : -500,
+      opacity: 0
+    }),
+    center: {
+      x: 0,
+      opacity: 1
+    },
+    exit: (direction: 'left' | 'right') => ({
+      x: direction === 'right' ? -500 : 500,
+      opacity: 0
+    })
+  };
+
+  return (
+    <div className="space-y-5 pb-8">
+      <div className="space-y-3 text-center px-4">
+        <h1 className="text-3xl sm:text-4xl font-bold text-legacy-green font-playfair">Personalize Your Cards</h1>
+        <p className="text-lg sm:text-xl text-legacy-dark/80">
+          Add personal messages to each month's card to make them extra special.
+        </p>
+      </div>
+      
+      {/* Progress indicator - dots row */}
+      <div className="flex justify-center items-center mb-6">
+        <div className="flex space-x-2">
+          {months.map((month, index) => {
+            const isActive = month === selectedMonth;
+            const isComplete = Boolean(formData.editionFlow.monthlyData?.[month]?.personalMessage);
+            
+            return (
+              <div 
+                key={month}
+                className={cn(
+                  "w-2.5 h-2.5 rounded-full transition-all",
+                  isActive 
+                    ? "bg-legacy-green" 
+                    : isComplete 
+                      ? "bg-legacy-green/30" 
+                      : "border border-gray-300 bg-transparent"
+                )}
+                aria-label={`Month ${index + 1}: ${month}`}
+              />
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Carousel container */}
+      <div 
+        ref={carouselRef}
+        className="relative overflow-hidden"
+        style={{ minHeight: '520px' }}
+      >
+        <AnimatePresence initial={false} custom={direction} mode="wait">
+          <motion.div
+            key={selectedMonth}
+            custom={direction}
+            variants={variants}
+            initial="enter"
+            animate="center"
+            exit="exit"
+            transition={{
+              x: { type: "spring", stiffness: 300, damping: 30 },
+              opacity: { duration: 0.2 }
+            }}
+            className="absolute w-full"
+          >
+            <div className="w-full px-4">
+              <div className="max-w-lg mx-auto bg-white rounded-xl shadow-md overflow-hidden border border-legacy-cream/50">
+                {/* Month header */}
+                <div className="bg-legacy-green/10 p-4 border-b border-legacy-cream/30">
+                  <h2 className="text-2xl font-medium text-center text-legacy-green">{selectedMonth}</h2>
+                </div>
+                
+                {/* Month content */}
+                <div className="p-5 space-y-5">
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="personalMessage" className="text-base font-medium">Personal Message</Label>
+                      <span className="text-xs text-muted-foreground">Optional</span>
+                    </div>
+                    <Textarea 
+                      id="personalMessage"
+                      className="min-h-[120px] text-base p-4"
+                      placeholder={`Add a personal note for the ${selectedMonth} card...`}
+                      value={currentMonthData.personalMessage || ''}
+                      onChange={(e) => handleMonthDataChange('personalMessage', e.target.value)}
+                    />
+                    <p className="text-muted-foreground text-xs">This message will appear inside the card.</p>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-base font-medium">Special Celebration</Label>
+                      <span className="text-xs text-muted-foreground">Optional</span>
+                    </div>
+                    
+                    <Select 
+                      value={currentMonthData.celebration || ''}
+                      onValueChange={(value) => handleMonthDataChange('celebration', value)}
+                    >
+                      <SelectTrigger className="h-11 text-base">
+                        <SelectValue placeholder="Select celebration type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectGroup>
+                          {celebrationTypes.map((type) => (
+                            <SelectItem key={type} value={type}>{type}</SelectItem>
+                          ))}
+                        </SelectGroup>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-base font-medium">Custom Delivery Date</Label>
+                      <span className="text-xs text-muted-foreground">Optional</span>
+                    </div>
+                    
+                    <Popover 
+                      open={openCalendars[selectedMonth]} 
+                      onOpenChange={(open) => handleCalendarToggle(selectedMonth, open)}
+                    >
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className="w-full h-11 justify-start text-left font-normal text-base"
+                        >
+                          <CalendarIcon className="mr-2 h-5 w-5" />
+                          {currentMonthData.customDate ? 
+                            format(currentMonthData.customDate, "PPP") : 
+                            <span className="text-muted-foreground">Select delivery date</span>
+                          }
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 pointer-events-auto z-50" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={currentMonthData.customDate}
+                          onSelect={(date) => {
+                            if (date) {
+                              handleMonthDataChange('customDate', date);
+                              // Close the popover after selection
+                              handleCalendarToggle(selectedMonth, false);
+                            }
+                          }}
+                          initialFocus
+                          className="p-3 pointer-events-auto"
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+
+                  {/* Month Navigation Buttons */}
+                  <div className="flex justify-between items-center w-full max-w-lg mx-auto mt-6 pt-3 border-t border-legacy-cream/30">
+                    {prevMonth ? (
+                      <Button 
+                        variant="ghost" 
+                        onClick={handlePrevMonth}
+                        className="text-legacy-dark/60 hover:text-legacy-green hover:bg-transparent flex items-center px-2"
+                        aria-label={`Go to previous month: ${prevMonth}`}
+                      >
+                        <ChevronLeft className="h-5 w-5 mr-1" />
+                        {prevMonth}
+                      </Button>
+                    ) : (
+                      <div className="w-24"></div> /* Empty placeholder when no previous month */
+                    )}
+                    
+                    {nextMonth ? (
+                      <Button 
+                        onClick={handleNextMonth}
+                        className="bg-legacy-green/10 text-legacy-green hover:bg-legacy-green/20 flex items-center font-medium px-4"
+                        aria-label={`Go to next month: ${nextMonth}`}
+                      >
+                        {nextMonth}
+                        <ChevronRight className="h-5 w-5 ml-1" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        className="bg-legacy-green text-white hover:bg-legacy-green/90 px-6"
+                        onClick={() => {/* Handle completion */}}
+                      >
+                        Complete
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="bg-legacy-cream/50 p-4 sm:p-6 rounded-lg max-w-3xl mx-auto mt-8">
+        <h3 className="font-medium text-lg mb-2">About Signature Editions</h3>
+        <p className="text-sm sm:text-base text-legacy-dark/80">
+          Our Signature Editions contain professionally written stories and beautiful illustrations that follow your selected theme throughout the year. Your personal messages add that extra touch that makes each card unique.
+        </p>
+      </div>
+    </div>
+  );
+};
+
+export default SignatureEditionFlowNew; 
