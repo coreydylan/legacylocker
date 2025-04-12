@@ -4,42 +4,35 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { User, Mail } from 'lucide-react';
-import { useSessionStore } from '@/lib/sessionStore';
 import { cn } from '@/lib/utils';
 
-const PurchaserInfo: React.FC = () => {
-  const { session, updateSession, nextStep } = useSessionStore();
-  const purchaser = session.purchaser;
+interface PurchaserInfoProps {
+  formData: {
+    fullName: string;
+    email: string;
+  };
+  onUpdate: (key: string, value: any) => void;
+  onNext: () => void;
+}
 
-  const isEmailValid = purchaser.email.trim() !== '' &&
-                       /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(purchaser.email);
-  const isNameValid = purchaser.fullName.trim() !== '';
+const PurchaserInfo: React.FC<PurchaserInfoProps> = ({ formData, onUpdate, onNext }) => {
+  const purchaser = formData || { fullName: '', email: '' };
+
+  const isEmailValid = purchaser.email?.trim() !== '' &&
+                       /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(purchaser.email || '');
+  const isNameValid = purchaser.fullName?.trim() !== '';
   const isValid = isNameValid && isEmailValid;
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { id, value } = e.target;
-    updateSession(`purchaser.${id}`, value);
+    onUpdate(id, value);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("PurchaserInfo: Submit attempt...");
     
-    const currentName = session.purchaser.fullName;
-    const currentEmail = session.purchaser.email;
-    const currentEmailValid = currentEmail.trim() !== '' && /^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$/.test(currentEmail);
-    const currentNameValid = currentName.trim() !== '';
-    const currentIsValid = currentNameValid && currentEmailValid;
-
-    console.log(`  Name: '${currentName}' (Valid: ${currentNameValid})`);
-    console.log(`  Email: '${currentEmail}' (Valid: ${currentEmailValid})`);
-    console.log(`  Overall Valid (re-checked): ${currentIsValid}`);
-
-    if (currentIsValid) {
-      console.log("  Form is valid. Proceeding to next step.");
-      nextStep();
-    } else {
-      console.log("  Form is invalid. Aborting step change.");
+    if (isValid) {
+      onNext();
     }
   };
 
@@ -74,17 +67,17 @@ const PurchaserInfo: React.FC = () => {
                 id="fullName"
                 type="text"
                 placeholder="Your full name"
-                value={purchaser.fullName}
+                value={purchaser.fullName || ''}
                 onChange={handleInputChange}
                 className={cn(
                   "pl-10 h-12",
-                  !isNameValid && purchaser.fullName.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
+                  !isNameValid && purchaser.fullName?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
                 )}
                 required
                 aria-invalid={!isNameValid}
               />
             </div>
-            {!isNameValid && purchaser.fullName.length > 0 && (
+            {!isNameValid && purchaser.fullName?.length > 0 && (
               <p className="text-xs text-red-600 pt-1">Please enter your full name.</p>
             )}
           </div>
@@ -102,17 +95,17 @@ const PurchaserInfo: React.FC = () => {
                 id="email"
                 type="email"
                 placeholder="your.email@example.com"
-                value={purchaser.email}
+                value={purchaser.email || ''}
                 onChange={handleInputChange}
                 className={cn(
                   "pl-10 h-12",
-                  !isEmailValid && purchaser.email.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
+                  !isEmailValid && purchaser.email?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
                 )}
                 required
                 aria-invalid={!isEmailValid}
               />
             </div>
-            {!isEmailValid && purchaser.email.length > 0 && (
+            {!isEmailValid && purchaser.email?.length > 0 && (
               <p className="text-xs text-red-600 pt-1">Please enter a valid email address.</p>
             )}
             <p className="text-xs text-gray-500 pt-1">

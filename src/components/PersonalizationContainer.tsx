@@ -2,10 +2,21 @@ import React from 'react';
 import { SessionProvider } from '@/contexts/SessionContext';
 import OnboardingFlow from './onboarding/OnboardingFlow';
 
-const PersonalizationContainer: React.FC = () => {
+interface PersonalizationContainerProps {
+  editionName?: string;
+  onBack?: () => void;
+}
+
+const PersonalizationContainer: React.FC<PersonalizationContainerProps> = ({ 
+  editionName,
+  onBack
+}) => {
   return (
     <SessionProvider>
-      <OnboardingFlow />
+      <OnboardingFlow 
+        editionName={editionName}
+        onBack={onBack}
+      />
     </SessionProvider>
   );
 };

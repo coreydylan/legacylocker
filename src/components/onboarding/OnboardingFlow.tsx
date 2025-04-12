@@ -20,7 +20,15 @@ const STEPS = {
 
 type Step = typeof STEPS[keyof typeof STEPS];
 
-const OnboardingFlow: React.FC = () => {
+interface OnboardingFlowProps {
+  editionName?: string;
+  onBack?: () => void;
+}
+
+const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ 
+  editionName,
+  onBack: externalOnBack
+}) => {
   // Get state and actions from Zustand store
   const {
     session,
@@ -41,7 +49,12 @@ const OnboardingFlow: React.FC = () => {
     console.clear();
     console.log("OnboardingFlow: Initializing session...");
     initialize();
-  }, [initialize]);
+    
+    // If edition name is provided, update the session
+    if (editionName) {
+      updateSession('editionName', editionName);
+    }
+  }, [initialize, editionName, updateSession]);
   
   // Update last saved time display based on session updates
   useEffect(() => {
@@ -67,7 +80,7 @@ const OnboardingFlow: React.FC = () => {
     // Persist email directly in session for potential resume link
     updateSession('email', email);
     // Also update purchaser email if not already set
-    if (!session.purchaser.email) {
+    if (!session.purchaser?.email) {
       updateSession('purchaser.email', email);
     }
     setLastSavedTime(new Date()); // Update display immediately
@@ -75,10 +88,14 @@ const OnboardingFlow: React.FC = () => {
     // NOTE: updateSession already calls saveSession internally
   };
   
-  // Handle back button
+  // Handle back button - use external handler if provided
   const handleBack = () => {
     console.log("OnboardingFlow: Back button clicked");
-    prevStep();
+    if (externalOnBack) {
+      externalOnBack();
+    } else {
+      prevStep();
+    }
   };
   
   // Handle closing onboarding
@@ -165,9 +182,12 @@ const OnboardingFlow: React.FC = () => {
       <SaveProgressModal
         open={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        onSave={handleSaveWithEmail}
-        // Pass initial email from session if available
-        initialEmail={session.email || session.purchaser?.email || ''}
+        formData={session}
+        onSaveProgress={async (email, data) => {
+          handleSaveWithEmail(email);
+          return true;
+        }}
+        setLastSavedTime={setLastSavedTime}
       />
     </div>
   );

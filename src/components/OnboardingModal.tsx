@@ -1,4 +1,3 @@
-
 import React, { useEffect } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useOnboardingForm } from '@/hooks/useOnboardingForm';
@@ -139,7 +138,6 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
               handleBack={handleBack}
               onClose={handleModalClose}
               setCurrentStep={setCurrentStep}
-              formData={formData}
               lastSavedTime={lastSavedTime}
               onSaveClick={() => setIsSaveModalOpen(true)}
             />
@@ -150,7 +148,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
               currentStep={currentStep}
               selectedSeries={selectedSeries}
               formData={formData}
-              updateFormData={handleUpdateFormData}
+              updateFormData={(key, value) => handleUpdateFormData(key as keyof typeof formData, value)}
               handleSubmit={handleSubmit}
             />
           </div>
@@ -170,7 +168,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
       </Dialog>
 
       <SaveProgressModal
-        isOpen={isSaveModalOpen}
+        open={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
         formData={formData}
         onSaveProgress={handleSaveProgress}
