@@ -14,7 +14,7 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: 'Missing email or sessionId' })
   }
 
-  const resumeLink = `https://legacylocker.co/?session_id=${sessionId}`
+  const resumeLink = `https://legacylockerco.com/?session_id=${sessionId}`
 
   try {
     const { error } = await resend.emails.send({
