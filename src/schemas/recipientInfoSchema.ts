@@ -34,30 +34,35 @@ const baseRecipientSchema = z.object({
   welcomeMessage: z.string().optional(),
 });
 
-// Individual recipient schema
-const individualRecipientSchema = baseRecipientSchema.extend({
+// Define individual recipient schema
+const individualSchema = baseRecipientSchema.extend({
   type: z.literal('individual'),
-  firstName: z.string().min(1, { message: 'First name is required' }),
-  lastName: z.string().min(1, { message: 'Last name is required' }),
-  birthday: dateWithYearValidation, // Use custom validator
+  firstName: z.string().min(1, "First name is required"),
+  lastName: z.string().min(1, "Last name is required"),
+  // Expect optional string for birthday
+  birthday: z.string().optional().nullable(), 
 });
 
-// Couple recipient schema
-const coupleRecipientSchema = baseRecipientSchema.extend({
+// Define couple recipient schema
+const coupleSchema = baseRecipientSchema.extend({
   type: z.literal('couple'),
-  recipient1FirstName: z.string().min(1, { message: 'First name (1) is required' }),
-  recipient1LastName: z.string().min(1, { message: 'Last name (1) is required' }),
-  recipient2FirstName: z.string().min(1, { message: 'First name (2) is required' }),
-  recipient2LastName: z.string().min(1, { message: 'Last name (2) is required' }),
-  recipient1Birthday: dateWithYearValidation, // Use custom validator
-  recipient2Birthday: dateWithYearValidation, // Use custom validator
-  anniversary: dateWithYearValidation, // Use custom validator
+  recipient1FirstName: z.string().min(1, "First recipient's first name is required"),
+  recipient1LastName: z.string().min(1, "First recipient's last name is required"),
+  recipient2FirstName: z.string().min(1, "Second recipient's first name is required"),
+  recipient2LastName: z.string().min(1, "Second recipient's last name is required"),
+  relationship: z.string().min(1, "Relationship is required"),
+  // Expect optional strings for dates
+  recipient1Birthday: z.string().optional().nullable(),
+  recipient2Birthday: z.string().optional().nullable(),
+  anniversary: z.string().optional().nullable(),
+  includeWelcomeCard: z.boolean().optional(),
+  welcomeMessage: z.string().optional(),
 });
 
-// Discriminated union for recipient types
+// Discriminated union based on the type field
 export const recipientInfoSchema = z.discriminatedUnion('type', [
-  individualRecipientSchema,
-  coupleRecipientSchema
+  individualSchema,
+  coupleSchema,
 ]);
 
 export type RecipientInfoFormValues = z.infer<typeof recipientInfoSchema>;

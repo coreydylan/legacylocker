@@ -1,4 +1,3 @@
-
 // Define the recipient types
 export interface IndividualRecipient {
   type: 'individual';
@@ -86,12 +85,11 @@ export interface FormData {
 }
 
 export interface SeriesType {
-  id?: string;
-  categoryName?: string;
-  subcategoryName?: string;
-  locationName?: string;
-  display: string;
-  type?: 'signature' | 'custom' | 'concierge';
+  id: string;
+  label: string;
+  description?: string;
+  type: 'signature' | 'custom' | 'concierge';
+  isHighlighted?: boolean;
 }
 
 // Ensure FormSubmissionResult has a boolean success property

@@ -1,21 +1,16 @@
 import React from 'react';
 import OnboardingNavigation from './OnboardingNavigation';
-import SaveProgressButton from './SaveProgressButton';
 import OnboardingStepper from './OnboardingStepper';
 import { useSessionStore } from '@/lib/sessionStore';
 
 interface OnboardingHeaderProps {
   handleBack: () => void;
   onClose: () => void;
-  onSaveClick: () => void;
-  lastSavedTime?: Date | null;
 }
 
 const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
   handleBack,
   onClose,
-  lastSavedTime,
-  onSaveClick
 }) => {
   const { session } = useSessionStore();
   const selectedEdition = session.selectedEdition;
@@ -40,10 +35,6 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
              'Concierge'} • {selectedEdition.label}
           </div>
         )}
-        <SaveProgressButton
-          onClick={onSaveClick}
-          lastSavedTime={lastSavedTime}
-        />
       </div>
     </div>
   );

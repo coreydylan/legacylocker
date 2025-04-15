@@ -40,6 +40,8 @@ const CustomMonthAccordion: React.FC = () => {
   const [openAccordionValue, setOpenAccordionValue] = useState<string | undefined>(undefined);
   // State to manage which tab to open initially when an item is opened via section tracker
   const [initialTabTarget, setInitialTabTarget] = useState<'story' | 'artwork' | 'footer'>('story');
+  // State to track if initial open has been attempted
+  const [initialOpenAttempted, setInitialOpenAttempted] = useState(false);
 
   // Calculate chronological months
   const orderedMonths = useMemo(() => getChronologicalMonths(), []);
@@ -53,19 +55,27 @@ const CustomMonthAccordion: React.FC = () => {
     return map;
   }, [customData]);
 
-  // Automatically open the first incomplete month when data is loaded
+  // Automatically open the first incomplete month ONCE when data is loaded
   useEffect(() => {
-     if (isHydrated && customDataMap.size === 12 && !openAccordionValue) {
-         const firstIncomplete = orderedMonths.find(({ month, year }) => {
-             const data = customDataMap.get(`${month}-${year}`);
-             const status = data ? getCompletionStatus(data).overall : 'not-started';
-             return status !== 'complete';
-         });
-         if (firstIncomplete) {
-             setOpenAccordionValue(`${firstIncomplete.month}-${firstIncomplete.year}`);
+     // Only run if hydrated, data is ready, and we haven't tried opening yet
+     if (isHydrated && customDataMap.size === 12 && !initialOpenAttempted) {
+         // Check if something isn't already open (e.g., potentially restored)
+         if (openAccordionValue === undefined) {
+             const firstIncomplete = orderedMonths.find(({ month, year }) => {
+                 const data = customDataMap.get(`${month}-${year}`);
+                 const status = data ? getCompletionStatus(data).overall : 'not-started';
+                 return status !== 'complete';
+             });
+             if (firstIncomplete) {
+                 console.log("[CustomMonthAccordion Effect]: Automatically opening first incomplete month:", `${firstIncomplete.month}-${firstIncomplete.year}`);
+                 setOpenAccordionValue(`${firstIncomplete.month}-${firstIncomplete.year}`);
+             }
          }
+         // Mark that we've attempted the initial open
+         setInitialOpenAttempted(true);
      }
-  }, [isHydrated, customDataMap, orderedMonths, openAccordionValue]);
+  // Only depend on hydration status, data readiness, and the attempt flag
+  }, [isHydrated, customDataMap, orderedMonths, initialOpenAttempted, openAccordionValue]); // Keep openAccordionValue here to prevent potential race conditions where it might be set externally before this runs
   
    // Helper function from CustomMonthCard (needed for useEffect logic)
    const getCompletionStatus = (data: typeof customData[0]): { overall: 'complete' | 'in-progress' | 'not-started' } => {

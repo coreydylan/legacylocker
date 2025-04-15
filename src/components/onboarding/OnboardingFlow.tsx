@@ -74,6 +74,7 @@ const findFirstIncompleteStep = (session: SessionData): number => {
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ 
   onBack: externalOnBack
 }) => {
+  console.log("--- Rendering OnboardingFlow ---");
   const {
     session,
     isLoading,
@@ -87,12 +88,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   
   useEffect(() => {
-    console.clear();
-    console.log("OnboardingFlow: Initializing session...");
+    console.log("OnboardingFlow: Initializing session (in useEffect)...");
     initialize();
-    
-    // Don't include session in deps, it creates an infinite loop
-  }, [initialize]); // Removed session from dependency array
+  }, [initialize]);
   
   // Separate effect for logging session changes
   useEffect(() => {
@@ -130,7 +128,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     console.log('OnboardingFlow: Close button clicked (logic handled by OnboardingModal)');
   };
   
+  console.log(`OnboardingFlow: isLoading=${isLoading}, session defined=${!!session}`);
   if (isLoading || !session) {
+    console.log("OnboardingFlow: Rendering Loading State");
     return (
       <div className="flex items-center justify-center min-h-screen bg-legacy-cream">
         <div className="text-lg font-medium text-legacy-green animate-pulse">Loading Onboarding...</div>
@@ -141,27 +141,27 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   // Render current step based on session.currentStep, validated
   const renderCurrentStep = () => {
     console.log(`OnboardingFlow: Attempting to render step ${session.currentStep}`);
-    console.log(`OnboardingFlow: Current Session data:`, session);
+    console.log(`OnboardingFlow: Current Session data:`, JSON.stringify(session));
 
-    // Validate session and find first incomplete step before rendering
     let stepToRender = session.currentStep;
-    if (!isValidSession(session)) {
-        console.warn("Current session is invalid according to isValidSession, resetting to step 1");
-        // If the whole session is invalid (e.g., stale), might need a reset mechanism
-        // For now, let's try finding the first truly incomplete step based on data presence
+    const isSessionValid = isValidSession(session);
+    console.log(`OnboardingFlow: isValidSession result: ${isSessionValid}`);
+    if (!isSessionValid) {
+        console.warn("Current session is invalid according to isValidSession, finding first incomplete step");
         stepToRender = findFirstIncompleteStep(session);
-        // setCurrentStep(stepToRender); // Optionally force store update
         console.log(`Redirecting to first incomplete step: ${stepToRender}`);
     }
-    // Additional check: is the data needed *for* this step present?
-    // This prevents rendering step 5 if step 4 data is missing
-    if (!isStepDataValid(session, stepToRender)){
-        console.warn(`Data for step ${stepToRender} is invalid. Finding previous valid step.`);
+    
+    const isDataValidForStep = isStepDataValid(session, stepToRender);
+    console.log(`OnboardingFlow: isStepDataValid for step ${stepToRender}: ${isDataValidForStep}`);
+    if (!isDataValidForStep){
+        console.warn(`Data for step ${stepToRender} is invalid. Finding first incomplete step.`);
         stepToRender = findFirstIncompleteStep(session);
         console.log(`Redirecting to first incomplete step instead: ${stepToRender}`);
     }
 
-    switch (stepToRender) { // Use validated stepToRender
+    console.log(`OnboardingFlow: Final step to render: ${stepToRender}`);
+    switch (stepToRender) {
       case STEPS.RECIPIENT_SELECTION:
         return <RecipientSelector />;
 
@@ -206,16 +206,13 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         return <ReviewCheckout />;
 
       default:
-        console.error(`OnboardingFlow: Unknown or invalid validated step number: ${stepToRender}`);
-        // Fallback to the first step if something goes wrong
-        // setCurrentStep(STEPS.RECIPIENT_SELECTION); // Careful with loops
-        return <RecipientSelector />; // Render step 1 as fallback
+        console.log(`OnboardingFlow: No matching component for step ${stepToRender}, rendering null`);
+        return null;
     }
   };
 
+  console.log("OnboardingFlow: Rendering step content area");
   return (
-    // Remove surrounding div if not needed, just render the step content
-    // The parent (OnboardingModal) provides the main layout now
     <div className="flex-grow container mx-auto px-4 py-8">
       {/* <<< Remove OnboardingHeader rendering >>> */}
       {/* 

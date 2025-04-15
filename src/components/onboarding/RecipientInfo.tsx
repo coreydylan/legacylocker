@@ -13,6 +13,7 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { recipientInfoSchema, RecipientInfoFormValues } from '@/schemas/recipientInfoSchema';
 import { cn } from '@/lib/utils';
+import { CalendarDate, DateValue } from '@internationalized/date';
 
 const INDIVIDUAL_RELATIONSHIPS = [
   'Parent',
@@ -41,48 +42,86 @@ const RecipientInfo: React.FC = () => {
   const { goNext, goBack } = useOnboardingNavigation();
   const recipientType = session.recipientType;
   
+  // Helper to safely convert CalendarDate to ISO string
+  const dateToISOString = (date: DateValue | null | undefined): string | null => {
+    if (!date) return null;
+    try {
+      // Convert CalendarDate/DateValue to a standard JS Date object first
+      const jsDate = new Date(date.year, date.month - 1, date.day); // Use constructor
+      return jsDate.toISOString();
+    } catch (e) {
+      console.error("Error converting date to ISO string:", e);
+      return null;
+    }
+  };
+  
+  // Helper to safely parse ISO string or YYYY-MM-DD to CalendarDate
+  const parseDateToCalendarDate = (dateStr: string | null | undefined): CalendarDate | undefined => {
+    console.log(`RecipientInfo: parseDateToCalendarDate called with: '${dateStr}'`);
+    if (!dateStr) return undefined;
+    try {
+      // Try parsing as full ISO string first
+      let date = new Date(dateStr);
+      if (!isNaN(date.getTime())) {
+        // Extract YYYY-MM-DD from the JS Date (in UTC) to avoid timezone shifts
+        const year = date.getUTCFullYear();
+        const month = date.getUTCMonth() + 1; // JS months are 0-indexed
+        const day = date.getUTCDate();
+        const parsed = new CalendarDate(year, month, day);
+        console.log(`RecipientInfo: parseDateToCalendarDate (ISO path) result: ${parsed}`);
+        return parsed;
+      }
+      
+      // Fallback: Try parsing as YYYY-MM-DD string directly
+      const directParsed = parseDate(dateStr);
+      console.log(`RecipientInfo: parseDateToCalendarDate (YYYY-MM-DD path) result: ${directParsed}`);
+      return directParsed;
+
+    } catch (e) {
+      console.error('Error parsing date string:', dateStr, e);
+      return undefined;
+    }
+  };
+
   // Create default values based on recipient type
   const getDefaultValues = (): RecipientInfoFormValues => {
-    const recipient = session.recipient || {
-      type: recipientType,
+    // Start with fully-formed default structures for both types
+    const defaultIndividual = {
+      type: 'individual' as const,
       firstName: '',
       lastName: '',
+      relationship: '',
+      birthday: null,
+      includeWelcomeCard: false,
+      welcomeMessage: '',
+    };
+    const defaultCouple = {
+      type: 'couple' as const,
       recipient1FirstName: '',
       recipient1LastName: '',
       recipient2FirstName: '',
       recipient2LastName: '',
       relationship: '',
-      birthday: '',
-      recipient1Birthday: '',
-      recipient2Birthday: '',
-      anniversary: '',
+      recipient1Birthday: null,
+      recipient2Birthday: null,
+      anniversary: null,
       includeWelcomeCard: false,
-      welcomeMessage: ''
+      welcomeMessage: '',
     };
-    
+
+    const existingRecipient = session.recipient;
+
     if (recipientType === 'couple') {
+      // Merge existing couple data with defaults
       return {
-        type: 'couple',
-        recipient1FirstName: recipient.recipient1FirstName || '',
-        recipient1LastName: recipient.recipient1LastName || '',
-        recipient2FirstName: recipient.recipient2FirstName || '',
-        recipient2LastName: recipient.recipient2LastName || '',
-        relationship: recipient.relationship || '',
-        recipient1Birthday: recipient.recipient1Birthday || '',
-        recipient2Birthday: recipient.recipient2Birthday || '',
-        anniversary: recipient.anniversary || '',
-        includeWelcomeCard: recipient.includeWelcomeCard || false,
-        welcomeMessage: recipient.welcomeMessage || '',
+        ...defaultCouple,
+        ...(existingRecipient && existingRecipient.type === 'couple' ? existingRecipient : {}),
       };
-    } else {
+    } else { // Default to individual if type is null or 'individual'
+      // Merge existing individual data with defaults
       return {
-        type: 'individual',
-        firstName: recipient.firstName || '',
-        lastName: recipient.lastName || '',
-        relationship: recipient.relationship || '',
-        birthday: recipient.birthday || '',
-        includeWelcomeCard: recipient.includeWelcomeCard || false,
-        welcomeMessage: recipient.welcomeMessage || '',
+        ...defaultIndividual,
+        ...(existingRecipient && existingRecipient.type === 'individual' ? existingRecipient : {}),
       };
     }
   };
@@ -94,7 +133,8 @@ const RecipientInfo: React.FC = () => {
     control,
     formState: { errors, isValid } 
   } = useForm<RecipientInfoFormValues>({
-    resolver: zodResolver(recipientInfoSchema),
+    // Use the schema that now expects strings for dates
+    resolver: zodResolver(recipientInfoSchema), 
     defaultValues: getDefaultValues(),
     mode: 'onChange'
   });
@@ -129,26 +169,10 @@ const RecipientInfo: React.FC = () => {
   };
 
   const onSubmit = (data: RecipientInfoFormValues) => {
-    console.log('RecipientInfo: Form validated, saving data:', data);
+    console.log('RecipientInfo: Form validated, saving data (dates as strings):', data);
+    // Data already contains dates as ISO strings or null
     updateSession('recipient', data);
     goNext();
-  };
-
-  const parseDateSafely = (dateStr?: string) => {
-    if (!dateStr) return undefined;
-    try {
-      // Handle ISO strings
-      if (dateStr.includes('T')) {
-        const date = new Date(dateStr);
-        if (isNaN(date.getTime())) return undefined;
-        return parseDate(date.toISOString().split('T')[0]);
-      }
-      // Handle YYYY-MM-DD strings
-      return parseDate(dateStr);
-    } catch (e) {
-      console.error('Error parsing date:', e);
-      return undefined;
-    }
   };
 
   return (
@@ -261,8 +285,8 @@ const RecipientInfo: React.FC = () => {
                 control={control}
                 render={({ field }) => (
                   <JollyDateField
-                    value={parseDateSafely(field.value)}
-                    onChange={(date) => field.onChange(date ? date.toString() : '')}
+                    value={parseDateToCalendarDate(field.value)}
+                    onChange={(date) => field.onChange(dateToISOString(date))}
                     className="h-12 w-full"
                   />
                 )}
@@ -329,8 +353,8 @@ const RecipientInfo: React.FC = () => {
                     control={control}
                     render={({ field }) => (
                       <JollyDateField
-                        value={parseDateSafely(field.value)}
-                        onChange={(date) => field.onChange(date ? date.toString() : '')}
+                        value={parseDateToCalendarDate(field.value)}
+                        onChange={(date) => field.onChange(dateToISOString(date))}
                         className="h-12 w-full"
                       />
                     )}
@@ -385,8 +409,8 @@ const RecipientInfo: React.FC = () => {
                     control={control}
                     render={({ field }) => (
                       <JollyDateField
-                        value={parseDateSafely(field.value)}
-                        onChange={(date) => field.onChange(date ? date.toString() : '')}
+                        value={parseDateToCalendarDate(field.value)}
+                        onChange={(date) => field.onChange(dateToISOString(date))}
                         className="h-12 w-full"
                       />
                     )}
@@ -447,8 +471,8 @@ const RecipientInfo: React.FC = () => {
                   control={control}
                   render={({ field }) => (
                     <JollyDateField
-                      value={parseDateSafely(field.value)}
-                      onChange={(date) => field.onChange(date ? date.toString() : '')}
+                      value={parseDateToCalendarDate(field.value)}
+                      onChange={(date) => field.onChange(dateToISOString(date))}
                       className="h-12 w-full"
                     />
                   )}

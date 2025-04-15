@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { User, Mail, ChevronLeft } from 'lucide-react';
@@ -12,7 +11,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { purchaserInfoSchema, PurchaserInfoFormValues } from '@/schemas/purchaserInfoSchema';
 
 const PurchaserInfo: React.FC = () => {
-  const { session, updateSession } = useSessionStore();
+  const { session, updateSession, startSession, sessionMetadata } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   
   // Initialize form with react-hook-form and zod validation
@@ -32,109 +31,100 @@ const PurchaserInfo: React.FC = () => {
   const onSubmit = (data: PurchaserInfoFormValues) => {
     console.log('PurchaserInfo: Form validated, saving data:', data);
     updateSession('purchaser', data);
+    
+    // Activate the session if it's not already active, using editionFlow.type
+    const editionType = session.editionFlow?.type;
+    if (!sessionMetadata.isActive && editionType) {
+      console.log('PurchaserInfo: Activating session with edition type:', editionType);
+      startSession(editionType);
+    }
+    
     goNext();
   };
 
   return (
-    <div className="max-w-xl mx-auto py-8">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-semibold text-legacy-green mb-4">
-          Your Information
-        </h1>
-        <p className="text-lg text-gray-600">
-          Please provide your details so we can personalize your experience.
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      transition={{ duration: 0.3 }}
+      className="max-w-md mx-auto"
+    >
+      <div className="mb-6">
+        <h2 className="text-2xl font-semibold text-legacy-dark mb-2">Your Information</h2>
+        <p className="text-muted-foreground">
+          Please provide your contact information so we can keep you updated on your order.
         </p>
       </div>
 
-      <motion.form
-        onSubmit={handleSubmit(onSubmit)}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        <div className="space-y-6">
-          {/* Full Name Input */}
-          <div className="space-y-2">
-            <Label htmlFor="fullName" className="text-legacy-green font-medium">
-              Full Name
-            </Label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <User className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input
-                id="fullName"
-                type="text"
-                placeholder="Your full name"
-                className={cn(
-                  "!px-0 !pl-12 h-12 w-full",
-                  errors.fullName ? "border-red-500 focus-visible:ring-red-500" : ""
-                )}
-                {...register('fullName')}
-                aria-invalid={!!errors.fullName}
-                aria-describedby={errors.fullName ? "fullName-error" : undefined}
-              />
-            </div>
-            {errors.fullName && (
-              <p id="fullName-error" className="text-xs text-red-600 pt-1">{errors.fullName.message}</p>
-            )}
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="space-y-2">
+          <Label htmlFor="fullName">Full Name</Label>
+          <div className={cn(
+            "flex items-center h-12 w-full rounded-md border border-input bg-background pl-3 pr-3",
+            "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+            errors.fullName && "border-red-500 focus-within:ring-red-500"
+          )}>
+            <User className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
+            <input
+              id="fullName"
+              placeholder="Your full name"
+              className={cn(
+                "flex-1 w-full h-full p-0 border-0 bg-transparent focus:outline-none focus:ring-0 placeholder:text-muted-foreground",
+                "text-base md:text-sm"
+              )}
+              {...register('fullName')}
+            />
           </div>
-          
-          {/* Email Input */}
-          <div className="space-y-2">
-            <Label htmlFor="email" className="text-legacy-green font-medium">
-              Email Address
-            </Label>
-            <div className="relative">
-              <div className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                <Mail className="h-5 w-5 text-gray-400" />
-              </div>
-              <Input
-                id="email"
-                type="email"
-                placeholder="your.email@example.com"
-                className={cn(
-                  "!px-0 !pl-12 h-12 w-full",
-                  errors.email ? "border-red-500 focus-visible:ring-red-500" : ""
-                )}
-                {...register('email')}
-                aria-invalid={!!errors.email}
-                aria-describedby={errors.email ? "email-error" : undefined}
-              />
-            </div>
-            {errors.email && (
-              <p id="email-error" className="text-xs text-red-600 pt-1">{errors.email.message}</p>
-            )}
-            <p className="text-xs text-gray-500 pt-1">
-              We'll use this to save your progress and contact you about your order.
-            </p>
-          </div>
+          {errors.fullName && (
+            <p className="text-sm text-red-500">{errors.fullName.message}</p>
+          )}
         </div>
 
-        <div className="flex justify-between items-center pt-8">
+        <div className="space-y-2">
+          <Label htmlFor="email">Email Address</Label>
+          <div className={cn(
+            "flex items-center h-12 w-full rounded-md border border-input bg-background pl-3 pr-3",
+            "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+            errors.email && "border-red-500 focus-within:ring-red-500"
+          )}>
+            <Mail className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
+            <input
+              id="email"
+              type="email"
+              placeholder="your.email@example.com"
+              className={cn(
+                "flex-1 w-full h-full p-0 border-0 bg-transparent focus:outline-none focus:ring-0 placeholder:text-muted-foreground",
+                "text-base md:text-sm"
+              )}
+              {...register('email')}
+            />
+          </div>
+          {errors.email && (
+            <p className="text-sm text-red-500">{errors.email.message}</p>
+          )}
+        </div>
+
+        <div className="flex justify-between pt-4">
           <Button
             type="button"
             variant="outline"
             onClick={goBack}
-            className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
+            className="flex items-center"
           >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Back
           </Button>
           <Button
             type="submit"
-            className={cn(
-              "px-8 py-2 text-base font-medium",
-              "bg-legacy-green hover:bg-legacy-green/90 text-white",
-              "disabled:bg-gray-300 disabled:cursor-not-allowed"
-            )}
             disabled={!isValid}
+            className="bg-legacy-green hover:bg-legacy-green/90"
           >
             Continue
           </Button>
         </div>
-      </motion.form>
-    </div>
+      </form>
+    </motion.div>
   );
 };
 

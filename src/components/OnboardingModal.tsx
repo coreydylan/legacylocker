@@ -6,7 +6,10 @@ import SaveProgressModal from '@/components/onboarding/SaveProgressModal';
 import { SeriesType } from '@/types/onboarding';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { useSessionStore } from '@/lib/sessionStore';
-import SessionPill from './onboarding/SessionPill';
+import { useModalStore } from '@/lib/modalStore';
+import SaveAndCloseButton from './onboarding/SaveAndCloseButton';
+import ClearSessionButton from './onboarding/ClearSessionButton';
+import ClearSessionDialog from './onboarding/ClearSessionDialog';
 import { useToast } from '@/hooks/use-toast';
 
 export type { FormData } from '@/types/onboarding';
@@ -26,18 +29,23 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 }) => {
   const { 
     session, 
+    sessionMetadata,
     initialize, 
-    resetSession,
     updateSession,
     isLoading,
     prevStep,
     nextStep,
-    setCurrentStep
+    setCurrentStep,
+    saveSession,
+    resetSession
   } = useSessionStore();
+
+  const { closeOnboarding } = useModalStore();
   
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const hasInitialized = useRef(false);
+  const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
 
   const { toast } = useToast();
 
@@ -57,7 +65,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
           if (selectedSeries) {
             console.log("OnboardingModal: Setting selected series in session:", selectedSeries);
             updateSession('selectedSeries', selectedSeries);
+            updateSession('selectedEdition', selectedSeries);
             updateSession('editionFlow.type', selectedSeries.type || 'signature');
+            
+            // We no longer activate the session here - it will be activated after the user
+            // completes the PurchaserInfo step
           }
         } else {
           console.log("OnboardingModal: Using existing session with series:", session.selectedSeries);
@@ -84,7 +96,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleModalClose = () => {
     console.log("OnboardingModal: Closing modal...");
-    resetSession();
+    saveSession();
+    closeOnboarding();
     onClose();
   };
   
@@ -99,6 +112,18 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const handleSubmit = async () => {
     console.log("OnboardingModal: Submitting...");
     toast({ title: "Submit (Not Implemented)", description: "Checkout/Submit logic needed." });
+  };
+
+  const handleConfirmClear = () => {
+    console.log("OnboardingModal: Clearing session...");
+    resetSession(); 
+    setIsClearDialogOpen(false);
+    closeOnboarding();
+    onClose();
+    toast({
+      title: "Session Cleared",
+      description: "Your session data has been removed.",
+    });
   };
 
   return (
@@ -119,8 +144,6 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 <OnboardingHeader
                   handleBack={handleBack}
                   onClose={handleModalClose}
-                  lastSavedTime={lastSavedTime}
-                  onSaveClick={handleSaveClick}
                 />
               </div>
               
@@ -129,16 +152,35 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </div>
             </>
           )}
+          
+          {sessionMetadata.isActive && (
+            <div style={{
+              position: 'fixed', 
+              bottom: '24px', 
+              right: '24px', 
+              zIndex: 10, 
+              display: 'flex',
+              gap: '8px',
+              alignItems: 'center'
+            }}>
+              <SaveAndCloseButton onClose={handleModalClose} />
+              <ClearSessionButton onClick={() => setIsClearDialogOpen(true)} />
+            </div>
+          )}
         </DialogContent>
       </Dialog>
+
+      <ClearSessionDialog
+        open={isClearDialogOpen}
+        onOpenChange={setIsClearDialogOpen}
+        onConfirm={handleConfirmClear}
+      />
 
       <SaveProgressModal
         open={isSaveModalOpen}
         onClose={() => setIsSaveModalOpen(false)}
         setLastSavedTime={setLastSavedTime}
       />
-
-      {/* SessionPill likely needs refactoring to use store */}
     </>
   );
 };

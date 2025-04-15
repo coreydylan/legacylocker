@@ -3,7 +3,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import setWith from 'lodash/setWith';
 import cloneDeep from 'lodash/cloneDeep';
-import { format, parseISO, getMonth, isValid, getYear } from 'date-fns';
+import { format, parseISO, getMonth, isValid, getYear, addMonths } from 'date-fns';
 import truncate from 'lodash/truncate';
 
 // Interface for month-specific signature customizations
@@ -66,6 +66,8 @@ export interface SessionData {
     anniversary?: string;
     shippingAddress?: ShippingAddress;
     cardAddresseeName?: string;
+    shippingName?: string;
+    shippingNameOverridden?: boolean;
   };
   cards: {
     [month: string]: {
@@ -81,6 +83,7 @@ export interface SessionData {
   currentStep: number;
   lastCompletedStep: number;
   editionFlow: {
+    type: EditionType | null;
     monthlyData?: Record<string, MonthlyCardData>;
     currentMonth?: string;
     customEditionData?: CustomEditionData;
@@ -108,12 +111,13 @@ export interface SessionData {
   customData: CustomMonthData[]; // Added customData
 }
 
-interface ShippingAddress {
+export interface ShippingAddress {
   street?: string;
   city?: string;
   state?: string;
-  zip?: string;
+  postalCode?: string;
   country?: string;
+  full?: string;
 }
 
 export interface MonthlyCardData {
@@ -127,11 +131,11 @@ export interface MonthlyCardData {
   title: string;
 }
 
-interface CustomEditionData {
+export interface CustomEditionData {
   // ... fields ...
 }
 
-interface ConciergeEditionData {
+export interface ConciergeEditionData {
   // ... fields ...
 }
 
@@ -156,8 +160,20 @@ interface Purchaser {
   // ... existing code ...
 }
 
+// Add type safety for edition types
+export type EditionType = 'signature' | 'custom' | 'concierge';
+
+// Update SessionMetadata to use EditionType
+interface SessionMetadata {
+  sessionId: string | null;
+  isActive: boolean;
+  editionType: EditionType | null;
+  lastSaved: Date | null;
+}
+
 interface SessionStore {
   session: SessionData;
+  sessionMetadata: SessionMetadata; // Added sessionMetadata state
   isLoading: boolean;
   isHydrated: boolean;
   initialize: () => void;
@@ -171,7 +187,11 @@ interface SessionStore {
   submitSession: () => Promise<boolean>;
   initializeSignatureData: () => void;
   updateSignatureMonth: (month: string, data: Partial<SignatureMonthCustomization>) => void;
-  updateCustomMonth: (month: string, year: number, data: Partial<CustomMonthData>) => void; // Added update action
+  updateCustomMonth: (month: string, year: number, data: Partial<CustomMonthData>) => void;
+  // Added sessionMetadata actions
+  startSession: (editionType: EditionType) => void;
+  endSession: () => void;
+  saveSession: () => void;
 }
 
 const ALL_MONTHS = [
@@ -197,8 +217,7 @@ const getChronologicalMonths = (): { month: string; year: number }[] => {
   const now = new Date();
   const chronologicalMonths: { month: string; year: number }[] = [];
   for (let i = 1; i <= 12; i++) {
-    const targetDate = new Date(now);
-    targetDate.setMonth(now.getMonth() + i);
+    const targetDate = addMonths(now, i);
     chronologicalMonths.push({
       month: ALL_MONTHS[getMonth(targetDate)],
       year: getYear(targetDate),
@@ -237,13 +256,19 @@ const createNewSession = (): SessionData => {
     recipientType: null,
     selectedEdition: null,
     purchaser: { fullName: '', email: '', phone: '' },
-    recipient: { type: 'individual' }, 
+    recipient: { type: 'individual', includeWelcomeCard: false, welcomeMessage: '' }, // Ensure welcome fields defaults
     cards: { },
     createdAt: now,
     updatedAt: now,
     currentStep: 1,
     lastCompletedStep: 0,
-    editionFlow: { },
+    editionFlow: {
+      type: null,
+      monthlyData: {},
+      currentMonth: '',
+      customEditionData: undefined,
+      conciergeData: undefined,
+    },
     selectedSeries: '',
     shipping: {
       address1: '',
@@ -268,13 +293,39 @@ const createNewSession = (): SessionData => {
 
 // Define isValidSession *before* useSessionStore as it's used in onRehydrate
 export const isValidSession = (session: SessionData | null | undefined): session is SessionData => {
-  // Moved validation logic here, ensure it only uses session arg
   if (!session) return false;
   const maxSteps = 7; 
+  
+  // Basic checks (always required)
   if (!session.sessionId || typeof session.sessionId !== 'string') return false;
   if (typeof session.currentStep !== 'number' || session.currentStep < 1 || session.currentStep > maxSteps) return false;
-  if (!session.selectedEdition || typeof session.selectedEdition.type !== 'string') return false;
-  if (!session.recipientType) return false;
+
+  // --- Conditional Checks based on progress --- 
+  
+  // Only check these fields if we're past step 1
+  if (session.currentStep > 1) {
+    // selectedEdition should exist after step 1 (where it's chosen)
+    if (!session.selectedEdition) return false;
+    
+    // recipientType should exist after step 1 (where it's chosen)
+    if (!session.recipientType) return false;
+  }
+  
+  // Only check purchaser info if we're past step 2
+  if (session.currentStep > 2) {
+    if (!session.purchaser || !session.purchaser.fullName || !session.purchaser.email) return false;
+  }
+
+  // Only check recipient info if we're past step 3
+  if (session.currentStep > 3) {
+    if (!session.recipient) return false;
+    // Check for either individual or couple recipient data
+    const hasIndividualData = session.recipient.firstName;
+    const hasCoupleData = session.recipient.recipient1FirstName;
+    if (!hasIndividualData && !hasCoupleData) return false;
+  }
+
+  // Check updatedAt timestamp validity (if present)
   if (session.updatedAt) {
     try {
       const lastUpdated = new Date(session.updatedAt);
@@ -283,13 +334,8 @@ export const isValidSession = (session: SessionData | null | undefined): session
       if (lastUpdated < sevenDaysAgo) return false;
     } catch (e) { return false; }
   }
-  if (session.currentStep >= 3) {
-    if (!session.recipient || !(session.recipient.firstName || session.recipient.recipient1FirstName)) return false;
-  }
-  if (session.currentStep >= 2) {
-      if (!session.purchaser || !session.purchaser.fullName || !session.purchaser.email) return false;
-  }
-  // Add more checks if needed...
+
+  // Passed all relevant checks for the current step
   return true;
 };
 
@@ -298,6 +344,12 @@ export const useSessionStore = create<SessionStore>()(
   persist(
     (set, get) => ({
   session: createNewSession(),
+  sessionMetadata: {
+    sessionId: null,
+    isActive: false,
+    editionType: null,
+    lastSaved: null,
+  },
   isLoading: true,
       isHydrated: false,
   
@@ -320,7 +372,9 @@ export const useSessionStore = create<SessionStore>()(
           const updatedSession = cloneDeep(state.session);
           setWith(updatedSession, path, value, cloneDeep);
           updatedSession.updatedAt = new Date().toISOString();
-          return { session: updatedSession };
+          // Also update metadata lastSaved when session is updated
+          const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          return { session: updatedSession, sessionMetadata: updatedMetadata };
         });
       },
   setCurrentStep: (step: number) => {
@@ -331,7 +385,8 @@ export const useSessionStore = create<SessionStore>()(
             lastCompletedStep: Math.max(state.session.lastCompletedStep, step - 1),
             updatedAt: new Date().toISOString(),
     };
-          return { session: updatedSession };
+          const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          return { session: updatedSession, sessionMetadata: updatedMetadata };
         });
   },
   nextStep: () => {
@@ -343,7 +398,8 @@ export const useSessionStore = create<SessionStore>()(
             lastCompletedStep: Math.max(state.session.lastCompletedStep, state.session.currentStep),
             updatedAt: new Date().toISOString(),
     };
-          return { session: updatedSession };
+          const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          return { session: updatedSession, sessionMetadata: updatedMetadata };
         });
   },
   prevStep: () => {
@@ -354,7 +410,8 @@ export const useSessionStore = create<SessionStore>()(
       currentStep: prevStep,
             updatedAt: new Date().toISOString(),
     };
-          return { session: updatedSession };
+          const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          return { session: updatedSession, sessionMetadata: updatedMetadata };
         });
   },
   setLastCompletedStep: (step: number) => {
@@ -364,7 +421,8 @@ export const useSessionStore = create<SessionStore>()(
             lastCompletedStep: Math.max(state.session.lastCompletedStep, step),
             updatedAt: new Date().toISOString(),
     };
-          return { session: updatedSession };
+          const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          return { session: updatedSession, sessionMetadata: updatedMetadata };
         });
   },
   saveSessionProgress: (email?: string) => {
@@ -374,13 +432,16 @@ export const useSessionStore = create<SessionStore>()(
             email: email ?? state.session.email,
             updatedAt: new Date().toISOString(),
     };
-          return { session: updatedSession };
+          const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          return { session: updatedSession, sessionMetadata: updatedMetadata };
         });
   },
   resetSession: () => {
         console.log("Resetting session state (persist middleware will handle storage)...");
         const newSession = createNewSession(); // Use helper
-        set({ session: newSession, isLoading: false, isHydrated: true });
+        // Reset metadata as well
+        const initialMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
+        set({ session: newSession, sessionMetadata: initialMetadata, isLoading: false, isHydrated: true });
         // Let persist handle clearing/overwriting storage based on new state
         // localStorage.removeItem('legacyLockerSession'); // Usually not needed with persist
       },
@@ -614,32 +675,91 @@ export const useSessionStore = create<SessionStore>()(
               };
           });
       },
+
+      // --- Actions for sessionMetadata --- 
+      startSession: (editionType: EditionType) => {
+          const newId = uuidv4(); // Use uuidv4 instead of crypto.randomUUID
+          set((state) => ({
+              sessionMetadata: {
+                  ...state.sessionMetadata,
+                  sessionId: newId,
+                  isActive: true,
+                  editionType,
+                  lastSaved: new Date(),
+              },
+              // Also update the session's selectedEdition type to match
+              session: {
+                  ...state.session,
+                  selectedEdition: state.session.selectedEdition ? {
+                      ...state.session.selectedEdition,
+                      type: editionType,
+                  } : null,
+              }
+          }));
+      },
+      endSession: () => {
+          set((state) => ({
+              sessionMetadata: {
+                  sessionId: null,
+                  isActive: false,
+                  editionType: null,
+                  lastSaved: null,
+              },
+          }));
+      },
+      saveSession: () => {
+          set((state) => ({
+              sessionMetadata: {
+                  ...state.sessionMetadata,
+                  lastSaved: new Date(),
+              },
+              session: {
+                  ...state.session,
+                  updatedAt: new Date().toISOString(),
+              }
+          }));
+      },
+
     }),
     {
       name: 'legacyLockerSession',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ session: state.session }),
+      partialize: (state) => ({ 
+          session: state.session, 
+          sessionMetadata: state.sessionMetadata // Ensure metadata is persisted
+        }),
       onRehydrateStorage: () => (state, error) => {
         let hydrationComplete = false;
         if (error) {
           console.error("Hydration error:", error);
           if (state) {
+             // Reset both session and metadata on error
              state.session = createNewSession();
+             state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
           } else {
              console.error("State unavailable during hydration error handling.");
           }
           hydrationComplete = true;
         } else {
+           // Validate main session
            if (state?.session && !isValidSession(state.session)) {
               console.warn("Hydrated session is invalid. Resetting state...");
               state.session = createNewSession();
+              // Reset metadata as well if main session is invalid
+              state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
+           }
+           // Ensure metadata is initialized if somehow missing after hydration
+           if (state && !state.sessionMetadata) {
+              console.warn("Hydrated state missing sessionMetadata. Initializing...");
+              state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
            }
            hydrationComplete = true;
         }
         if (hydrationComplete) {
           setTimeout(() => {
-            useSessionStore.setState({ isLoading: false, isHydrated: true });
-            // NOTE: We no longer call initializeSignatureData here directly
+            // Use the state from the rehydration callback if available
+            const finalState = { isLoading: false, isHydrated: true };
+            useSessionStore.setState(finalState);
           }, 0);
         }
       },

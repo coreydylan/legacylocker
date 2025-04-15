@@ -5,30 +5,43 @@ import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useSessionStore } from '@/lib/sessionStore';
+import { useSessionStore, SessionData } from '@/lib/sessionStore';
 import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
-import { ShippingAddress, Recipient } from '@/lib/sessionManager';
+import { ShippingAddress } from '@/lib/sessionStore';
 import AddressAutocomplete, { StructuredAddress } from './inputs/AddressAutocomplete';
 import { formatShipToName } from '@/lib/utils/formatShipToName';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { shippingInfoSchema, ShippingInfoFormValues } from '@/schemas/shippingInfoSchema';
 
+// Define a type for the recipient part of the session data more explicitly if needed
+// Or rely on SessionData['recipient']
+type RecipientData = SessionData['recipient'];
+
 const ShippingInfoCard: React.FC = () => {
+  console.log("--- Rendering ShippingInfoCard ---");
   const { session, updateSession } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
-  const recipient: Recipient | undefined = session.recipient;
+  const recipient: RecipientData | undefined = session.recipient;
+  console.log("ShippingInfoCard: Recipient data:", recipient);
   
   // Get default shipping name from recipient info
-  const defaultShippingName = formatShipToName(session);
+  let defaultShippingName = '';
+  try {
+    defaultShippingName = formatShipToName(session);
+    console.log("ShippingInfoCard: Default shipping name:", defaultShippingName);
+  } catch (error) {
+    console.error("ShippingInfoCard: Error calling formatShipToName:", error);
+  }
   
   // Get initial values for the form
   const getDefaultValues = (): ShippingInfoFormValues => {
+    console.log("ShippingInfoCard: Calling getDefaultValues");
     const initialShippingName = recipient?.shippingNameOverridden 
       ? (recipient?.shippingName || '') 
       : defaultShippingName;
       
-    return {
+    const defaultVals = {
       shippingName: initialShippingName,
       shippingNameOverridden: recipient?.shippingNameOverridden || false,
       shippingAddress: recipient?.shippingAddress || {
@@ -40,11 +53,13 @@ const ShippingInfoCard: React.FC = () => {
         full: ''
       }
     };
+    console.log("ShippingInfoCard: Default form values:", defaultVals);
+    return defaultVals;
   };
   
   // State for address autocomplete
   const [addressString, setAddressString] = useState<string>(
-    recipient?.shippingAddress?.full || ''
+    session.recipient?.shippingAddress?.full || ''
   );
   
   // Initialize form with react-hook-form and zod validation
@@ -61,12 +76,22 @@ const ShippingInfoCard: React.FC = () => {
     mode: 'onChange'
   });
   
-  // Watch the shipping address to update the UI
-  const shippingAddress = watch('shippingAddress');
+  // Watch the shipping address from the form state
+  const formShippingAddress = watch('shippingAddress');
+
+  // Effect to sync addressString state with session data when it changes externally
+  useEffect(() => {
+    const sessionAddressFull = session.recipient?.shippingAddress?.full || '';
+    // Only update if the session data differs from the current display string
+    if (sessionAddressFull !== addressString) {
+       console.log("ShippingInfoCard: Syncing addressString state from session:", sessionAddressFull);
+       setAddressString(sessionAddressFull);
+    }
+  }, [session.recipient?.shippingAddress?.full]); // Depend on the specific field
   
   // Update shipping name when recipient info changes
   useEffect(() => {
-    const currentRecipient: Recipient | undefined = session.recipient;
+    const currentRecipient: RecipientData | undefined = session.recipient;
     const newDefaultName = formatShipToName(session);
     
     // Only update if not overridden by user
@@ -117,6 +142,9 @@ const ShippingInfoCard: React.FC = () => {
   const onSubmit = (data: ShippingInfoFormValues) => {
     console.log('ShippingInfoCard: Form validated, saving data:', data);
     
+    // Log the address object specifically before saving
+    console.log('ShippingInfoCard: Saving shippingAddress:', data.shippingAddress);
+
     // Update session with shipping info
     updateSession('recipient.shippingName', data.shippingName);
     updateSession('recipient.shippingNameOverridden', data.shippingNameOverridden);
@@ -125,6 +153,7 @@ const ShippingInfoCard: React.FC = () => {
     goNext();
   };
 
+  console.log("ShippingInfoCard: Reached return statement");
   return (
     <div className="max-w-xl mx-auto py-8">
       <div className="text-center mb-10">
@@ -190,13 +219,13 @@ const ShippingInfoCard: React.FC = () => {
                 )}
               />
               
-              {shippingAddress.street && !errors.shippingAddress?.street && (
+              {formShippingAddress.street && !errors.shippingAddress?.street && (
                 <div className="text-sm text-muted-foreground mt-2 pl-1 border-l-2 border-legacy-green/50 ml-1">
                   <p className="pl-3">
                     <strong className="text-gray-700 block mb-0.5">{watch('shippingName')}</strong> 
-                    {shippingAddress.street}<br />
-                    {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}<br />
-                    {shippingAddress.country}
+                    {formShippingAddress.street}<br />
+                    {formShippingAddress.city}, {formShippingAddress.state} {formShippingAddress.postalCode}<br />
+                    {formShippingAddress.country}
                   </p>
                 </div>
               )}
