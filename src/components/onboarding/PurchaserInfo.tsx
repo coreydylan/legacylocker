@@ -93,36 +93,36 @@ const PurchaserInfo: React.FC = () => {
       console.log('[SUBMIT] PurchaserInfo: Final session save successful.');
       
       // --- Call Backend API to Send Resume Email --- 
-      console.log(`[SUBMIT] PurchaserInfo: Checking API call condition - sessionJustStarted: ${sessionJustStarted}, newSessionId: ${newSessionId}`);
-      if (sessionJustStarted && newSessionId) {
-          const email = data.email; // Get email from form data
-          const sessionId = newSessionId; // Get sessionId captured earlier
-          console.log(`[SUBMIT] PurchaserInfo: Attempting call to /api/send-resume-email for ${email} / ${sessionId}.`);
-          try {
-              const response = await fetch('/api/send-resume-email', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email, sessionId }),
-              });
+      // console.log(`[SUBMIT] PurchaserInfo: Checking API call condition - sessionJustStarted: ${sessionJustStarted}, newSessionId: ${newSessionId}`);
+      // if (sessionJustStarted && newSessionId) {
+      //     const email = data.email; // Get email from form data
+      //     const sessionId = newSessionId; // Get sessionId captured earlier
+      //     console.log(`[SUBMIT] PurchaserInfo: Attempting call to /api/send-resume-email for ${email} / ${sessionId}.`);
+      //     try {
+      //         const response = await fetch('/api/send-resume-email', {
+      //             method: 'POST',
+      //             headers: { 'Content-Type': 'application/json' },
+      //             body: JSON.stringify({ email, sessionId }),
+      //         });
               
-              if (!response.ok) {
-                  // Throw an error to be caught by the outer catch block
-                  throw new Error(`API responded with status: ${response.status}`);
-              }
+      //         if (!response.ok) {
+      //             // Throw an error to be caught by the outer catch block
+      //             throw new Error(`API responded with status: ${response.status}`);
+      //         }
               
-              const responseData = await response.json(); // Assuming your API returns JSON
-              console.log('[SUBMIT] PurchaserInfo: API call to /api/send-resume-email successful.', responseData);
+      //         const responseData = await response.json(); // Assuming your API returns JSON
+      //         console.log('[SUBMIT] PurchaserInfo: API call to /api/send-resume-email successful.', responseData);
 
-          } catch (err) {
-              console.error('[SUBMIT] PurchaserInfo: API call to /api/send-resume-email FAILED:', err);
-              // Log the error but don't block navigation
-          }
-      } else {
-         console.log('[SUBMIT] PurchaserInfo: Conditions NOT met for calling email API.');
-         if (sessionJustStarted && !newSessionId) {
-             console.warn('[SUBMIT] PurchaserInfo: Session started but no ID captured for email API.');
-         }
-      }
+      //     } catch (err) {
+      //         console.error('[SUBMIT] PurchaserInfo: API call to /api/send-resume-email FAILED:', err);
+      //         // Log the error but don't block navigation
+      //     }
+      // } else {
+      //    console.log('[SUBMIT] PurchaserInfo: Conditions NOT met for calling email API.');
+      //    if (sessionJustStarted && !newSessionId) {
+      //        console.warn('[SUBMIT] PurchaserInfo: Session started but no ID captured for email API.');
+      //    }
+      // }
       // --- End API Call Logic --- 
       
     } catch (error) {

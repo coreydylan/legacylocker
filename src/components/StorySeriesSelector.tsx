@@ -52,28 +52,32 @@ const StorySeriesSelector = () => {
   }, [searchQuery, allStoryOptions]);
   
   const handleEditionSelection = (editionType: 'signature' | 'custom' | 'concierge', series?: SeriesType) => {
-    if (editionType === 'signature' || editionType === 'custom') {
+    if (series) {
+      handleStorySeriesSelection(series);
+    } else {
       setFilterType(editionType);
       setDialogOpen(true);
-    } else if (editionType === 'concierge' && series) {
-      setSelectedSeriesForModal(series);
-      setOnboardingModalOpen(true);
     }
   };
   
   const handleStorySeriesSelection = (series: SeriesType) => {
-    const isActiveSession = session && (session.selectedSeries || session.editionFlow?.customEditionData);
+    const isActiveSession = !!(session && (session.selectedEdition || session.customData?.length > 0 || session.signatureData?.some(d => d.enabled)));
+
+    console.log(`[handleStorySeriesSelection] Selected: ${series.label}, Is Active Session: ${isActiveSession}`);
 
     if (isActiveSession) {
+      console.log("[handleStorySeriesSelection] Active session detected, opening confirmation dialog.");
       setSeriesToConfirm(series);
       setConfirmDialogOpen(true);
       setDialogOpen(false);
     } else {
+      console.log("[handleStorySeriesSelection] No active session detected, proceeding directly.");
       proceedWithSelection(series);
     }
   };
 
   const proceedWithSelection = (series: SeriesType) => {
+    console.log(`[proceedWithSelection] Proceeding with series: ${series.label}`);
     setSelectedSeriesForModal(series);
     setDialogOpen(false);
     setSearchQuery('');
@@ -83,21 +87,26 @@ const StorySeriesSelector = () => {
   };
 
   const handleStartFresh = () => {
+    console.log("[handleStartFresh] Resetting session and starting fresh.");
     resetSession();
     if (seriesToConfirm) {
       proceedWithSelection(seriesToConfirm);
     }
     setSeriesToConfirm(null);
+    setConfirmDialogOpen(false);
   };
 
   const handleContinueCurrentSession = () => {
+    console.log("[handleContinueCurrentSession] Continuing with existing session.");
     if (session?.selectedEdition) {
       setSelectedSeriesForModal(session.selectedEdition);
-      setOnboardingModalOpen(true);
     } else {
-      console.warn("Attempted to continue session, but no selectedEdition found in session data.");
+      console.warn("Continuing session, but no selectedEdition found in session data.");
+      setSelectedSeriesForModal(null);
     }
+    setOnboardingModalOpen(true);
     setSeriesToConfirm(null);
+    setConfirmDialogOpen(false);
   };
 
   const renderSeriesDisplay = () => {

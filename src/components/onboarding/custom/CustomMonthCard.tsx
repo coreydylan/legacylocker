@@ -11,7 +11,7 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, CircleEllipsis, XCircle, Edit3, ImageIcon, MessageSquareText } from 'lucide-react'; // Icons
+import { CheckCircle2, CircleEllipsis, XCircle, Edit3, ImageIcon, MessageSquareText, ChevronDown } from 'lucide-react'; // Icons
 import { CustomMonthData } from '@/lib/sessionStore';
 import StoryTab from './StoryTab';
 import ArtworkTab from './ArtworkTab';
@@ -81,21 +81,21 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
   };
 
   const statusMap: Record<CompletionStatus, { text: string; icon: React.ElementType; className: string }> = {
-    'complete': { text: 'Complete', icon: CheckCircle2, className: 'bg-green-100 text-green-800 border-green-300' },
-    'in-progress': { text: 'In Progress', icon: CircleEllipsis, className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-    'not-started': { text: 'Not Started', icon: XCircle, className: 'bg-red-100 text-red-800 border-red-300' },
+    'complete': { text: 'Complete', icon: CheckCircle2, className: 'border-green-200 bg-green-100 text-green-700' },
+    'in-progress': { text: 'In Progress', icon: CircleEllipsis, className: 'border-amber-200 bg-amber-100 text-amber-700' },
+    'not-started': { text: 'Not Started', icon: XCircle, className: 'border-gray-200 bg-gray-100 text-gray-600' },
   };
 
   const statusInfo = statusMap[overallStatus];
 
   return (
-    <AccordionItem value={accordionValue} className="border bg-white rounded-lg shadow-sm overflow-hidden">
+    <AccordionItem value={accordionValue} className="group border bg-white rounded-lg shadow-sm overflow-hidden">
       {/* Accordion Header / Trigger */}
-      <AccordionTrigger className="px-4 py-3 hover:bg-gray-50 [&[data-state=open]]:bg-gray-50">
+      <AccordionTrigger className="px-4 py-3 hover:bg-gray-50 data-[state=open]:bg-gray-50/80">
         <div className="flex justify-between items-center w-full">
           {/* Left Side: Month/Year and Section Tracker */}
           <div className="flex flex-col items-start text-left space-y-1.5">
-            <span className="text-lg font-medium text-legacy-gray-darker">
+            <span className="text-lg font-semibold text-neutral-800">
                 {month} {year}
             </span>
             {/* Inline Section Tracker */}
@@ -124,29 +124,47 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
             </div>
           </div>
           
-          {/* Right Side: Status Badge */}
-          <Badge variant="outline" className={cn("ml-4 flex items-center space-x-1.5", statusInfo.className)}>
-             <statusInfo.icon size={14} />
-             <span>{statusInfo.text}</span>
-           </Badge>
+          {/* Right Side: Status Badge & Chevron */}
+          <div className="flex items-center gap-3">
+            <Badge variant="outline" className={cn("ml-auto text-xs font-medium rounded-full px-2.5 py-0.5 border", statusInfo.className)}>
+               <statusInfo.icon size={12} className="mr-1" />
+               <span>{statusInfo.text}</span>
+             </Badge>
+             <ChevronDown className="h-5 w-5 text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
+           </div>
         </div>
       </AccordionTrigger>
 
       {/* Accordion Content: Tabs */}
-      <AccordionContent className="p-4 border-t bg-gray-50/50">
+      <AccordionContent className="p-4 border-t bg-white divide-y divide-gray-100">
         <Tabs defaultValue={initialTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="story">Story</TabsTrigger>
-            <TabsTrigger value="artwork">Artwork</TabsTrigger>
-            <TabsTrigger value="footer">Footer</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-gray-100/80 rounded-lg backdrop-blur-sm shadow-sm">
+            <TabsTrigger 
+              value="story" 
+              className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors data-[state=active]:bg-white data-[state=active]:text-neutral-800 data-[state=active]:shadow rounded-md py-1.5"
+            >
+                Story
+             </TabsTrigger>
+            <TabsTrigger 
+              value="artwork" 
+              className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors data-[state=active]:bg-white data-[state=active]:text-neutral-800 data-[state=active]:shadow rounded-md py-1.5"
+            >
+                Artwork
+             </TabsTrigger>
+            <TabsTrigger 
+              value="footer" 
+              className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors data-[state=active]:bg-white data-[state=active]:text-neutral-800 data-[state=active]:shadow rounded-md py-1.5"
+             >
+                Footer
+            </TabsTrigger>
           </TabsList>
-          <TabsContent value="story" className="pt-6">
+          <TabsContent value="story" className="pt-6 hover:bg-gray-50/50 rounded-b-lg -mx-4 px-4 pb-4">
             <StoryTab data={monthData} onUpdate={handleUpdate} />
           </TabsContent>
-          <TabsContent value="artwork" className="pt-6">
+          <TabsContent value="artwork" className="pt-6 hover:bg-gray-50/50 rounded-b-lg -mx-4 px-4 pb-4">
             <ArtworkTab data={monthData} onUpdate={handleUpdate} />
           </TabsContent>
-          <TabsContent value="footer" className="pt-6">
+          <TabsContent value="footer" className="pt-6 hover:bg-gray-50/50 rounded-b-lg -mx-4 px-4 pb-4">
             <FooterTab data={monthData} onUpdate={handleUpdate} />
           </TabsContent>
         </Tabs>

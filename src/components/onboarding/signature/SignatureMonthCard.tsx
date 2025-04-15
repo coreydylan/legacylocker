@@ -150,7 +150,7 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
           </div>
 
           <div className="space-y-1">
-            <Label htmlFor={`date-${month}-${year}`} className="text-sm font-medium text-legacy-gray-darker">Ship Date</Label>
+            <Label htmlFor={`date-${month}-${year}`} className="text-sm font-medium text-legacy-gray-darker">Arrive By Date</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button

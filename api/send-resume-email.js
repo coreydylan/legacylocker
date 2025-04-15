@@ -8,13 +8,17 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { email, sessionId } = req.body
+  const { email, sessionId, recipientFirstName } = req.body
 
   if (!email || !sessionId) {
     return res.status(400).json({ error: 'Missing email or sessionId' })
   }
 
   const resumeLink = `https://legacylockerco.com/?session_id=${sessionId}`
+
+  const greeting = recipientFirstName 
+    ? `You started creating a Legacy Locker gift for ${recipientFirstName} — we saved your spot!`
+    : `You started creating a Legacy Locker gift — we saved your spot!`;
 
   try {
     const { error } = await resend.emails.send({
@@ -23,7 +27,7 @@ module.exports = async (req, res) => {
       subject: 'Finish creating your gift',
       html: `
         <p>Hey there 👋</p>
-        <p>You started creating a Legacy Locker gift — we saved your spot!</p>
+        <p>${greeting}</p>
         <p><a href="${resumeLink}">Click here to resume your setup</a></p>
         <p>We're here when you're ready ✨</p>
       `,

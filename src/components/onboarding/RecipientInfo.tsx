@@ -198,13 +198,67 @@ const RecipientInfo: React.FC = () => {
     console.log('RecipientInfo: Form validated, onSubmit triggered.');
     debouncedSave.cancel();
     updateSession('recipient', data); 
+
+    // --- Final Save and Email Logic ---
     try {
-      await saveSessionToSupabase();
-      console.log('RecipientInfo: Final session save on submit successful.');
+      console.log('[SUBMIT] RecipientInfo: Calling final saveSessionToSupabase...');
+      await saveSessionToSupabase(); 
+      console.log('[SUBMIT] RecipientInfo: Final session save successful.');
+
+      // --- Call Backend API to Send Resume Email ---
+      // Get necessary data from the session store
+      const { session } = useSessionStore.getState();
+      const purchaserEmail = session.purchaser?.email || session.email; // Use purchaser email or the saved email
+      const sessionId = session.sessionId;
+      
+      // Determine recipient's first name based on the form data type
+      const recipientFirstName = data.type === 'individual' 
+                                  ? data.firstName 
+                                  : data.recipient1FirstName; // Use first name for couple
+
+      console.log(`[SUBMIT] RecipientInfo: Checking API call condition - sessionId: ${sessionId}, purchaserEmail: ${purchaserEmail}`);
+      
+      // Send email if we have a session ID and purchaser email
+      if (sessionId && purchaserEmail) {
+          console.log(`[SUBMIT] RecipientInfo: Attempting call to /api/send-resume-email for ${purchaserEmail} / ${sessionId}.`);
+          try {
+              const response = await fetch('/api/send-resume-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: purchaserEmail, sessionId, recipientFirstName }), // Include recipientFirstName
+              });
+              
+              if (!response.ok) {
+                  // Throw an error to be caught by the outer catch block
+                  throw new Error(`API responded with status: ${response.status}`);
+              }
+              
+              const responseData = await response.json(); // Assuming your API returns JSON
+              console.log('[SUBMIT] RecipientInfo: API call to /api/send-resume-email successful.', responseData);
+
+          } catch (err) {
+              console.error('[SUBMIT] RecipientInfo: API call to /api/send-resume-email FAILED:', err);
+              // Log the error but don't block navigation
+          }
+      } else {
+         console.log('[SUBMIT] RecipientInfo: Conditions NOT met for calling email API.');
+         if (!sessionId) {
+             console.warn('[SUBMIT] RecipientInfo: Session ID not found for email API.');
+         }
+         if (!purchaserEmail) {
+             console.warn('[SUBMIT] RecipientInfo: Purchaser email not found for email API.');
+         }
+      }
+      // --- End API Call Logic ---
+
     } catch (error) {
-      console.error('RecipientInfo: Failed to save session to Supabase on submit:', error);
+      console.error('[SUBMIT] RecipientInfo: Final saveSessionToSupabase FAILED:', error);
+      // Consider adding user feedback here (e.g., toast notification)
     }
-    goNext();
+    // --- End Final Save and Email Logic ---
+
+    console.log('RecipientInfo: Calling goNext()...');
+    goNext(); 
   };
 
   return (

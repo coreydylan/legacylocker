@@ -89,20 +89,20 @@ const FooterTab: React.FC<FooterTabProps> = ({ data, onUpdate }) => {
                value={data.footerMessage}
                onChange={handleFooterChange}
                placeholder="Enter your footer message..."
-               className="min-h-[60px]"
+               className="min-h-[60px] rounded-lg border-gray-200 px-4 py-3 focus:ring-1 focus:ring-neutral-300"
                maxLength={characterLimit}
              />
            </div>
            {/* Ship Date Field */}
            <div className="space-y-2">
-              <Label htmlFor={`ship-date-${data.month}-${data.year}`} className="text-sm font-medium">Ship Date</Label>
+              <Label htmlFor={`ship-date-${data.month}-${data.year}`} className="text-sm font-medium">Arrive By Date</Label>
               <JollyDateField 
-                aria-label="Ship date"
+                aria-label="Arrive by date"
                 value={parseDateToCalendarDate(data.shipDate)}
                 onChange={handleDateChange}
                 granularity="day"
               />
-              <p className="text-xs text-gray-500 px-1">Select the date you'd like this card to ship.</p>
+              <p className="text-xs text-gray-500 px-1">Select the date you'd like this card to arrive.</p>
             </div>
          </div>
       )}

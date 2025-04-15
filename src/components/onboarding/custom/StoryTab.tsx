@@ -23,12 +23,13 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
           value={data.title}
           onChange={(e) => onUpdate({ title: e.target.value })}
           placeholder='e.g., "The First Snowfall" or "You Always Knew"'
+          className="rounded-lg border-gray-200 px-4 py-3 focus:ring-1 focus:ring-neutral-300"
         />
-        <div className="flex space-x-1 rounded-md bg-muted p-0.5 mt-2">
+        <div className="flex space-x-1 rounded-lg bg-muted p-0.5 mt-2">
              <Button
                  variant={data.useExactTitle ? "outline" : "secondary"}
                  className={cn(
-                     "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
+                     "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm rounded-md",
                      data.useExactTitle ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactTitle: true })}
@@ -39,7 +40,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
              <Button
                  variant={!data.useExactTitle ? "outline" : "secondary"}
                  className={cn(
-                    "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
+                    "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm rounded-md",
                     !data.useExactTitle ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactTitle: false })}
@@ -59,13 +60,13 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
            value={data.story}
            onChange={(e) => onUpdate({ story: e.target.value })}
            placeholder="Tell us the moment — we'll help turn it into magic."
-           className="min-h-[120px]"
+           className="min-h-[120px] rounded-lg border-gray-200 px-4 py-3 focus:ring-1 focus:ring-neutral-300"
         />
-         <div className="flex space-x-1 rounded-md bg-muted p-0.5 mt-2">
+         <div className="flex space-x-1 rounded-lg bg-muted p-0.5 mt-2">
              <Button
                  variant={data.useExactStory ? "outline" : "secondary"}
                  className={cn(
-                     "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
+                     "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm rounded-md",
                      data.useExactStory ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactStory: true })}
@@ -76,7 +77,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
              <Button
                  variant={!data.useExactStory ? "outline" : "secondary"}
                  className={cn(
-                    "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
+                    "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm rounded-md",
                     !data.useExactStory ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactStory: false })}

@@ -216,11 +216,11 @@ const ArtworkTab: React.FC<ArtworkTabProps> = ({ data, onUpdate }) => {
           {previewUrl && !isUploading ? (
             <div className="space-y-2">
               <Label className="text-sm">Uploaded Photo:</Label>
-              <div className="relative w-40 h-40 group border rounded shadow-sm">
+              <div className="relative w-40 h-40 group border rounded-lg shadow-sm">
                 <img
                   src={previewUrl}
                   alt="Uploaded preview"
-                  className="w-full h-full object-cover rounded"
+                  className="w-full h-full object-cover rounded-lg"
                 />
                 {/* Simple Change Button - Triggers file input click */}
                 <Button 
@@ -240,7 +240,7 @@ const ArtworkTab: React.FC<ArtworkTabProps> = ({ data, onUpdate }) => {
               htmlFor="photo-upload"
               className={cn(
                 "flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100",
-                uploadError ? "border-red-500" : "border-gray-300"
+                uploadError ? "border-red-500" : "border-gray-200"
               )}
             >
               <div className="flex flex-col items-center justify-center pt-5 pb-6">

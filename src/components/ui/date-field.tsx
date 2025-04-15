@@ -30,13 +30,12 @@ function DateSegment({ className, ...props }: AriaDateSegmentProps) {
     <AriaDateSegment
       className={composeRenderProps(className, (className) =>
         cn(
-          "type-literal:px-0 inline rounded p-0.5 caret-transparent outline outline-0 text-base",
+          "type-literal:px-0 inline rounded p-0.5 caret-transparent outline outline-0 text-base data-[focused]:bg-neutral-100 data-[focused]:ring-1 data-[focused]:ring-neutral-300",
           /* Placeholder */
           "data-[placeholder]:text-muted-foreground",
           /* Disabled */
           "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-50",
-          /* Focused */
-          "data-[focused]:bg-accent data-[focused]:text-accent-foreground",
+          /* Focused (keep for fallback?) */
           /* Invalid */
           "data-[invalid]:data-[focused]:bg-destructive data-[invalid]:data-[focused]:data-[placeholder]:text-destructive-foreground data-[invalid]:data-[focused]:text-destructive-foreground data-[invalid]:data-[placeholder]:text-destructive data-[invalid]:text-destructive",
           className
@@ -59,7 +58,7 @@ function DateInput({
   return (
     <AriaDateInput
       className={composeRenderProps(className, (className) =>
-        cn(fieldGroupVariants({ variant }), className)
+        cn(fieldGroupVariants({ variant }), "rounded-lg border border-gray-200 px-4 py-3 focus-within:ring-1 focus-within:ring-neutral-300", className)
       )}
       {...props}
     >
