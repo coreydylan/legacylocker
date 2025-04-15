@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Search, ChevronRight } from "lucide-react";
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
@@ -71,7 +70,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                     key={option.id}
                     onSelect={() => handleStorySeriesSelection({
                       id: option.id,
-                      display: option.label,
+                      label: option.label,
                       type: 'custom'
                     })}
                     className="py-3 cursor-pointer hover:bg-legacy-green/5"
@@ -93,7 +92,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                     key={option.id}
                     onSelect={() => handleStorySeriesSelection({
                       id: option.id,
-                      display: option.label,
+                      label: option.label,
                       type: 'custom'
                     })}
                     className="py-3 cursor-pointer hover:bg-legacy-green/5"
@@ -115,7 +114,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                     key={option.id}
                     onSelect={() => handleStorySeriesSelection({
                       id: option.id,
-                      display: option.label,
+                      label: option.label,
                       type: 'custom'
                     })}
                     className="py-3 cursor-pointer hover:bg-legacy-green/5"
@@ -130,7 +129,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                 <CommandItem 
                   onSelect={() => handleStorySeriesSelection({
                     id: 'custom',
-                    display: 'Build Your Own Story',
+                    label: 'Build Your Own Story',
                     type: 'custom'
                   })}
                   className="py-3 cursor-pointer hover:bg-legacy-green/5 mt-2"
@@ -150,7 +149,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                     key={option.id}
                     onSelect={() => handleStorySeriesSelection({
                       id: option.id,
-                      display: option.label,
+                      label: option.label,
                       type: 'concierge'
                     })}
                     className="py-3 cursor-pointer hover:bg-legacy-green/5"
@@ -192,10 +191,8 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                         if (!category) return;
                         
                         handleStorySeriesSelection({
-                          categoryName: category.name,
-                          subcategoryName: subcategory.name,
-                          locationName: '',
-                          display: `${category.display} - ${subcategory.display}`,
+                          id: `${category.name}-${subcategory.name}`,
+                          label: `${category.display} - ${subcategory.display}`,
                           type: 'signature'
                         });
                       } else {
@@ -254,10 +251,8 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                     <CommandItem 
                       key={location.name}
                       onSelect={() => handleStorySeriesSelection({
-                        categoryName: category.name,
-                        subcategoryName: subcategory.name,
-                        locationName: location.name,
-                        display: `${subcategory.display} - ${location.display}`,
+                        id: `${category.name}-${subcategory.name}-${location.name}`,
+                        label: `${subcategory.display} - ${location.display}`,
                         type: 'signature'
                       })}
                       className="py-3 cursor-pointer hover:bg-legacy-green/5"
@@ -277,10 +272,8 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
               <CommandItem 
                 key={`${option.categoryName}-${option.subcategoryName}-${option.locationName || index}`}
                 onSelect={() => handleStorySeriesSelection({
-                  categoryName: option.categoryName,
-                  subcategoryName: option.subcategoryName,
-                  locationName: option.locationName,
-                  display: option.fullDisplay,
+                  id: `${option.categoryName}-${option.subcategoryName}-${option.locationName || 'search'}`,
+                  label: option.fullDisplay,
                   type: 'signature'
                 })}
                 className="py-3 cursor-pointer hover:bg-legacy-green/5"

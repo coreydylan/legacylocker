@@ -9,9 +9,11 @@ import { useSessionStore } from '@/lib/sessionStore';
 import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
 import { Recipient } from '@/lib/sessionManager';
 import { formatCardAddresseeName } from '@/lib/utils/formatCardAddresseeName';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { envelopePersonalizationSchema, EnvelopePersonalizationFormValues } from '@/schemas/envelopePersonalizationSchema';
+import { useDebouncedCallback } from 'use-debounce';
+import { saveSessionToSupabase } from '@/lib/sessionService';
 
 const EnvelopeAddresseeCard: React.FC = () => {
   const { session, updateSession } = useSessionStore();
@@ -37,6 +39,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
   const { 
     handleSubmit, 
     setValue,
+    control,
     formState: { errors, isValid },
     watch
   } = useForm<EnvelopePersonalizationFormValues>({
@@ -45,6 +48,31 @@ const EnvelopeAddresseeCard: React.FC = () => {
     mode: 'onChange'
   });
   
+  // --- Debounced Autosave Logic --- 
+  const watchedFields = useWatch({ control }); // Watch all fields
+
+  const debouncedSave = useDebouncedCallback(async () => {
+    const currentData = watchedFields as EnvelopePersonalizationFormValues;
+    console.log('[Autosave] EnvelopeAddresseeCard: Triggering save with data:', currentData);
+    // Update relevant recipient fields in the session store
+    updateSession('recipient.cardAddresseeName', currentData.cardAddresseeName);
+    updateSession('recipient.cardAddresseeNameOverridden', currentData.cardAddresseeNameOverridden);
+    
+    try {
+      await saveSessionToSupabase();
+      console.log('[Autosave] EnvelopeAddresseeCard: Session saved to Supabase.');
+    } catch (error) {
+      console.error('[Autosave] EnvelopeAddresseeCard: Failed to save session to Supabase:', error);
+    }
+  }, 1000); // Debounce for 1 second
+
+  useEffect(() => {
+    // Call debouncedSave whenever watchedFields changes.
+    console.log('[Autosave] EnvelopeAddresseeCard: Field changed, debouncing save...');
+    debouncedSave();
+  }, [watchedFields, debouncedSave]); 
+  // --- End Autosave Logic --- 
+
   // Update addressee name when recipient info changes
   useEffect(() => {
     const currentRecipient: Recipient | undefined = session.recipient;
@@ -63,12 +91,21 @@ const EnvelopeAddresseeCard: React.FC = () => {
   };
 
   // Form submission handler
-  const onSubmit = (data: EnvelopePersonalizationFormValues) => {
-    console.log('EnvelopeAddresseeCard: Form validated, saving data:', data);
-    
-    // Update session with envelope personalization info
+  const onSubmit = async (data: EnvelopePersonalizationFormValues) => {
+    console.log('EnvelopeAddresseeCard: Form validated, onSubmit triggered.');
+    // Cancel pending autosave
+    debouncedSave.cancel();
+    // Update store with latest validated data
     updateSession('recipient.cardAddresseeName', data.cardAddresseeName);
     updateSession('recipient.cardAddresseeNameOverridden', data.cardAddresseeNameOverridden);
+    
+    // Final save on submit
+    try {
+      await saveSessionToSupabase(); 
+      console.log('EnvelopeAddresseeCard: Final session save on submit successful.');
+    } catch (error) {
+      console.error('EnvelopeAddresseeCard: Failed to save session to Supabase on submit:', error);
+    }
     
     goNext();
   };

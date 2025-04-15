@@ -135,8 +135,17 @@ export interface CustomEditionData {
   // ... fields ...
 }
 
+// Define the structure for Concierge contact details
+interface ConciergeContact {
+  method: 'email' | 'phone';
+  phoneNumber?: string;
+  availability?: string;
+}
+
+// Update ConciergeEditionData interface
 export interface ConciergeEditionData {
-  // ... fields ...
+  openEndedStory?: string;         // The main text input
+  preferredContact?: ConciergeContact; // Nested object for contact info
 }
 
 interface Recipient {

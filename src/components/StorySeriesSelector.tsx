@@ -199,7 +199,10 @@ const StorySeriesSelector = () => {
       
       <OnboardingModal 
         isOpen={onboardingModalOpen} 
-        onClose={() => setOnboardingModalOpen(false)} 
+        onClose={() => {
+          setOnboardingModalOpen(false);
+          setSelectedSeriesForModal(null);
+        }} 
         selectedSeries={selectedSeriesForModal}
       />
 

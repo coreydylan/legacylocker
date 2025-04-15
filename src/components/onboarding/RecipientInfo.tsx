@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,11 +9,13 @@ import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
 import { motion } from 'framer-motion';
 import { JollyDateField } from '@/components/ui/date-field';
 import { parseDate } from '@internationalized/date';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { recipientInfoSchema, RecipientInfoFormValues } from '@/schemas/recipientInfoSchema';
 import { cn } from '@/lib/utils';
 import { CalendarDate, DateValue } from '@internationalized/date';
+import { useDebouncedCallback } from 'use-debounce';
+import { saveSessionToSupabase } from '@/lib/sessionService';
 
 const INDIVIDUAL_RELATIONSHIPS = [
   'Parent',
@@ -139,6 +141,30 @@ const RecipientInfo: React.FC = () => {
     mode: 'onChange'
   });
 
+  // --- Debounced Autosave Logic --- 
+  const watchedFields = useWatch({ control }); // Watch all fields
+
+  const debouncedSave = useDebouncedCallback(async () => {
+    const currentData = watchedFields;
+    console.log('[Autosave] RecipientInfo: Triggering save with data:', currentData);
+    updateSession('recipient', currentData);
+    try {
+      await saveSessionToSupabase();
+      console.log('[Autosave] RecipientInfo: Session saved to Supabase.');
+    } catch (error) {
+      console.error('[Autosave] RecipientInfo: Failed to save session to Supabase:', error);
+    }
+  }, 1000); 
+
+  useEffect(() => {
+    // Directly call debouncedSave whenever watchedFields changes.
+    // The initial state will be saved once after the first render + debounce.
+    console.log('[Autosave] RecipientInfo: Field changed, debouncing save...');
+    debouncedSave();
+  // Depend only on watchedFields (the object reference changes on update) and debouncedSave
+  }, [watchedFields, debouncedSave]); 
+  // --- End Autosave Logic --- 
+
   // Type guard to check if errors are for individual recipient
   const isIndividualErrors = (errors: any): errors is { 
     firstName?: { message: string }, 
@@ -168,10 +194,16 @@ const RecipientInfo: React.FC = () => {
            'recipient2FirstName' in errors || 'recipient2LastName' in errors;
   };
 
-  const onSubmit = (data: RecipientInfoFormValues) => {
-    console.log('RecipientInfo: Form validated, saving data (dates as strings):', data);
-    // Data already contains dates as ISO strings or null
-    updateSession('recipient', data);
+  const onSubmit = async (data: RecipientInfoFormValues) => {
+    console.log('RecipientInfo: Form validated, onSubmit triggered.');
+    debouncedSave.cancel();
+    updateSession('recipient', data); 
+    try {
+      await saveSessionToSupabase();
+      console.log('RecipientInfo: Final session save on submit successful.');
+    } catch (error) {
+      console.error('RecipientInfo: Failed to save session to Supabase on submit:', error);
+    }
     goNext();
   };
 

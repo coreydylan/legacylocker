@@ -17,6 +17,8 @@ import StoryTab from './StoryTab';
 import ArtworkTab from './ArtworkTab';
 import FooterTab from './FooterTab';
 import { cn } from '@/lib/utils';
+import { useDebouncedCallback } from 'use-debounce';
+import { saveSessionToSupabase } from '@/lib/sessionService';
 
 // Define completion status types
 type CompletionStatus = 'complete' | 'in-progress' | 'not-started';
@@ -63,8 +65,19 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
   const { month, year } = monthData;
   const { overall: overallStatus, sections: sectionStatus } = getCompletionStatus(monthData);
 
+  // --- Debounced Save Logic --- 
+  const debouncedSave = useDebouncedCallback(() => {
+    console.log(`[Autosave] CustomMonthCard (${month}-${year}): Triggering Supabase save...`);
+    saveSessionToSupabase();
+  }, 1000); // 1 second debounce
+  // --- End Debounced Save Logic ---
+
+  // This function is called by the child tabs
   const handleUpdate = (update: Partial<CustomMonthData>) => {
+    // Update the Zustand store first
     onUpdate(month, year, update);
+    // Then trigger the debounced save
+    debouncedSave(); 
   };
 
   const statusMap: Record<CompletionStatus, { text: string; icon: React.ElementType; className: string }> = {

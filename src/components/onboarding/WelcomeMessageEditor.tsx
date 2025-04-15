@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import truncate from 'lodash/truncate';
+import { useDebouncedCallback } from 'use-debounce';
+import { saveSessionToSupabase } from '@/lib/sessionService';
 
 const WelcomeMessageEditor: React.FC = () => {
   const { welcomeMessage, updateSession } = useSessionStore(state => ({
@@ -11,6 +13,13 @@ const WelcomeMessageEditor: React.FC = () => {
       welcomeMessage: state.session.recipient?.welcomeMessage || '',
       updateSession: state.updateSession,
   }));
+
+  // --- Debounced Save Logic --- 
+  const debouncedSave = useDebouncedCallback(() => {
+    console.log('[Autosave] WelcomeMessageEditor: Triggering Supabase save...');
+    saveSessionToSupabase();
+  }, 1000); // 1 second debounce
+  // --- End Debounced Save Logic ---
 
   const characterLimit = 150; // Allow a bit more for a welcome message
   const messageLength = welcomeMessage?.length || 0;
@@ -22,7 +31,10 @@ const WelcomeMessageEditor: React.FC = () => {
      if (newValue.length > characterLimit) {
          newValue = truncate(newValue, { length: characterLimit, omission: '' });
      }
+     // Update Zustand state first
      updateSession('recipient.welcomeMessage', newValue);
+     // Then trigger the debounced save to Supabase
+     debouncedSave(); 
   };
 
   return (

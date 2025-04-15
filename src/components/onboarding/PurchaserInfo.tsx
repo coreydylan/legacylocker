@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
@@ -6,11 +6,14 @@ import { User, Mail, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/lib/sessionStore';
 import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { purchaserInfoSchema, PurchaserInfoFormValues } from '@/schemas/purchaserInfoSchema';
+import { saveSessionToSupabase } from '@/lib/sessionService';
+import { useDebouncedCallback } from 'use-debounce';
 
 const PurchaserInfo: React.FC = () => {
+  console.log('PURCHASER INFO COMPONENT RENDERED - Check if SUBMIT logs appear on continue');
   const { session, updateSession, startSession, sessionMetadata } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   
@@ -18,6 +21,7 @@ const PurchaserInfo: React.FC = () => {
   const { 
     register, 
     handleSubmit, 
+    control,
     formState: { errors, isValid } 
   } = useForm<PurchaserInfoFormValues>({
     resolver: zodResolver(purchaserInfoSchema),
@@ -28,17 +32,102 @@ const PurchaserInfo: React.FC = () => {
     mode: 'onChange'
   });
 
-  const onSubmit = (data: PurchaserInfoFormValues) => {
-    console.log('PurchaserInfo: Form validated, saving data:', data);
-    updateSession('purchaser', data);
+  // --- Debounced Autosave Logic --- 
+  const watchedFields = useWatch({ control });
+
+  const debouncedSave = useDebouncedCallback(async () => {
+    const currentData = { 
+      fullName: watchedFields.fullName, 
+      email: watchedFields.email 
+    };
+    console.log('[Autosave] PurchaserInfo: Triggering save with data:', currentData);
+    updateSession('purchaser', currentData); 
+    try {
+      await saveSessionToSupabase();
+      console.log('[Autosave] PurchaserInfo: Session saved to Supabase.');
+    } catch (error) {
+      console.error('[Autosave] PurchaserInfo: Failed to save session to Supabase:', error);
+    }
+  }, 1000);
+
+  useEffect(() => {
+    if (watchedFields.fullName !== undefined && watchedFields.email !== undefined) {
+      console.log('[Autosave] PurchaserInfo: Field changed, debouncing save...');
+      debouncedSave();
+    }
+  }, [watchedFields.fullName, watchedFields.email, debouncedSave]);
+  // --- End Autosave Logic --- 
+
+  const onSubmit = async (data: PurchaserInfoFormValues) => { 
+    console.log('[SUBMIT] PurchaserInfo: onSubmit started.');
+    let sessionJustStarted = false; 
+    let newSessionId: string | null = null; 
     
-    // Activate the session if it's not already active, using editionFlow.type
-    const editionType = session.editionFlow?.type;
-    if (!sessionMetadata.isActive && editionType) {
-      console.log('PurchaserInfo: Activating session with edition type:', editionType);
-      startSession(editionType);
+    updateSession('purchaser', data);
+    console.log('[SUBMIT] PurchaserInfo: Purchaser info updated in store.', data);
+    
+    const currentSessionState = useSessionStore.getState(); // Get full state once
+    const currentSessionMetadata = currentSessionState.sessionMetadata;
+    const editionType = currentSessionState.session.editionFlow?.type;
+    
+    console.log(`[SUBMIT] PurchaserInfo: Checking conditions - isActive: ${currentSessionMetadata.isActive}, editionType: ${editionType}`);
+    
+    if (!currentSessionMetadata.isActive && editionType) {
+      console.log('[SUBMIT] PurchaserInfo: Conditions met. Calling startSession...');
+      startSession(editionType); 
+      sessionJustStarted = true; 
+      // Re-get state AFTER startSession to capture the new ID
+      newSessionId = useSessionStore.getState().sessionMetadata.sessionId;
+      console.log(`[SUBMIT] PurchaserInfo: startSession called. sessionJustStarted: ${sessionJustStarted}, newSessionId captured: ${newSessionId}`);
+    } else {
+       console.log('[SUBMIT] PurchaserInfo: Conditions NOT met for startSession.');
     }
     
+    console.log('[SUBMIT] PurchaserInfo: Cancelling pending autosave...');
+    debouncedSave.cancel();
+    try {
+      console.log('[SUBMIT] PurchaserInfo: Calling final saveSessionToSupabase...');
+      await saveSessionToSupabase(); 
+      console.log('[SUBMIT] PurchaserInfo: Final session save successful.');
+      
+      // --- Call Backend API to Send Resume Email --- 
+      console.log(`[SUBMIT] PurchaserInfo: Checking API call condition - sessionJustStarted: ${sessionJustStarted}, newSessionId: ${newSessionId}`);
+      if (sessionJustStarted && newSessionId) {
+          const email = data.email; // Get email from form data
+          const sessionId = newSessionId; // Get sessionId captured earlier
+          console.log(`[SUBMIT] PurchaserInfo: Attempting call to /api/send-resume-email for ${email} / ${sessionId}.`);
+          try {
+              const response = await fetch('/api/send-resume-email', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email, sessionId }),
+              });
+              
+              if (!response.ok) {
+                  // Throw an error to be caught by the outer catch block
+                  throw new Error(`API responded with status: ${response.status}`);
+              }
+              
+              const responseData = await response.json(); // Assuming your API returns JSON
+              console.log('[SUBMIT] PurchaserInfo: API call to /api/send-resume-email successful.', responseData);
+
+          } catch (err) {
+              console.error('[SUBMIT] PurchaserInfo: API call to /api/send-resume-email FAILED:', err);
+              // Log the error but don't block navigation
+          }
+      } else {
+         console.log('[SUBMIT] PurchaserInfo: Conditions NOT met for calling email API.');
+         if (sessionJustStarted && !newSessionId) {
+             console.warn('[SUBMIT] PurchaserInfo: Session started but no ID captured for email API.');
+         }
+      }
+      // --- End API Call Logic --- 
+      
+    } catch (error) {
+      console.error('[SUBMIT] PurchaserInfo: Final saveSessionToSupabase FAILED:', error);
+    }
+    
+    console.log('[SUBMIT] PurchaserInfo: Calling goNext()...');
     goNext();
   };
 

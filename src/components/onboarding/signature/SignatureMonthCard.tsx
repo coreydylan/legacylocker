@@ -10,6 +10,8 @@ import { format, parseISO, isValid } from 'date-fns';
 import { CalendarIcon, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from "@/lib/utils";
+import { useDebouncedCallback } from 'use-debounce';
+import { saveSessionToSupabase } from '@/lib/sessionService';
 
 interface SignatureMonthCardProps {
   monthData: SignatureMonthCustomization;
@@ -31,6 +33,13 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
+
+  // --- Debounced Save Logic --- 
+  const debouncedSave = useDebouncedCallback(() => {
+    console.log(`[Autosave] SignatureMonthCard (${month}): Triggering Supabase save...`);
+    saveSessionToSupabase();
+  }, 1000); // 1 second debounce
+  // --- End Debounced Save Logic ---
 
   const handleToggle = (checked: boolean) => {
     const updateData: Partial<SignatureMonthCustomization> = { enabled: checked };
@@ -55,11 +64,13 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
        // updateData.shipDate = ''; 
      }
     onUpdate(month, updateData);
+    debouncedSave(); // Save after update
   };
 
   const handleDateChange = (date: Date | undefined) => {
     if (date) {
       onUpdate(month, { shipDate: format(date, 'yyyy-MM-dd') });
+      debouncedSave(); // Save after update
     }
   };
 
@@ -67,6 +78,7 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
      const newFooter = event.target.value;
      if (newFooter.length <= characterLimit) {
         onUpdate(month, { footerMessage: newFooter });
+        debouncedSave(); // Save after update
      }
   };
 

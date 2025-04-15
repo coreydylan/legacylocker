@@ -5,9 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { MessageCircle, CalendarCheck, Mail, Phone, ChevronLeft } from 'lucide-react';
-import { useSessionStore } from '@/lib/sessionStore'; // Import store hook
-import { SessionData } from '@/lib/sessionManager'; // Import types
+import { useSessionStore, SessionData } from '@/lib/sessionStore'; // Corrected import path for SessionData
 import { Button } from "@/components/ui/button"; // Import Button
+import { useDebouncedCallback } from 'use-debounce'; // Added
+import { saveSessionToSupabase } from '@/lib/sessionService'; // Added
 
 // interface ConciergeEditionFlowProps { ... } // Remove props interface
 
@@ -43,9 +44,17 @@ const ConciergeEditionFlow: React.FC = () => {
     }
   }, [typedSession.editionFlow?.conciergeData, updateSession]);
 
+  // --- Debounced Save Logic --- 
+  const debouncedSave = useDebouncedCallback(() => {
+    console.log('[Autosave] ConciergeEditionFlow: Triggering Supabase save...');
+    saveSessionToSupabase();
+  }, 1000); 
+  // --- End Debounced Save Logic ---
+
   // Update story in session
   const handleStoryChange = (value: string) => {
     updateSession('editionFlow.conciergeData.openEndedStory', value);
+    debouncedSave(); 
   };
   
   // Update contact method in local state and session
@@ -54,11 +63,13 @@ const ConciergeEditionFlow: React.FC = () => {
     setContactMethod(value);
     // Update session, potentially casting to the specific literal type if needed by store
     updateSession('editionFlow.conciergeData.preferredContact.method', value as 'email' | 'phone');
+    debouncedSave(); 
   };
 
   // Update contact details in session
   const handleContactDetailChange = (field: string, value: string) => {
     updateSession(`editionFlow.conciergeData.preferredContact.${field}`, value);
+    debouncedSave(); 
   };
 
   const charactersUsed = conciergeData?.openEndedStory?.length || 0;
