@@ -8,13 +8,25 @@ import {
   DialogDescription,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { SeriesType } from '@/types/onboarding';
 import { getAllStoryOptions } from "@/data/storySeriesData";
+import { useSessionStore } from '@/lib/sessionStore';
 import OnboardingModal from './OnboardingModal';
 import EditionTypeCard from './story-selector/EditionTypeCard';
 import SearchableCommandMenu from './story-selector/SearchableCommandMenu';
 
 const StorySeriesSelector = () => {
+  const { session, resetSession } = useSessionStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -22,6 +34,8 @@ const StorySeriesSelector = () => {
   const [selectedSeriesForModal, setSelectedSeriesForModal] = useState<SeriesType | null>(null);
   const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [filterType, setFilterType] = useState<'signature' | 'custom' | 'concierge' | null>(null);
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [seriesToConfirm, setSeriesToConfirm] = useState<SeriesType | null>(null);
   
   const allStoryOptions = useMemo(() => getAllStoryOptions(), []);
   
@@ -48,12 +62,42 @@ const StorySeriesSelector = () => {
   };
   
   const handleStorySeriesSelection = (series: SeriesType) => {
+    const isActiveSession = session && (session.selectedSeries || session.editionFlow?.customEditionData);
+
+    if (isActiveSession) {
+      setSeriesToConfirm(series);
+      setConfirmDialogOpen(true);
+      setDialogOpen(false);
+    } else {
+      proceedWithSelection(series);
+    }
+  };
+
+  const proceedWithSelection = (series: SeriesType) => {
     setSelectedSeriesForModal(series);
     setDialogOpen(false);
     setSearchQuery('');
     setSelectedCategory(null);
     setSelectedSubcategory(null);
     setOnboardingModalOpen(true);
+  };
+
+  const handleStartFresh = () => {
+    resetSession();
+    if (seriesToConfirm) {
+      proceedWithSelection(seriesToConfirm);
+    }
+    setSeriesToConfirm(null);
+  };
+
+  const handleContinueCurrentSession = () => {
+    if (session?.selectedEdition) {
+      setSelectedSeriesForModal(session.selectedEdition);
+      setOnboardingModalOpen(true);
+    } else {
+      console.warn("Attempted to continue session, but no selectedEdition found in session data.");
+    }
+    setSeriesToConfirm(null);
   };
 
   const renderSeriesDisplay = () => {
@@ -158,6 +202,21 @@ const StorySeriesSelector = () => {
         onClose={() => setOnboardingModalOpen(false)} 
         selectedSeries={selectedSeriesForModal}
       />
+
+      <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Active Session Detected</AlertDialogTitle>
+            <AlertDialogDescription>
+              You're currently building a story edition! Would you like to continue with that or clear the existing data and start fresh with the new selection?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={handleContinueCurrentSession}>Continue Current</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStartFresh}>Start Fresh</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   );
 };
