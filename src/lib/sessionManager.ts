@@ -4,7 +4,9 @@ import get from 'lodash.get';
 import cloneDeep from 'lodash/cloneDeep';
 import setWith from 'lodash/setWith';
 import { SeriesType } from '@/types/onboarding';
-import { 
+
+// Import and re-export types from sessionStore
+export type { 
     SessionData, 
     MonthlyCardData, 
     EditionType, 
@@ -12,6 +14,10 @@ import {
     ConciergeEditionData,
     ShippingAddress 
 } from './sessionStore';
+
+// Import necessary types locally if needed for internal logic (check usage)
+// If SessionData etc. are used *within* this file, keep the import:
+import { SessionData, MonthlyCardData, CustomEditionData, ConciergeEditionData, ShippingAddress } from './sessionStore';
 
 export interface CustomCardData { /* ... */ }
 
