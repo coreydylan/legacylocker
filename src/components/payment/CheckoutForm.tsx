@@ -9,9 +9,10 @@ import { Loader2, AlertCircle } from 'lucide-react'; // Icons for loading and er
 
 interface CheckoutFormProps {
   onSuccessfulPayment?: () => void; // Optional callback for success
+  isExternallySubmitting?: boolean; // Accept the prop from the parent
 }
 
-const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment }) => {
+const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExternallySubmitting }) => {
   const stripe = useStripe();
   const elements = useElements();
 
@@ -56,8 +57,9 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment }) => {
     */
   }, [stripe, onSuccessfulPayment]);
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSubmit = async (e?: React.FormEvent<HTMLFormElement>) => {
+    // Prevent default form submission if called from form event
+    e?.preventDefault();
 
     if (!stripe || !elements) {
       // Stripe.js has not yet loaded.
@@ -67,6 +69,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment }) => {
       return;
     }
 
+    // Use internal loading state
     setIsLoading(true);
     setMessage(null); // Clear previous messages
 
@@ -76,13 +79,13 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment }) => {
         // Make sure to change this to your payment completion page
         return_url: `${window.location.origin}/checkout/success`, // Use window.location.origin for dynamic base URL
       },
+      // We can disable the redirect here if we want to handle the result 
+      // directly within this component without leaving the page, but for 
+      // most flows (like 3D Secure), redirection is necessary.
+      // redirect: 'if_required' 
     });
 
-    // This point will only be reached if there is an immediate error when
-    // confirming the payment. Otherwise, your customer will be redirected to
-    // your `return_url`. For some payment methods like iDEAL, your customer will
-    // be redirected to an intermediate site first to authorize the payment, then
-    // redirected to the `return_url`.
+    // This point is only reached if there is an immediate error or if redirect: 'if_required' is used
     if (error) {
         if (error.type === "card_error" || error.type === "validation_error") {
             setMessage(error.message || "An error occurred with your payment details.");
@@ -90,12 +93,15 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment }) => {
             setMessage("An unexpected error occurred. Please try again.");
         }
         console.error("Stripe confirmation error:", error);
+        // If triggered externally, we might need a way to signal failure back up?
     } else {
-      // Success case is handled by redirection to return_url
-      setMessage("Processing payment..."); // Technically won't be seen if redirection is immediate
+      // Success without redirection (only if redirect: 'if_required' was used and no redirect needed)
+      // Or this could be a processing state
+      setMessage("Processing payment...");
+      // Potentially call onSuccessfulPayment if applicable here
     }
 
-
+    // Reset internal loading state regardless of external trigger
     setIsLoading(false);
   };
 
@@ -106,24 +112,34 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment }) => {
   return (
     <form id="payment-form" onSubmit={handleSubmit} className="space-y-6">
       <PaymentElement id="payment-element" options={paymentElementOptions}/>
+      
+      {/* OPTION 1: Keep internal button but disable based on external state */}
+      {/* 
       <Button
-        disabled={isLoading || !stripe || !elements}
-        id="submit"
+        // Disable if internal loading OR external submitting is happening
+        disabled={isLoading || isExternallySubmitting || !stripe || !elements}
+        id="submit" // Keep ID if needed, though maybe rename
+        type="submit" // Ensure it can submit the form
         size="lg"
         className="w-full text-base bg-legacy-green text-white hover:bg-legacy-green/90"
       >
-        <span id="button-text">
-          {isLoading ? (
-            <div className="flex items-center justify-center">
-              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              Processing...
-            </div>
-           ) : (
-            "Complete Payment"
-           )}
-        </span>
-      </Button>
-      {/* Show any error or success messages */}
+         <span id="button-text">
+           {isLoading ? (
+             <div className="flex items-center justify-center">
+               <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+               Processing...
+             </div>
+            ) : (
+             "Complete Payment Internally"
+            )}
+         </span>
+       </Button>
+      */}
+
+      {/* OPTION 2: Hide the internal button entirely */}
+      {/* No button rendered here, submission is handled by the parent component */}
+
+      {/* Show any error or success messages (important feedback) */}
       {message && (
         <div id="payment-message" className="flex items-center p-3 text-sm text-red-700 bg-red-100 rounded-md border border-red-200">
             <AlertCircle className="h-5 w-5 mr-2 text-red-500" />
