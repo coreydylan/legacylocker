@@ -31,6 +31,7 @@ export interface CustomMonthData {
   // Footer Tab
   footerEnabled: boolean;
   footerMessage: string;
+  shipDate?: string | null; // Add optional shipDate (ISO string YYYY-MM-DD)
 }
 
 export interface SessionData {
@@ -257,6 +258,7 @@ const createNewSession = (): SessionData => {
     photoUrl: undefined,
     footerEnabled: false,
     footerMessage: '',
+    shipDate: undefined,
   }));
 
   return {
