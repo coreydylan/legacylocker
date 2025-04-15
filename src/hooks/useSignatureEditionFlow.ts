@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 // import { FormData } from '@/types/onboarding'; // No longer needed as arg
 import { useToast } from './use-toast';
-import { useSessionStore } from '@/lib/sessionStore'; // Import store hook
-import { SessionData } from '@/lib/sessionManager'; // Import SessionData for typing
+import { useSessionStore, SessionData } from '@/lib/sessionStore'; // Import SessionData from sessionStore instead of sessionManager
 
 // Remove formData and updateFormData from arguments
 export const useSignatureEditionFlow = () => {
@@ -35,14 +34,15 @@ export const useSignatureEditionFlow = () => {
         acc[month] = { 
           personalMessage: '', 
           celebration: '', 
-          customDate: undefined,
+          customDate: '',
           useExactText: false,
           useExactTitle: false,
           artworkOption: 'from-story',
-          photoUrl: undefined
+          photoUrl: '',
+          title: ''
         };
         return acc;
-      }, {} as SessionData['editionFlow']['monthlyData']); // Use SessionData type
+      }, {} as Record<string, any>);
       
       // Update the session directly
       updateSession('editionFlow.monthlyData', initialMonthlyData);
@@ -59,11 +59,12 @@ export const useSignatureEditionFlow = () => {
   const currentMonthData = typedSession.editionFlow?.monthlyData?.[selectedMonth] || { 
     personalMessage: '', 
     celebration: '', 
-    customDate: undefined,
+    customDate: '',
     useExactText: false,
     useExactTitle: false,
     artworkOption: 'from-story',
-    photoUrl: undefined
+    photoUrl: '',
+    title: ''
   };
 
   const handleMonthChange = (newMonth: string) => {
@@ -124,6 +125,29 @@ export const useSignatureEditionFlow = () => {
   const prevMonth = currentIndex > 0 ? months[currentIndex - 1] : null;
   const nextMonth = currentIndex < months.length - 1 ? months[currentIndex + 1] : null;
 
+  const initializeMonthlyData = useCallback(() => {
+    // Initialize monthly data in the session if it doesn't exist
+    if (!typedSession.editionFlow?.monthlyData) {
+      const initialMonthlyData = months.reduce((acc, month) => {
+        acc[month] = { 
+          personalMessage: '', 
+          celebration: '', 
+          customDate: '',
+          useExactText: false,
+          useExactTitle: false,
+          artworkOption: 'from-story',
+          photoUrl: '',
+          title: ''
+        };
+        return acc;
+      }, {} as Record<string, any>);
+      
+      // Update the session directly
+      updateSession('editionFlow.monthlyData', initialMonthlyData);
+      updateSession('editionFlow.currentMonth', "January");
+    }
+  }, [months, updateSession, typedSession.editionFlow]);
+
   return {
     selectedMonth,
     // setSelectedMonth, // Usually not needed externally if synced with store
@@ -141,6 +165,7 @@ export const useSignatureEditionFlow = () => {
     handleNextMonth, // Updates session
     handleMonthDataChange, // Updates session
     handleCalendarToggle, // Local UI state
-    handlePhotoUpload // Updates session (placeholder)
+    handlePhotoUpload, // Updates session (placeholder)
+    initializeMonthlyData
   };
 };

@@ -1,84 +1,65 @@
 import React from 'react';
-// import { FormData } from '@/types/onboarding'; // No longer needed
-import { useSignatureEditionFlow } from '@/hooks/useSignatureEditionFlow'; // Import refactored hook
-import MonthsIndicator from './signature/MonthsIndicator';
-import MonthCarousel from './signature/MonthCarousel';
-import SignatureEditionInfo from './signature/SignatureEditionInfo';
-import { useSessionStore } from '@/lib/sessionStore'; // Import store hook for session data
-import { SessionData } from '@/lib/sessionManager'; // Import SessionData for typing
+import SignatureMonthGrid from './signature/SignatureMonthGrid'; // Import the new grid component
+import { useSessionStore } from '@/lib/sessionStore'; // Keep store hook if needed for other parts
+import WelcomeMessageEditor from './WelcomeMessageEditor'; // Import the new component
 
-// Remove props interface
-// interface SignatureEditionFlowProps { ... }
+interface SignatureEditionFlowProps {
+  hideCustomization?: boolean; // Keep prop if needed, though grid likely always shows
+}
 
-// Remove props from component signature
-const SignatureEditionFlow: React.FC = () => {
-  // Call the refactored hook (no arguments needed)
-  const {
-    selectedMonth,
-    openCalendars,
-    direction,
-    containerHeight,
-    setContainerHeight,
-    months,
-    celebrationTypes,
-    currentMonthData, // Data now comes directly from hook (derived from store)
-    prevMonth,
-    nextMonth,
-    handleMonthChange,
-    handleMonthDataChange,
-    handlePrevMonth,
-    handleNextMonth,
-    handleCalendarToggle,
-    handlePhotoUpload
-  } = useSignatureEditionFlow();
+const SignatureEditionFlow: React.FC<SignatureEditionFlowProps> = ({ hideCustomization = false }) => {
+  // Remove the useSignatureEditionFlow hook
+  // const {
+  //   selectedMonth,
+  //   openCalendars,
+  //   ...rest of old hook values
+  // } = useSignatureEditionFlow();
 
-  // Get session data for passing to MonthsIndicator
-  const { session } = useSessionStore();
-  const typedSession = session as SessionData;
-  const monthlyData = typedSession.editionFlow?.monthlyData || {};
+  // Session store might still be needed if other info is displayed here
+  const { isLoading, isHydrated } = useSessionStore(state => ({
+    isLoading: state.isLoading,
+    isHydrated: state.isHydrated,
+  }));
+
+  // Remove useEffect for initializeMonthlyData - handled by store now
+
+  // Basic loading state (can be enhanced)
+  if (isLoading || !isHydrated) {
+      return (
+          <div className="space-y-8">
+              {/* Header */}
+              <div className="space-y-3 text-center px-4">
+                  <h1 className="text-3xl sm:text-4xl font-bold text-legacy-green font-playfair">Personalize Your Signature Cards</h1>
+                  <p className="text-lg sm:text-xl text-legacy-dark/80">Loading Customization Options...</p>
+              </div>
+          </div>
+      );
+  }
 
   return (
-    <div className="space-y-5 pb-8">
+    // Add space-y-8 for spacing between Welcome Card and Grid
+    <div className="space-y-8">
+      {/* Header */}
       <div className="space-y-3 text-center px-4">
-        <h1 className="text-3xl sm:text-4xl font-bold text-legacy-green font-playfair">Personalize Your Cards</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold text-legacy-green font-playfair">Personalize Your Signature Cards</h1>
         <p className="text-lg sm:text-xl text-legacy-dark/80">
-          Add personal messages to each month's card to make them extra special.
+          Optionally add a welcome message and customize ship dates or special footers.
         </p>
       </div>
       
-      {/* Pass necessary data from hook and store */}
-      <MonthsIndicator 
-        months={months} 
-        selectedMonth={selectedMonth} 
-        monthlyData={monthlyData} // Pass monthlyData from session
-      />
+      {/* --- Add Welcome Message Editor --- */} 
+      <WelcomeMessageEditor />
+      
+      {/* Conditionally render Grid or hide message */} 
+      {!hideCustomization ? (
+           <SignatureMonthGrid />
+       ) : (
+          <div className="bg-gray-50 p-4 rounded-lg text-center max-w-3xl mx-auto">
+            <p className="text-legacy-dark/80">Monthly signature customization options are managed here.</p> 
+          </div>
+       )}
 
-      <div className="space-y-8">
-        {/* Pass all necessary props from the hook */}
-        <MonthCarousel
-          selectedMonth={selectedMonth}
-          prevMonth={prevMonth}
-          nextMonth={nextMonth}
-          currentMonthData={currentMonthData}
-          openCalendars={openCalendars}
-          direction={direction}
-          containerHeight={containerHeight}
-          setContainerHeight={setContainerHeight}
-          handleMonthDataChange={handleMonthDataChange}
-          handlePrevMonth={handlePrevMonth}
-          handleNextMonth={handleNextMonth}
-          handleCalendarToggle={handleCalendarToggle}
-          celebrationTypes={celebrationTypes}
-          months={months}
-          handleMonthChange={handleMonthChange}
-          handlePhotoUpload={handlePhotoUpload}
-        />
-
-        <div className="pt-10">
-          {/* SignatureEditionInfo might need refactoring if it uses props */}
-          <SignatureEditionInfo />
-        </div>
-      </div>
+      {/* Navigation Buttons remain handled by the parent step component */}
     </div>
   );
 };

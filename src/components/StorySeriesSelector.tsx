@@ -13,7 +13,7 @@ import OnboardingModal from './OnboardingModal';
 import EditionTypeCard from './story-selector/EditionTypeCard';
 import SearchableCommandMenu from './story-selector/SearchableCommandMenu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { hasActiveSession, getCurrentSession } from '@/services/sessionService';
+import { useSessionStore, isValidSession } from '@/lib/sessionStore';
 
 const StorySeriesSelector = () => {
   const [open, setOpen] = useState(false);
@@ -42,14 +42,19 @@ const StorySeriesSelector = () => {
   }, [searchQuery, allStoryOptions]);
   
   const handleStorySeriesSelection = (series: SeriesType) => {
-    // Only check for existing session if there's actually a session with meaningful data
-    const hasSession = hasActiveSession();
+    const { session, initialize, updateSession, resetSession } = useSessionStore.getState();
     
-    if (hasSession && !showSessionAlert) {
-      setSelectedSeries(series);
-      setShowSessionAlert(true);
-      return;
+    if (isValidSession(session)) {
+      if (!showSessionAlert) {
+        setSelectedSeries(series);
+        setShowSessionAlert(true);
+        return;
+      }
     }
+    
+    updateSession('selectedEdition', series);
+    
+    console.log('Session initialized/updated with series:', series);
     
     setSelectedSeries(series);
     setDialogOpen(false);
@@ -62,7 +67,7 @@ const StorySeriesSelector = () => {
   };
 
   const openSelectorWithFilter = (type: 'signature' | 'custom' | 'concierge') => {
-    const hasSession = hasActiveSession();
+    const hasSession = isValidSession(useSessionStore.getState().session);
     
     if (hasSession) {
       setFilterType(type);
@@ -90,15 +95,25 @@ const StorySeriesSelector = () => {
     }
   };
   
-  const continueExistingSession = () => {
+  const handleResetAndSelect = () => {
+    const { resetSession } = useSessionStore.getState();
+    resetSession();
     setShowSessionAlert(false);
-    const { formData } = getCurrentSession();
-    
-    if (formData && formData.selectedSeries) {
-      setSelectedSeries(formData.selectedSeries);
+    if (selectedSeries) {
+      const { initialize, updateSession } = useSessionStore.getState();
+      initialize();
+      updateSession('selectedEdition', selectedSeries);
+
+      console.log('Session initialized with series after reset:', selectedSeries);
+
+      setDialogOpen(false);
+      setOpen(false);
+      setSearchQuery('');
+      setSelectedCategory(null);
+      setSelectedSubcategory(null);
+
+      setOnboardingModalOpen(true);
     }
-    
-    setOnboardingModalOpen(true);
   };
   
   const startNewSession = () => {
@@ -186,7 +201,6 @@ const StorySeriesSelector = () => {
         </div>
       </div>
       
-      {/* Session Alert Dialog */}
       <AlertDialog open={showSessionAlert} onOpenChange={setShowSessionAlert}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -201,7 +215,7 @@ const StorySeriesSelector = () => {
             </AlertDialogCancel>
             <AlertDialogAction 
               className="bg-legacy-green hover:bg-legacy-green/90" 
-              onClick={continueExistingSession}
+              onClick={handleResetAndSelect}
             >
               Continue My Order
             </AlertDialogAction>

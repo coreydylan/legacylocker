@@ -1,7 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from "framer-motion";
 import MonthCard from './MonthCard';
-import { MonthlyCardData } from '@/lib/sessionManager';
+import { MonthlyCardData } from '@/lib/sessionStore';
 
 interface MonthCarouselProps {
   selectedMonth: string;

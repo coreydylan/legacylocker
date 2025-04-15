@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,51 +6,34 @@ import { motion } from 'framer-motion';
 import { User, Mail, ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { purchaserInfoSchema, PurchaserInfoFormValues } from '@/schemas/purchaserInfoSchema';
 
 const PurchaserInfo: React.FC = () => {
-  const { session, updateSession, nextStep, prevStep } = useSessionStore();
-  const purchaser = session.purchaser || { fullName: '', email: '' };
-
-  const [errors, setErrors] = useState<{ fullName?: string; email?: string }>({});
-
-  const validateForm = () => {
-    const newErrors: { fullName?: string; email?: string } = {};
-    if (!purchaser.fullName?.trim()) {
-      newErrors.fullName = 'Full name is required.';
-    }
-    if (!purchaser.email?.trim()) {
-      newErrors.email = 'Email is required.';
-    } else if (!/^\S+@\S+\.\S+$/.test(purchaser.email)) {
-      newErrors.email = 'Please enter a valid email address.';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    updateSession(`purchaser.${id}`, value);
-    if (errors[id as keyof typeof errors]) {
-      setErrors(prev => ({ ...prev, [id]: undefined }));
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validateForm()) {
-      console.log('PurchaserInfo: Form validated, moving to next step');
-      nextStep();
-    } else {
-      console.log('PurchaserInfo: Form validation failed');
-    }
-  };
+  const { session, updateSession } = useSessionStore();
+  const { goNext, goBack } = useOnboardingNavigation();
   
-  useEffect(() => {
-    if (purchaser.fullName || purchaser.email) {
-      validateForm();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // Initialize form with react-hook-form and zod validation
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors, isValid } 
+  } = useForm<PurchaserInfoFormValues>({
+    resolver: zodResolver(purchaserInfoSchema),
+    defaultValues: {
+      fullName: session.purchaser?.fullName || '',
+      email: session.purchaser?.email || '',
+    },
+    mode: 'onChange'
+  });
+
+  const onSubmit = (data: PurchaserInfoFormValues) => {
+    console.log('PurchaserInfo: Form validated, saving data:', data);
+    updateSession('purchaser', data);
+    goNext();
+  };
 
   return (
     <div className="max-w-xl mx-auto py-8">
@@ -64,7 +47,7 @@ const PurchaserInfo: React.FC = () => {
       </div>
 
       <motion.form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -83,19 +66,17 @@ const PurchaserInfo: React.FC = () => {
                 id="fullName"
                 type="text"
                 placeholder="Your full name"
-                value={purchaser.fullName || ''}
-                onChange={handleInputChange}
                 className={cn(
                   "!px-0 !pl-12 h-12 w-full",
-                  errors.fullName && purchaser.fullName?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
+                  errors.fullName ? "border-red-500 focus-visible:ring-red-500" : ""
                 )}
-                required
+                {...register('fullName')}
                 aria-invalid={!!errors.fullName}
                 aria-describedby={errors.fullName ? "fullName-error" : undefined}
               />
             </div>
-            {errors.fullName && purchaser.fullName?.length > 0 && (
-              <p id="fullName-error" className="text-xs text-red-600 pt-1">{errors.fullName}</p>
+            {errors.fullName && (
+              <p id="fullName-error" className="text-xs text-red-600 pt-1">{errors.fullName.message}</p>
             )}
           </div>
           
@@ -112,19 +93,17 @@ const PurchaserInfo: React.FC = () => {
                 id="email"
                 type="email"
                 placeholder="your.email@example.com"
-                value={purchaser.email || ''}
-                onChange={handleInputChange}
                 className={cn(
                   "!px-0 !pl-12 h-12 w-full",
-                  errors.email && purchaser.email?.length > 0 ? "border-red-500 focus-visible:ring-red-500" : ""
+                  errors.email ? "border-red-500 focus-visible:ring-red-500" : ""
                 )}
-                required
+                {...register('email')}
                 aria-invalid={!!errors.email}
                 aria-describedby={errors.email ? "email-error" : undefined}
               />
             </div>
-            {errors.email && purchaser.email?.length > 0 && (
-              <p id="email-error" className="text-xs text-red-600 pt-1">{errors.email}</p>
+            {errors.email && (
+              <p id="email-error" className="text-xs text-red-600 pt-1">{errors.email.message}</p>
             )}
             <p className="text-xs text-gray-500 pt-1">
               We'll use this to save your progress and contact you about your order.
@@ -136,7 +115,7 @@ const PurchaserInfo: React.FC = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={prevStep}
+            onClick={goBack}
             className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -149,7 +128,7 @@ const PurchaserInfo: React.FC = () => {
               "bg-legacy-green hover:bg-legacy-green/90 text-white",
               "disabled:bg-gray-300 disabled:cursor-not-allowed"
             )}
-            disabled={Object.keys(errors).some(key => errors[key as keyof typeof errors])}
+            disabled={!isValid}
           >
             Continue
           </Button>

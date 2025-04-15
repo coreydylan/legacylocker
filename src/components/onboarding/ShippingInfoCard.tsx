@@ -3,118 +3,126 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
-import { ChevronLeft, Home, User } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
 import { ShippingAddress, Recipient } from '@/lib/sessionManager';
 import AddressAutocomplete, { StructuredAddress } from './inputs/AddressAutocomplete';
 import { formatShipToName } from '@/lib/utils/formatShipToName';
+import { useForm, Controller } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { shippingInfoSchema, ShippingInfoFormValues } from '@/schemas/shippingInfoSchema';
 
 const ShippingInfoCard: React.FC = () => {
-  const { session, updateSession, nextStep, prevStep } = useSessionStore();
+  const { session, updateSession } = useSessionStore();
+  const { goNext, goBack } = useOnboardingNavigation();
   const recipient: Recipient | undefined = session.recipient;
-  const initialAddress: ShippingAddress = recipient?.shippingAddress || {}; 
   
-  const [addressString, setAddressString] = useState<string>(initialAddress.full || '');
-  const [structuredAddress, setStructuredAddress] = useState<ShippingAddress>(initialAddress);
-  const [errors, setErrors] = useState<Partial<Record<keyof ShippingAddress | 'shippingName', string>>>({});
-
+  // Get default shipping name from recipient info
   const defaultShippingName = formatShipToName(session);
-  const initialShippingName = recipient?.shippingNameOverridden 
-                                 ? (recipient?.shippingName || '') 
-                                 : defaultShippingName;
-  const [shippingName, setShippingName] = useState<string>(initialShippingName);
-
+  
+  // Get initial values for the form
+  const getDefaultValues = (): ShippingInfoFormValues => {
+    const initialShippingName = recipient?.shippingNameOverridden 
+      ? (recipient?.shippingName || '') 
+      : defaultShippingName;
+      
+    return {
+      shippingName: initialShippingName,
+      shippingNameOverridden: recipient?.shippingNameOverridden || false,
+      shippingAddress: recipient?.shippingAddress || {
+        street: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: '',
+        full: ''
+      }
+    };
+  };
+  
+  // State for address autocomplete
+  const [addressString, setAddressString] = useState<string>(
+    recipient?.shippingAddress?.full || ''
+  );
+  
+  // Initialize form with react-hook-form and zod validation
+  const { 
+    register, 
+    handleSubmit, 
+    control,
+    setValue,
+    formState: { errors, isValid },
+    watch
+  } = useForm<ShippingInfoFormValues>({
+    resolver: zodResolver(shippingInfoSchema),
+    defaultValues: getDefaultValues(),
+    mode: 'onChange'
+  });
+  
+  // Watch the shipping address to update the UI
+  const shippingAddress = watch('shippingAddress');
+  
+  // Update shipping name when recipient info changes
   useEffect(() => {
     const currentRecipient: Recipient | undefined = session.recipient;
-    const sessionAddress = currentRecipient?.shippingAddress || {};
-    setStructuredAddress(sessionAddress);
-    setAddressString(sessionAddress.full || '');
-
     const newDefaultName = formatShipToName(session);
-    const currentShippingName = currentRecipient?.shippingNameOverridden
-                                 ? (currentRecipient?.shippingName || '')
-                                 : newDefaultName;
-    setShippingName(currentShippingName);
-    if (!currentRecipient?.shippingNameOverridden && currentShippingName !== currentRecipient?.shippingName) {
-        updateSession('recipient.shippingName', currentShippingName);    
-    }
-
-  }, [session, updateSession]);
-
-  const validateForm = () => {
-    const newErrors: Partial<Record<keyof ShippingAddress | 'shippingName', string>> = {};
-    if (!structuredAddress.street?.trim()) newErrors.street = 'Street address is required.';
-    if (!structuredAddress.city?.trim()) newErrors.city = 'City is required.';
-    if (!structuredAddress.state?.trim()) newErrors.state = 'State/Province is required.';
-    if (!structuredAddress.postalCode?.trim()) newErrors.postalCode = 'ZIP/Postal code is required.';
-    if (!structuredAddress.country?.trim()) newErrors.country = 'Country is required.';
-    if (addressString && !structuredAddress.street) {
-       newErrors.full = 'Please select a valid address from the suggestions.';
-    }
-    if (!shippingName.trim()) newErrors.shippingName = 'Shipping name is required.';
     
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+    // Only update if not overridden by user
+    if (!currentRecipient?.shippingNameOverridden) {
+      setValue('shippingName', newDefaultName);
+    }
+  }, [session, setValue]);
 
+  // Handle address selection from autocomplete
   const handleAddressSelect = (selected: StructuredAddress) => {
     console.log('ShippingInfoCard: Address selected via autocomplete', selected);
-    const updatedAddress: ShippingAddress = selected;
-    setStructuredAddress(updatedAddress);
-    setAddressString(updatedAddress.full || '');
-    updateSession('recipient.shippingAddress', updatedAddress);
-    setErrors(prev => ({ 
-        ...prev, 
-        street: undefined, 
-        city: undefined, 
-        state: undefined, 
-        postalCode: undefined, 
-        country: undefined, 
-        full: undefined 
-    }));
+    setAddressString(selected.full || '');
+    
+    // Update form values
+    setValue('shippingAddress', {
+      street: selected.street || '',
+      city: selected.city || '',
+      state: selected.state || '',
+      postalCode: selected.postalCode || '',
+      country: selected.country || '',
+      full: selected.full || ''
+    }, { shouldValidate: true });
   };
 
+  // Handle address input change
   const handleAddressInputChange = (value: string) => {
     setAddressString(value);
     if (value.trim() === '') {
-        const emptyAddress: ShippingAddress = {};
-        setStructuredAddress(emptyAddress);
-        updateSession('recipient.shippingAddress', emptyAddress);
-        setErrors(prev => ({ 
-            ...prev, 
-            street: undefined, 
-            city: undefined, 
-            state: undefined, 
-            postalCode: undefined, 
-            country: undefined, 
-            full: undefined 
-        }));
+      // Clear address fields if input is empty
+      setValue('shippingAddress', {
+        street: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: '',
+        full: ''
+      }, { shouldValidate: true });
     }
   };
 
+  // Handle shipping name change
   const handleShippingNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setShippingName(newName);
-    updateSession('recipient.shippingName', newName);
-    updateSession('recipient.shippingNameOverridden', true);
-    if (errors.shippingName) {
-        setErrors(prev => ({ ...prev, shippingName: undefined }));
-    }
+    setValue('shippingName', e.target.value, { shouldValidate: true });
+    setValue('shippingNameOverridden', true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const currentRecipient: Recipient | undefined = session.recipient;
-    if (validateForm()) {
-      if (!currentRecipient?.shippingNameOverridden) {
-          updateSession('recipient.shippingName', shippingName); 
-      }
-      console.log('ShippingInfoCard: Form validated, moving to next step');
-      nextStep();
-    } else {
-      console.log('ShippingInfoCard: Form validation failed', errors);
-    }
+  // Form submission handler
+  const onSubmit = (data: ShippingInfoFormValues) => {
+    console.log('ShippingInfoCard: Form validated, saving data:', data);
+    
+    // Update session with shipping info
+    updateSession('recipient.shippingName', data.shippingName);
+    updateSession('recipient.shippingNameOverridden', data.shippingNameOverridden);
+    updateSession('recipient.shippingAddress', data.shippingAddress);
+    
+    goNext();
   };
 
   return (
@@ -129,7 +137,7 @@ const ShippingInfoCard: React.FC = () => {
       </div>
 
       <motion.form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -143,20 +151,20 @@ const ShippingInfoCard: React.FC = () => {
                 Shipping Name
               </Label>
               <Input
-                 id="shippingName"
-                 type="text"
-                 placeholder="Name for the shipping label"
-                 value={shippingName}
-                 onChange={handleShippingNameChange}
-                 className={cn(
-                   "h-12 w-full",
-                   errors.shippingName ? "border-red-500 focus-visible:ring-red-500" : ""
-                 )}
-                 aria-invalid={!!errors.shippingName}
-                 aria-describedby={errors.shippingName ? "shippingName-error" : undefined}
+                id="shippingName"
+                type="text"
+                placeholder="Name for the shipping label"
+                value={watch('shippingName')}
+                onChange={handleShippingNameChange}
+                className={cn(
+                  "h-12 w-full",
+                  errors.shippingName ? "border-red-500 focus-visible:ring-red-500" : ""
+                )}
+                aria-invalid={!!errors.shippingName}
+                aria-describedby={errors.shippingName ? "shippingName-error" : undefined}
               />
               {errors.shippingName && (
-                 <p id="shippingName-error" className="text-xs text-red-600 pt-1">{errors.shippingName}</p>
+                <p id="shippingName-error" className="text-xs text-red-600 pt-1">{errors.shippingName.message}</p>
               )}
             </div>
             
@@ -164,22 +172,43 @@ const ShippingInfoCard: React.FC = () => {
               <Label htmlFor="addressAutocomplete" className="text-legacy-green font-medium">
                 Shipping Address
               </Label>
-              <AddressAutocomplete
-                value={addressString} 
-                onChange={handleAddressInputChange} 
-                onSelect={handleAddressSelect} 
-                placeholder="Start typing the recipient's address..."
-                error={errors.full || errors.street || errors.city || errors.state || errors.postalCode || errors.country} 
+              <Controller
+                name="shippingAddress.full"
+                control={control}
+                render={({ field }) => (
+                  <AddressAutocomplete
+                    value={addressString}
+                    onChange={handleAddressInputChange}
+                    onSelect={handleAddressSelect}
+                    placeholder="Start typing the recipient's address..."
+                    error={errors.shippingAddress?.street?.message || 
+                           errors.shippingAddress?.city?.message || 
+                           errors.shippingAddress?.state?.message || 
+                           errors.shippingAddress?.postalCode?.message || 
+                           errors.shippingAddress?.country?.message}
+                  />
+                )}
               />
-              {structuredAddress.street && !errors.full && (
+              
+              {shippingAddress.street && !errors.shippingAddress?.street && (
                 <div className="text-sm text-muted-foreground mt-2 pl-1 border-l-2 border-legacy-green/50 ml-1">
                   <p className="pl-3">
-                    <strong className="text-gray-700 block mb-0.5">{shippingName}</strong> 
-                    {structuredAddress.street}<br />
-                    {structuredAddress.city}, {structuredAddress.state} {structuredAddress.postalCode}<br />
-                    {structuredAddress.country}
+                    <strong className="text-gray-700 block mb-0.5">{watch('shippingName')}</strong> 
+                    {shippingAddress.street}<br />
+                    {shippingAddress.city}, {shippingAddress.state} {shippingAddress.postalCode}<br />
+                    {shippingAddress.country}
                   </p>
                 </div>
+              )}
+              
+              {(errors.shippingAddress?.street || 
+                errors.shippingAddress?.city || 
+                errors.shippingAddress?.state || 
+                errors.shippingAddress?.postalCode || 
+                errors.shippingAddress?.country) && (
+                <p className="text-xs text-red-600 pt-1">
+                  Please select a complete address from the suggestions.
+                </p>
               )}
             </div>
           </div>
@@ -189,7 +218,7 @@ const ShippingInfoCard: React.FC = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={prevStep}
+            onClick={goBack}
             className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -202,7 +231,6 @@ const ShippingInfoCard: React.FC = () => {
               "bg-legacy-green hover:bg-legacy-green/90 text-white",
               "disabled:bg-gray-300 disabled:cursor-not-allowed"
             )}
-            disabled={!shippingName.trim() || !structuredAddress.street || !structuredAddress.city || !structuredAddress.state || !structuredAddress.postalCode || !structuredAddress.country || Object.values(errors).some(e => !!e)}
           >
             Continue
           </Button>

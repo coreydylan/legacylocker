@@ -1,6 +1,6 @@
 import React from 'react';
 import { cn } from "@/lib/utils";
-import { MonthlyCardData } from '@/lib/sessionManager';
+import { MonthlyCardData } from '@/lib/sessionStore';
 
 interface MonthsIndicatorProps {
   months: string[];

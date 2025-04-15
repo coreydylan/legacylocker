@@ -2,7 +2,7 @@ import React from 'react';
 import MonthPersonalizationForm from './MonthPersonalizationForm';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { MonthlyCardData } from '@/lib/sessionManager';
+import { MonthlyCardData } from '@/lib/sessionStore';
 import { useSessionStore } from '@/lib/sessionStore';
 
 interface MonthCardProps {

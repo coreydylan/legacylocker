@@ -14,7 +14,7 @@ import ConciergeEditionFlow from './ConciergeEditionFlow';
 import ReviewCheckout from './ReviewCheckout';
 import SaveProgressModal from './SaveProgressModal';
 // import OnboardingHeader from './OnboardingHeader'; // <<< Remove Header import
-import { SessionData } from '@/lib/sessionManager'; // Import SessionData for typing
+import { SessionData, isValidSession } from '@/lib/sessionStore'; // Import SessionData for typing and isValidSession
 
 
 // Define steps in our onboarding flow
@@ -32,6 +32,44 @@ interface OnboardingFlowProps {
   // Removed editionName prop, should be handled by store initialization
   onBack?: () => void;
 }
+
+// Helper to check if data for a step is valid (more comprehensive)
+const isStepDataValid = (session: SessionData | null | undefined, step: number): boolean => {
+  if (!session) return false;
+  if (step <= 0) return false;
+
+  switch (step) {
+    case STEPS.RECIPIENT_SELECTION:
+      return true; 
+    case STEPS.PURCHASER_INFO:
+      return !!session.recipientType; 
+    case STEPS.RECIPIENT_INFO:
+      return !!session.purchaser?.fullName && !!session.purchaser?.email; 
+    case STEPS.SHIPPING_INFO: 
+      // Correct boolean check: returns true if *either* firstName or recipient1FirstName exists
+      return !!session.recipient && (!!session.recipient.firstName || !!session.recipient.recipient1FirstName);
+    case STEPS.ENVELOPE_ADDRESSEE:
+      // Use the correct field name 'street' from the ShippingAddress interface
+      return !!session?.recipient?.shippingAddress?.street; 
+    case STEPS.EDITION_DETAILS:
+      return !!session.recipient?.cardAddresseeName;
+    case STEPS.REVIEW_CHECKOUT:
+       if (!session.selectedEdition) return false;
+       return true; // Placeholder
+    default:
+      return false;
+  }
+};
+
+// Helper to find the first step for which data is *missing*
+const findFirstIncompleteStep = (session: SessionData): number => {
+  for (let i = 1; i <= STEPS.REVIEW_CHECKOUT; i++) {
+    if (!isStepDataValid(session, i + 1)) { // Check if data for the *next* step is missing
+      return i; // Return the current step as incomplete
+    }
+  }
+  return STEPS.REVIEW_CHECKOUT; // If all steps are valid, return the last one
+};
 
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ 
   onBack: externalOnBack
@@ -52,21 +90,30 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     console.clear();
     console.log("OnboardingFlow: Initializing session...");
     initialize();
-  }, [initialize]);
+    
+    // Don't include session in deps, it creates an infinite loop
+  }, [initialize]); // Removed session from dependency array
   
+  // Separate effect for logging session changes
   useEffect(() => {
-    if (session.updatedAt) {
+    console.log("Session updated:", session);
+  }, [session.updatedAt]);
+
+  useEffect(() => {
+    if (session?.updatedAt) {
       try {
         setLastSavedTime(new Date(session.updatedAt));
       } catch (e) {
         console.error("Failed to parse session updatedAt:", e);
         setLastSavedTime(null);
       }
+    } else {
+      setLastSavedTime(null);
     }
-  }, [session.updatedAt]);
+  }, [session?.updatedAt]);
 
   const handleSaveProgress = () => {
-    console.log("OnboardingFlow: Save progress clicked");
+    console.log("OnboardingFlow: Save progress clicked - handled by store action");
     setShowSaveModal(true);
   };
   
@@ -83,9 +130,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     console.log('OnboardingFlow: Close button clicked (logic handled by OnboardingModal)');
   };
   
-  const typedSession = session as SessionData;
-
-  if (isLoading) {
+  if (isLoading || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-legacy-cream">
         <div className="text-lg font-medium text-legacy-green animate-pulse">Loading Onboarding...</div>
@@ -93,10 +138,30 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     );
   }
   
-  // Render current step based on session.currentStep
+  // Render current step based on session.currentStep, validated
   const renderCurrentStep = () => {
-    console.log(`OnboardingFlow: Rendering step ${typedSession.currentStep}`);
-    switch (typedSession.currentStep) {
+    console.log(`OnboardingFlow: Attempting to render step ${session.currentStep}`);
+    console.log(`OnboardingFlow: Current Session data:`, session);
+
+    // Validate session and find first incomplete step before rendering
+    let stepToRender = session.currentStep;
+    if (!isValidSession(session)) {
+        console.warn("Current session is invalid according to isValidSession, resetting to step 1");
+        // If the whole session is invalid (e.g., stale), might need a reset mechanism
+        // For now, let's try finding the first truly incomplete step based on data presence
+        stepToRender = findFirstIncompleteStep(session);
+        // setCurrentStep(stepToRender); // Optionally force store update
+        console.log(`Redirecting to first incomplete step: ${stepToRender}`);
+    }
+    // Additional check: is the data needed *for* this step present?
+    // This prevents rendering step 5 if step 4 data is missing
+    if (!isStepDataValid(session, stepToRender)){
+        console.warn(`Data for step ${stepToRender} is invalid. Finding previous valid step.`);
+        stepToRender = findFirstIncompleteStep(session);
+        console.log(`Redirecting to first incomplete step instead: ${stepToRender}`);
+    }
+
+    switch (stepToRender) { // Use validated stepToRender
       case STEPS.RECIPIENT_SELECTION:
         return <RecipientSelector />;
 
@@ -113,24 +178,38 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         return <EnvelopeAddresseeCard />;
 
       case STEPS.EDITION_DETAILS:
-        const editionType = typedSession.editionFlow?.type || 'signature';
-        console.log(`OnboardingFlow: Rendering edition type: ${editionType}`);
-        if (editionType === 'custom') {
-          return <CustomEditionFlow />;
-        } else if (editionType === 'concierge') {
-          return <ConciergeEditionFlow />;
-        } else {
-          // Assume signature is the default
-          return <SignatureEditionFlow />;
+        // Use selectedEdition.type from the session data
+        const editionType = session.selectedEdition?.type; // Use .type directly
+        console.log(`Rendering EDITION_DETAILS for edition type: ${editionType}`);
+        
+        switch (editionType) {
+          case 'custom':
+            return <CustomEditionFlow />;
+          case 'concierge':
+            return <ConciergeEditionFlow />;
+          case 'signature':
+            // Pass hideCustomization prop correctly
+            return <SignatureEditionFlow hideCustomization={false} />;
+          default:
+            console.error(`Invalid or missing editionType: ${editionType}`);
+            // Fallback or redirect logic
+            return (
+              <div className="flex flex-col items-center justify-center p-8">
+                <p className="text-lg text-red-600 mb-4">Error: Edition details cannot be loaded.</p>
+                <p>Please go back and select an edition.</p>
+                {/* Optionally add a button to go back? */}
+              </div>
+            );
         }
 
       case STEPS.REVIEW_CHECKOUT:
         return <ReviewCheckout />;
 
       default:
-        console.error(`OnboardingFlow: Unknown step number: ${typedSession.currentStep}`);
-        setCurrentStep(STEPS.RECIPIENT_SELECTION);
-        return <RecipientSelector />;
+        console.error(`OnboardingFlow: Unknown or invalid validated step number: ${stepToRender}`);
+        // Fallback to the first step if something goes wrong
+        // setCurrentStep(STEPS.RECIPIENT_SELECTION); // Careful with loops
+        return <RecipientSelector />; // Render step 1 as fallback
     }
   };
 
@@ -151,14 +230,12 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       {/* Render only the current step content */}
       {!isLoading && session ? renderCurrentStep() : null}
 
-      {/* SaveProgressModal is likely handled by OnboardingModal now */}
-      {/* 
+      {/* Pass the setLastSavedTime function to SaveProgressModal */}
       <SaveProgressModal
         open={showSaveModal}
         onClose={() => setShowSaveModal(false)}
         setLastSavedTime={setLastSavedTime}
       /> 
-      */}
     </div>
   );
 };

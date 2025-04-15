@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,65 +6,74 @@ import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
 import { Recipient } from '@/lib/sessionManager';
-import { formatShipToName } from '@/lib/utils/formatShipToName';
+import { formatCardAddresseeName } from '@/lib/utils/formatCardAddresseeName';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { envelopePersonalizationSchema, EnvelopePersonalizationFormValues } from '@/schemas/envelopePersonalizationSchema';
 
 const EnvelopeAddresseeCard: React.FC = () => {
-  const { session, updateSession, nextStep, prevStep } = useSessionStore();
+  const { session, updateSession } = useSessionStore();
+  const { goNext, goBack } = useOnboardingNavigation();
   const recipient: Recipient | undefined = session.recipient;
-
-  const defaultAddresseeName = formatShipToName(session);
   
-  const initialName = recipient?.cardAddresseeNameOverridden 
-                        ? (recipient?.cardAddresseeName || '') 
-                        : defaultAddresseeName;
-  const [addresseeName, setAddresseeName] = useState<string>(initialName);
-  const [error, setError] = useState<string | undefined>(undefined);
-
+  // Get default addressee name from recipient info
+  const defaultAddresseeName = formatCardAddresseeName(session);
+  
+  // Get initial values for the form
+  const getDefaultValues = (): EnvelopePersonalizationFormValues => {
+    const initialAddresseeName = recipient?.cardAddresseeNameOverridden 
+      ? (recipient?.cardAddresseeName || '') 
+      : defaultAddresseeName;
+      
+    return {
+      cardAddresseeName: initialAddresseeName,
+      cardAddresseeNameOverridden: recipient?.cardAddresseeNameOverridden || false,
+    };
+  };
+  
+  // Initialize form with react-hook-form and zod validation
+  const { 
+    handleSubmit, 
+    setValue,
+    formState: { errors, isValid },
+    watch
+  } = useForm<EnvelopePersonalizationFormValues>({
+    resolver: zodResolver(envelopePersonalizationSchema),
+    defaultValues: getDefaultValues(),
+    mode: 'onChange'
+  });
+  
+  // Update addressee name when recipient info changes
   useEffect(() => {
     const currentRecipient: Recipient | undefined = session.recipient;
-    const newDefaultName = formatShipToName(session);
-    const currentName = currentRecipient?.cardAddresseeNameOverridden
-                         ? (currentRecipient?.cardAddresseeName || '')
-                         : newDefaultName;
-    setAddresseeName(currentName);
-    if (!currentRecipient?.cardAddresseeNameOverridden && currentName !== currentRecipient?.cardAddresseeName) {
-        updateSession('recipient.cardAddresseeName', currentName);
-    }
-    setError(undefined); 
-  }, [session, updateSession]);
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newName = e.target.value;
-    setAddresseeName(newName);
-    updateSession('recipient.cardAddresseeName', newName);
-    updateSession('recipient.cardAddresseeNameOverridden', true);
-    if (!newName.trim()) {
-      setError('Envelope addressee name cannot be empty.');
-    } else {
-      setError(undefined);
-    }
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const currentRecipient: Recipient | undefined = session.recipient;
-    const finalName = addresseeName.trim();
-
-    if (!finalName) {
-      setError('Envelope addressee name cannot be empty.');
-      return;
-    }
     
+    // Only update if not overridden by user
     if (!currentRecipient?.cardAddresseeNameOverridden) {
-        updateSession('recipient.cardAddresseeName', finalName); 
+      const newDefaultName = formatCardAddresseeName(session);
+      setValue('cardAddresseeName', newDefaultName, { shouldValidate: true });
     }
-    
-    console.log('EnvelopeAddresseeCard: Moving to next step');
-    nextStep();
+  }, [session, setValue]);
+
+  // Handle addressee name change
+  const handleAddresseeNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setValue('cardAddresseeName', e.target.value, { shouldValidate: true });
+    setValue('cardAddresseeNameOverridden', true);
   };
 
-  const previewName = addresseeName || defaultAddresseeName || "Recipient Name";
+  // Form submission handler
+  const onSubmit = (data: EnvelopePersonalizationFormValues) => {
+    console.log('EnvelopeAddresseeCard: Form validated, saving data:', data);
+    
+    // Update session with envelope personalization info
+    updateSession('recipient.cardAddresseeName', data.cardAddresseeName);
+    updateSession('recipient.cardAddresseeNameOverridden', data.cardAddresseeNameOverridden);
+    
+    goNext();
+  };
+
+  const previewName = watch('cardAddresseeName') || defaultAddresseeName || "Recipient Name";
 
   return (
     <div className="max-w-xl mx-auto py-8">
@@ -78,7 +87,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
       </div>
 
       <motion.form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
@@ -92,17 +101,17 @@ const EnvelopeAddresseeCard: React.FC = () => {
             id="cardAddresseeName"
             type="text"
             placeholder="e.g., James and Anne or Grandma Betty"
-            value={addresseeName}
-            onChange={handleInputChange}
+            value={watch('cardAddresseeName')}
+            onChange={handleAddresseeNameChange}
             className={cn(
               "h-12 w-full",
-              error ? "border-red-500 focus-visible:ring-red-500" : ""
+              errors.cardAddresseeName ? "border-red-500 focus-visible:ring-red-500" : ""
             )}
-            aria-invalid={!!error}
-            aria-describedby={error ? "addresseeName-error" : undefined}
+            aria-invalid={!!errors.cardAddresseeName}
+            aria-describedby={errors.cardAddresseeName ? "cardAddresseeName-error" : undefined}
           />
-          {error && (
-            <p id="addresseeName-error" className="text-xs text-red-600 pt-1">{error}</p>
+          {errors.cardAddresseeName && (
+            <p id="cardAddresseeName-error" className="text-xs text-red-600 pt-1">{errors.cardAddresseeName.message}</p>
           )}
         </div>
 
@@ -120,7 +129,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
           <Button
             type="button"
             variant="outline"
-            onClick={prevStep}
+            onClick={goBack}
             className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -133,7 +142,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
               "bg-legacy-green hover:bg-legacy-green/90 text-white",
               "disabled:bg-gray-300 disabled:cursor-not-allowed"
             )}
-            disabled={!addresseeName.trim() || !!error}
+            disabled={!isValid}
           >
             Continue
           </Button>

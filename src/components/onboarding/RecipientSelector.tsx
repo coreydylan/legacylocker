@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { motion } from 'framer-motion';
 import { Users, Gift } from 'lucide-react';
@@ -7,7 +7,16 @@ import { useSessionStore } from '@/lib/sessionStore';
 const RecipientSelector: React.FC = () => {
   const { session, updateSession, nextStep } = useSessionStore();
 
+  // Log when component renders to verify it has access to series data
+  useEffect(() => {
+    console.log("RecipientSelector: Rendered with session data:", {
+      selectedSeries: session.selectedSeries,
+      recipientType: session.recipientType
+    });
+  }, []);
+
   const handleSelect = (type: 'individual' | 'couple') => {
+    console.log(`RecipientSelector: Selected recipient type: ${type}`);
     updateSession('recipientType', type);
 
     if (type === 'couple') {
@@ -48,6 +57,7 @@ const RecipientSelector: React.FC = () => {
       });
     }
 
+    console.log("RecipientSelector: Moving to next step");
     nextStep();
   };
 

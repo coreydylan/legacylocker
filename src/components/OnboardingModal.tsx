@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import OnboardingHeader from '@/components/onboarding/OnboardingHeader';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
@@ -37,17 +37,37 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  const hasInitialized = useRef(false);
 
   const { toast } = useToast();
 
   useEffect(() => {
     if (isOpen) {
       console.log("OnboardingModal: Initializing/Resuming session...");
-      initialize(); 
-      if (selectedSeries) {
-        updateSession('selectedSeries', selectedSeries);
-        updateSession('editionFlow.type', selectedSeries.type || 'signature');
+      
+      // Only initialize once when opening
+      if (!hasInitialized.current) {
+        // Check if session already has series data
+        const hasExistingSeries = !!session.selectedSeries;
+        
+        if (!hasExistingSeries) {
+          initialize();
+          
+          // Only update the session if the selectedSeries prop is provided
+          if (selectedSeries) {
+            console.log("OnboardingModal: Setting selected series in session:", selectedSeries);
+            updateSession('selectedSeries', selectedSeries);
+            updateSession('editionFlow.type', selectedSeries.type || 'signature');
+          }
+        } else {
+          console.log("OnboardingModal: Using existing session with series:", session.selectedSeries);
+        }
+        
+        hasInitialized.current = true;
       }
+    } else {
+      // Reset the initialization flag when modal is closed
+      hasInitialized.current = false;
     }
   }, [isOpen, resumeToken, selectedSeries, initialize, updateSession]);
 

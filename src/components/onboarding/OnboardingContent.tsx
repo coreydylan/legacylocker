@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { FormData, SeriesType } from '@/types/onboarding';
 import Introduction from './Introduction';
 import PurchaserInfo from './PurchaserInfo';
@@ -7,6 +7,7 @@ import SignatureEditionFlow from './SignatureEditionFlow';
 import CustomEditionFlow from './CustomEditionFlow';
 import ConciergeEditionFlow from './ConciergeEditionFlow';
 import ReviewCheckout from './ReviewCheckout';
+import { useSessionStore } from '@/lib/sessionStore';
 
 interface OnboardingContentProps {
   currentStep: number;
@@ -25,6 +26,13 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
   handleSubmit,
   onNextStep
 }) => {
+  const { session } = useSessionStore();
+  
+  useEffect(() => {
+    console.log("OnboardingContent: Rendered with step", currentStep);
+    console.log("OnboardingContent: Session series:", session.selectedSeries);
+  }, [currentStep, session.selectedSeries]);
+
   // Style transitions between steps
   const getStepStyles = (step: number) => {
     return {
@@ -34,13 +42,16 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
     };
   };
 
+  // Use session.selectedSeries if available, otherwise use prop
+  const effectiveSelectedSeries = session.selectedSeries || selectedSeries;
+
   return (
     <div className="w-full">
       <div className="w-full max-w-3xl mx-auto px-4 sm:px-6 md:px-8 pt-4 sm:pt-6">
         {/* Step 1: Introduction */}
         <div style={getStepStyles(1)}>
           <Introduction 
-            selectedSeries={selectedSeries} 
+            selectedSeries={effectiveSelectedSeries} 
             formData={formData}
             updateFormData={updateFormData}
             onNext={onNextStep}
@@ -87,7 +98,7 @@ const OnboardingContent: React.FC<OnboardingContentProps> = ({
         <div style={getStepStyles(5)}>
           <ReviewCheckout 
             formData={formData} 
-            selectedSeries={selectedSeries}
+            selectedSeries={effectiveSelectedSeries}
             onSubmit={handleSubmit}
           />
         </div>
