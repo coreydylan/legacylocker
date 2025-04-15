@@ -1,8 +1,12 @@
 {
-  "framework": "other",
   "devCommand": "vite",
   "buildCommand": "vite build",
   "outputDirectory": "dist",
+  "functions": {
+    "api/**/*.ts": {
+      "runtime": "edge"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/(.*)",
