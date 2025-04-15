@@ -11,6 +11,7 @@ import SaveAndCloseButton from './onboarding/SaveAndCloseButton';
 import ClearSessionButton from './onboarding/ClearSessionButton';
 import ClearSessionDialog from './onboarding/ClearSessionDialog';
 import { useToast } from '@/hooks/use-toast';
+import { SafeAreaWrapper } from '@/components/utils/SafeAreaWrapper';
 
 export type { FormData } from '@/types/onboarding';
 
@@ -129,44 +130,40 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleModalClose} modal>
-        <DialogContent className="sm:max-w-full w-full h-[100vh] max-h-[100vh] p-0 m-0 bg-white flex flex-col overflow-hidden">
-          <VisuallyHidden>
-            <DialogTitle>Onboarding Form</DialogTitle>
-          </VisuallyHidden>
-          
-          {isLoading ? (
-            <div className="flex-grow flex items-center justify-center">
-              <p>Loading Session...</p>
-            </div>
-          ) : (
-            <>
-              <div className="flex-shrink-0 bg-white border-b w-full">
-                <OnboardingHeader
-                  handleBack={handleBack}
-                  onClose={handleModalClose}
-                />
+        <DialogContent className="sm:max-w-full w-full h-full p-0 m-0 bg-white flex flex-col">
+          <SafeAreaWrapper>
+            <VisuallyHidden>
+              <DialogTitle>Onboarding Form</DialogTitle>
+            </VisuallyHidden>
+            
+            {isLoading ? (
+              <div className="flex-grow flex items-center justify-center">
+                <p>Loading Session...</p>
               </div>
-              
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <OnboardingFlow />
-              </div>
-            </>
-          )}
-          
-          {sessionMetadata.isActive && (
-            <div style={{
-              position: 'fixed', 
-              bottom: '24px', 
-              right: '24px', 
-              zIndex: 10, 
-              display: 'flex',
-              gap: '8px',
-              alignItems: 'center'
-            }}>
-              <SaveAndCloseButton onClose={handleModalClose} />
-              <ClearSessionButton onClick={() => setIsClearDialogOpen(true)} />
-            </div>
-          )}
+            ) : (
+              <>
+                <div className="flex-shrink-0 bg-white border-b w-full">
+                  <OnboardingHeader
+                    handleBack={handleBack}
+                    onClose={handleModalClose}
+                  />
+                </div>
+                
+                <div className="flex-1 overflow-y-auto min-h-0">
+                  <OnboardingFlow />
+                </div>
+
+                {sessionMetadata.isActive && (
+                  <div className="flex-shrink-0">
+                    <div className="flex justify-end items-center gap-2 px-6 py-4">
+                      <ClearSessionButton onClick={() => setIsClearDialogOpen(true)} />
+                      <SaveAndCloseButton onClose={handleModalClose} />
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </SafeAreaWrapper>
         </DialogContent>
       </Dialog>
 

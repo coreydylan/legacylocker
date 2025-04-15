@@ -28,23 +28,23 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
              <Button
                  variant={data.useExactTitle ? "outline" : "secondary"}
                  className={cn(
-                     "flex-1 justify-center h-9 px-3 shadow-sm",
+                     "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
                      data.useExactTitle ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactTitle: true })}
              >
-                 <Pencil size={16} className="mr-2"/>
+                 <Pencil size={16} className="mr-1 md:mr-2"/>
                  Use my exact title
              </Button>
              <Button
                  variant={!data.useExactTitle ? "outline" : "secondary"}
                  className={cn(
-                    "flex-1 justify-center h-9 px-3 shadow-sm",
+                    "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
                     !data.useExactTitle ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactTitle: false })}
              >
-                 <Sparkles size={16} className="mr-2"/>
+                 <Sparkles size={16} className="mr-1 md:mr-2"/>
                  Let Legacy Locker polish it
              </Button>
         </div>
@@ -65,23 +65,23 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
              <Button
                  variant={data.useExactStory ? "outline" : "secondary"}
                  className={cn(
-                     "flex-1 justify-center h-9 px-3 shadow-sm",
+                     "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
                      data.useExactStory ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactStory: true })}
              >
-                 <Pencil size={16} className="mr-2"/>
+                 <Pencil size={16} className="mr-1 md:mr-2"/>
                  Use my exact text
              </Button>
              <Button
                  variant={!data.useExactStory ? "outline" : "secondary"}
                  className={cn(
-                    "flex-1 justify-center h-9 px-3 shadow-sm",
+                    "flex-1 justify-center h-9 px-3 shadow-sm text-xs md:text-sm",
                     !data.useExactStory ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactStory: false })}
              >
-                 <Sparkles size={16} className="mr-2"/>
+                 <Sparkles size={16} className="mr-1 md:mr-2"/>
                  Let Legacy Locker craft it
              </Button>
         </div>

@@ -30,7 +30,7 @@ function DateSegment({ className, ...props }: AriaDateSegmentProps) {
     <AriaDateSegment
       className={composeRenderProps(className, (className) =>
         cn(
-          "type-literal:px-0 inline rounded p-0.5 caret-transparent outline outline-0",
+          "type-literal:px-0 inline rounded p-0.5 caret-transparent outline outline-0 text-base",
           /* Placeholder */
           "data-[placeholder]:text-muted-foreground",
           /* Disabled */
@@ -59,7 +59,7 @@ function DateInput({
   return (
     <AriaDateInput
       className={composeRenderProps(className, (className) =>
-        cn(fieldGroupVariants({ variant }), "text-sm", className)
+        cn(fieldGroupVariants({ variant }), className)
       )}
       {...props}
     >

@@ -213,7 +213,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
   console.log("OnboardingFlow: Rendering step content area");
   return (
-    <div className="flex-grow container mx-auto px-4 py-8">
+    <div className="flex-grow container mx-auto px-4 pt-4 pb-8 md:pt-8">
       {/* <<< Remove OnboardingHeader rendering >>> */}
       {/* 
       <OnboardingHeader

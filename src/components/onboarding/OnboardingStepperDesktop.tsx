@@ -40,9 +40,10 @@ const OnboardingStepperDesktop: React.FC = () => {
   };
 
   return (
-    // This is the desktop layout from the previous StepProgress
-    <div className="flex flex-col items-center w-full px-4">
-      <div className="flex items-start justify-between w-full mb-1">
+    // Add max-w-xl to prevent excessive width
+    <div className="flex flex-col items-center w-full px-4 max-w-xl mx-auto">
+      {/* Remove w-full, add justify-center */}
+      <div className="flex items-start justify-center w-auto mb-1">
         {visualSteps.map((visualStep, index) => {
           const isCompleted = visualStep <= lastCompletedVisualStep;
           const isActive = visualStep === visualCurrentStep;
@@ -81,7 +82,7 @@ const OnboardingStepperDesktop: React.FC = () => {
               </div>
               {index < totalVisualSteps - 1 && (
                 <div className={cn(
-                  "h-0.5 flex-1 mt-4 mx-2", // Using sm: margin as default for desktop
+                  "h-0.5 w-16 mt-4 mx-2", 
                   isCompleted ? "bg-legacy-green/50" : "bg-gray-300"
                 )} />
               )}

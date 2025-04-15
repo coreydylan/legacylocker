@@ -2,7 +2,7 @@ import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { motion } from 'framer-motion';
-import { User, Mail, ChevronLeft } from 'lucide-react';
+import { User, Mail, ChevronLeft, Info } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/lib/sessionStore';
 import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
@@ -11,6 +11,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { purchaserInfoSchema, PurchaserInfoFormValues } from '@/schemas/purchaserInfoSchema';
 import { saveSessionToSupabase } from '@/lib/sessionService';
 import { useDebouncedCallback } from 'use-debounce';
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const PurchaserInfo: React.FC = () => {
   console.log('PURCHASER INFO COMPONENT RENDERED - Check if SUBMIT logs appear on continue');
@@ -192,6 +194,26 @@ const PurchaserInfo: React.FC = () => {
           {errors.email && (
             <p className="text-sm text-red-500">{errors.email.message}</p>
           )}
+        </div>
+
+        <div className="p-4 rounded-md bg-legacy-cream/20 border border-legacy-green/15 space-y-2 text-sm">
+          <p className="text-legacy-dark/90 leading-relaxed"> 
+            We'll send a magic link to this email so you can easily resume customizing anytime.
+            We only use this email for your order updates and the magic link... 
+            <span className="italic">unless you'd like to stay in touch?</span>
+          </p>
+          <div className="flex items-center space-x-2 pt-1">
+            <Checkbox 
+              id="mailingListOptIn" 
+              className="data-[state=checked]:bg-legacy-green data-[state=checked]:border-legacy-green" 
+            />
+            <Label 
+              htmlFor="mailingListOptIn" 
+              className="text-sm font-normal text-gray-600 leading-snug cursor-pointer"
+            >
+              Yes, send me occasional updates (about once a month, we promise!).
+            </Label>
+          </div>
         </div>
 
         <div className="flex justify-between pt-4">
