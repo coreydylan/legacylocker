@@ -297,11 +297,11 @@ export const isValidSession = (session: SessionData | null | undefined): session
 export const useSessionStore = create<SessionStore>()(
   persist(
     (set, get) => ({
-      session: createNewSession(),
-      isLoading: true,
+  session: createNewSession(),
+  isLoading: true,
       isHydrated: false,
-
-      initialize: () => {
+  
+  initialize: () => {
         // This function is called by the consuming component (e.g., _app.tsx or layout)
         // after the store is potentially hydrated.
         if (get().isHydrated) {
@@ -310,12 +310,12 @@ export const useSessionStore = create<SessionStore>()(
           get().initializeSignatureData();
         } else {
           // Still waiting for hydration
-          set({ isLoading: true });
+    set({ isLoading: true });
           // The onRehydrateStorage logic will eventually set isHydrated and call initializeSignatureData
         }
       },
       
-      updateSession: (path: string, value: any) => {
+  updateSession: (path: string, value: any) => {
         set(state => {
           const updatedSession = cloneDeep(state.session);
           setWith(updatedSession, path, value, cloneDeep);
@@ -323,78 +323,78 @@ export const useSessionStore = create<SessionStore>()(
           return { session: updatedSession };
         });
       },
-       setCurrentStep: (step: number) => {
+  setCurrentStep: (step: number) => {
         set(state => {
-          const updatedSession = {
+    const updatedSession = {
             ...state.session,
-            currentStep: step,
+      currentStep: step,
             lastCompletedStep: Math.max(state.session.lastCompletedStep, step - 1),
             updatedAt: new Date().toISOString(),
-          };
+    };
           return { session: updatedSession };
         });
-      },
-       nextStep: () => {
+  },
+  nextStep: () => {
         set(state => {
           const nextStep = state.session.currentStep + 1;
-          const updatedSession = {
+    const updatedSession = {
             ...state.session,
-            currentStep: nextStep,
+      currentStep: nextStep,
             lastCompletedStep: Math.max(state.session.lastCompletedStep, state.session.currentStep),
             updatedAt: new Date().toISOString(),
-          };
+    };
           return { session: updatedSession };
         });
-      },
-       prevStep: () => {
+  },
+  prevStep: () => {
         set(state => {
           const prevStep = Math.max(1, state.session.currentStep - 1);
-          const updatedSession = {
+    const updatedSession = {
             ...state.session,
-            currentStep: prevStep,
+      currentStep: prevStep,
             updatedAt: new Date().toISOString(),
-          };
+    };
           return { session: updatedSession };
         });
-      },
-       setLastCompletedStep: (step: number) => {
+  },
+  setLastCompletedStep: (step: number) => {
         set(state => {
-          const updatedSession = {
+    const updatedSession = {
             ...state.session,
             lastCompletedStep: Math.max(state.session.lastCompletedStep, step),
             updatedAt: new Date().toISOString(),
-          };
+    };
           return { session: updatedSession };
         });
-      },
-       saveSessionProgress: (email?: string) => {
+  },
+  saveSessionProgress: (email?: string) => {
         set(state => {
-          const updatedSession = {
+    const updatedSession = {
             ...state.session,
             email: email ?? state.session.email,
             updatedAt: new Date().toISOString(),
-          };
+    };
           return { session: updatedSession };
         });
-      },
-       resetSession: () => {
+  },
+  resetSession: () => {
         console.log("Resetting session state (persist middleware will handle storage)...");
         const newSession = createNewSession(); // Use helper
         set({ session: newSession, isLoading: false, isHydrated: true });
         // Let persist handle clearing/overwriting storage based on new state
         // localStorage.removeItem('legacyLockerSession'); // Usually not needed with persist
       },
-       submitSession: async (): Promise<boolean> => {
-        const { session } = get();
-        console.log("Submitting session:", session);
+  submitSession: async (): Promise<boolean> => {
+    const { session } = get();
+    console.log("Submitting session:", session);
         const success = true; 
-        if (success) {
-           console.log("Session submitted successfully!");
-        } else {
-          console.error("Session submission failed.");
-        }
-        return success;
-      },
+    if (success) {
+      console.log("Session submitted successfully!");
+    } else {
+      console.error("Session submission failed.");
+    }
+    return success;
+  },
 
       initializeSignatureData: () => {
         console.log("['initializeSignatureData']: Running...");
