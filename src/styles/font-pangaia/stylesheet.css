@@ -1,0 +1,54 @@
+@font-face {
+    font-family: 'PP Pangaia';
+    src: url('PPPangaia-BoldItalic.woff2') format('woff2'),
+        url('PPPangaia-BoldItalic.woff') format('woff');
+    font-weight: bold;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'PP Pangaia';
+    src: url('PPPangaia-UltralightItalic.woff2') format('woff2'),
+        url('PPPangaia-UltralightItalic.woff') format('woff');
+    font-weight: 200;
+    font-style: italic;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'PP Pangaia';
+    src: url('PPPangaia-Medium.woff2') format('woff2'),
+        url('PPPangaia-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'PP Pangaia';
+    src: url('PPPangaia-Bold.woff2') format('woff2'),
+        url('PPPangaia-Bold.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'PP Pangaia';
+    src: url('PPPangaia-Ultralight.woff2') format('woff2'),
+        url('PPPangaia-Ultralight.woff') format('woff');
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'PP Pangaia';
+    src: url('PPPangaia-MediumItalic.woff2') format('woff2'),
+        url('PPPangaia-MediumItalic.woff') format('woff');
+    font-weight: 500;
+    font-style: italic;
+    font-display: swap;
+}
+

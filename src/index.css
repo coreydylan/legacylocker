@@ -1,4 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Source+Sans+Pro:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700;1,900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
+@import url('./styles/font-pphattonweb/stylesheet.css');
+@import url('./styles/font-pangaia/stylesheet.css');
 
 @tailwind base;
 @tailwind components;
@@ -32,7 +35,7 @@
     --ring: 222.2 84% 4.9%;
 
     --radius: 0.5rem;
-    --font-sans: "Source Sans Pro", sans-serif;
+    --font-sans: "Plus Jakarta Sans", sans-serif;
   }
 
   .dark {
@@ -72,8 +75,20 @@
     @apply bg-legacy-cream text-legacy-dark font-sans;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-serif;
+  h1 {
+    @apply font-pangaia font-bold;
+  }
+  
+  h2 {
+    @apply font-pangaia font-medium;
+  }
+  
+  h3 {
+    @apply font-pangaia font-medium;
+  }
+  
+  h4, h5, h6 {
+    @apply font-pangaia font-normal;
   }
 }
 

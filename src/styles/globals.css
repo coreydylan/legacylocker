@@ -1,0 +1,23 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+*, ::before, ::after {
+  box-sizing: border-box; /* border-box */
+  border-width: 0; /* Reset border width */
+  /* border-style: solid; */ /* Reset border style - Commented out */
+  /* border-color: #e5e7eb; */ /* Reset border color - Commented out */
+} 
+
+@layer utilities {
+  .no-border-style {
+    border-style: none !important;
+  }
+} 
+
+/* High-specificity override for the onboarding header border */
+header.onboarding-header {
+  border-style: none !important;
+  border-width: 0 !important;
+  border: none !important; /* Add a general border: none just in case */
+} 

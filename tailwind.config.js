@@ -64,10 +64,13 @@ module.exports = {
         sm: "calc(var(--radius) - 4px)",
       },
       fontFamily: {
-        sans: ["var(--font-sans)", ...fontFamily.sans],
+        sans: ["Plus Jakarta Sans", "var(--font-sans)", ...fontFamily.sans],
         serif: ["Playfair Display", ...fontFamily.serif],
         cormorant: ["Cormorant Garamond", "serif"], // Added Cormorant
         "homemade-apple": ["\"Homemade Apple\"", "cursive"], // Added Homemade Apple
+        pphatton: ["PP Hatton", "serif"], // Added PP Hatton
+        jakarta: ["Plus Jakarta Sans", "sans-serif"], // Added Jakarta Sans
+        pangaia: ["PP Pangaia", "serif"], // Added PP Pangaia
       },
       keyframes: {
         "accordion-down": {

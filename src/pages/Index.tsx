@@ -7,7 +7,6 @@ import AudiencePortraits from '@/components/AudiencePortraits';
 import FeaturesSection from '@/components/FeaturesSection';
 import StorySeriesSelector from '@/components/StorySeriesSelector';
 import TestimonialsSection from '@/components/TestimonialsSection';
-import PricingSection from '@/components/PricingSection';
 import FAQSection from '@/components/FAQSection';
 import ClosingCTASection from '@/components/ClosingCTASection';
 import Footer from '@/components/Footer';
@@ -28,7 +27,6 @@ const Index = () => {
         <FeaturesSection />
         <StorySeriesSelector />
         <TestimonialsSection />
-        <PricingSection />
         <FAQSection />
         <ClosingCTASection />
       </main>

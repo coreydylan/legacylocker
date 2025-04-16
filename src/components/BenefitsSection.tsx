@@ -1,22 +1,38 @@
-
 import React from 'react';
-import { Calendar, BookOpen, Gift } from 'lucide-react';
+import { Calendar, Mail, Heart } from 'lucide-react';
 
 const benefits = [
   {
     icon: <Calendar className="h-12 w-12 text-legacy-gold" />,
-    title: "A Gift That Deepens Over Time",
-    description: "Thoughtful, month-by-month delivery means the gesture keeps growing — not fading."
+    title: "thoughtfulness on autopilot",
+    description: "You'll spend a few minutes now to give them something unforgettable all year long. Each card is automatically timed to arrive when it matters most — birthdays, anniversaries, or just because.",
+    bullets: [
+      "Give a gift with real meaning (and no last-minute stress)",
+      "Celebrate important dates without needing reminders",
+      "Show up month after month with zero extra effort",
+      "THE gift for the impossible-to-shop-for"
+    ]
   },
   {
-    icon: <BookOpen className="h-12 w-12 text-legacy-gold" />,
-    title: "Professionally Written, Beautifully Designed",
-    description: "Every card features a unique story paired with custom illustrations and optional personal messages."
+    icon: <Mail className="h-12 w-12 text-legacy-gold" />,
+    title: "mail that matters",
+    description: "Every month, they'll open a beautifully crafted card that sparks joy — and reflection. Whether it's stories about their favorite team, their neighborhood's roots, or personal memories, it feels intimate, surprising, and worth keeping.",
+    bullets: [
+      "A ritual that makes them feel seen",
+      "Discover new stories or revisit old ones",
+      "Artwork and writing they'll want to show off",
+      "Actual joy in the mailbox (not junk)"
+    ]
   },
   {
-    icon: <Gift className="h-12 w-12 text-legacy-gold" />,
-    title: "Effortless to Give, Unforgettable to Receive",
-    description: "You handle a few minutes of setup. We handle the surprise and delight for the next 12 months."
+    icon: <Heart className="h-12 w-12 text-legacy-gold" />,
+    title: "stories create connection",
+    description: "Legacy Locker builds a shared rhythm — a quiet \"I'm thinking of you\" that shows up again and again. Each card becomes a reason to reach out, reminisce, or just feel close.",
+    bullets: [
+      "Sparks meaningful conversations",
+      "Keeps you on each other's mind",
+      "Builds something bigger than the gift itself"
+    ]
   }
 ];
 
@@ -26,7 +42,7 @@ const BenefitsSection = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold font-playfair text-legacy-dark mb-6">
-            Why people love Legacy Locker
+            making magic by mail
           </h2>
         </div>
         
@@ -34,13 +50,21 @@ const BenefitsSection = () => {
           {benefits.map((benefit, index) => (
             <div 
               key={index} 
-              className="text-center p-8 border border-legacy-cream rounded-lg hover:shadow-lg transition-shadow"
+              className="text-left p-8 border border-legacy-cream rounded-lg hover:shadow-lg transition-shadow"
             >
               <div className="inline-flex items-center justify-center rounded-full bg-legacy-green/5 p-6 mb-6">
                 {benefit.icon}
               </div>
-              <h3 className="text-xl font-bold mb-3 font-playfair">{benefit.title}</h3>
-              <p className="text-legacy-dark/80">{benefit.description}</p>
+              <h3 className="text-xl font-normal mb-4 font-playfair text-legacy-green">{benefit.title}</h3>
+              <p className="text-legacy-dark/80 mb-6">{benefit.description}</p>
+              <ul className="space-y-3">
+                {benefit.bullets.map((bullet, bulletIndex) => (
+                  <li key={bulletIndex} className="flex items-start">
+                    <span className="text-legacy-gold mr-2">•</span>
+                    <span className="text-legacy-dark/80">{bullet}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
           ))}
         </div>

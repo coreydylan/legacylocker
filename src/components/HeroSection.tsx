@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
@@ -37,19 +36,30 @@ const HeroSection = () => {
       <div className="container mx-auto px-6 flex flex-col md:flex-row items-center gap-10 relative z-10">
         <div className="w-full md:w-1/2 text-left">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-fade-in font-playfair text-legacy-green">
-            The Gift That Lasts All Year
+            stories are powerful
           </h1>
           
-          <p className="text-lg md:text-xl mb-12 text-legacy-dark/80 animate-fade-in delay-150">
-            Give someone the joy of discovering a new story about their past each month — personalized, illustrated, unforgettable.
-          </p>
+          <div className="space-y-4 text-lg md:text-xl mb-8 text-legacy-dark/80 animate-fade-in delay-150">
+            <p>so we illustrate them beautifully</p>
+            <p>tell them thoughtfully</p>
+            <p>package them perfectly</p>
+            <p>and mail them automatically</p>
+          </div>
+
+          <div className="mb-12">
+            <p className="text-xl md:text-2xl font-semibold text-legacy-green mb-4">the best part?</p>
+            <p className="text-lg md:text-xl text-legacy-dark/80">
+              you get the credit for making their day —<br />
+              again and again, for a whole year
+            </p>
+          </div>
           
           <div className="flex justify-center md:justify-start animate-fade-in delay-300">
             <Button 
               className="bg-legacy-green hover:bg-legacy-green/90 text-white py-6 px-8 rounded text-lg"
               onClick={handleScrollToStorySelector}
             >
-              Send a Gift Now
+              start a story
               <ArrowRight className="ml-2 h-5 w-5" />
             </Button>
           </div>
