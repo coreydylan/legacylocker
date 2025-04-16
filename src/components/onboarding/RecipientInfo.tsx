@@ -610,28 +610,28 @@ const RecipientInfo: React.FC = () => {
 
         {/* Conditionally render desktop buttons */}
         {!isMobile && (
-          <div className="flex justify-between items-center pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={goBack}
-              className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
-            >
-              <ChevronLeft className="h-4 w-4 mr-2" />
-              Previous
-            </Button>
-            <Button
-              type="submit"
-              className={cn(
-                "px-8 py-2 text-base font-medium",
-                "bg-legacy-green hover:bg-legacy-green/90 text-white",
-                "disabled:bg-gray-300 disabled:cursor-not-allowed"
-              )}
+        <div className="flex justify-between items-center pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={goBack}
+            className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          <Button
+            type="submit"
+            className={cn(
+              "px-8 py-2 text-base font-medium",
+              "bg-legacy-green hover:bg-legacy-green/90 text-white",
+              "disabled:bg-gray-300 disabled:cursor-not-allowed"
+            )}
               disabled={!isCurrentStepValid}
-            >
-              Continue
-            </Button>
-          </div>
+          >
+            Continue
+          </Button>
+        </div>
         )}
       </motion.form>
     </div>

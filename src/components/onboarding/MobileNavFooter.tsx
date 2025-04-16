@@ -25,7 +25,7 @@ const MobileNavFooter: React.FC = () => {
   const { closeOnboarding } = useModalStore(); // Get close action from modal store
 
   const currentStep = session.currentStep;
-  const totalSteps = 7; // Assuming 7 steps, adjust if needed
+  const totalSteps = 8; // <<< Updated total steps
   const recipientInfoStep = 3; // Define the step number for recipient info
 
   // Function to handle Save & Close, similar to OnboardingModal

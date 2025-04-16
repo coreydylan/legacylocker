@@ -6,7 +6,7 @@ import RecipientInfo from './RecipientInfo';
 import ShippingInfoCard from './ShippingInfoCard';
 import EnvelopeAddresseeCard from './EnvelopeAddresseeCard';
 // Import the specific flow components
-import SignatureEditionFlow from './SignatureEditionFlow'; 
+// import SignatureEditionFlow from './SignatureEditionFlow'; // <<< Remove deleted import
 import CustomEditionFlow from './CustomEditionFlow';
 import ConciergeEditionFlow from './ConciergeEditionFlow';
 // CardCustomization might be part of Signature or used differently now
@@ -15,17 +15,21 @@ import ReviewCheckout from './ReviewCheckout';
 import SaveProgressModal from './SaveProgressModal';
 // import OnboardingHeader from './OnboardingHeader'; // <<< Remove Header import
 import { SessionData, isValidSession } from '@/lib/sessionStore'; // Import SessionData for typing and isValidSession
+// <<< Import new/renamed step components (will be created next) >>>
+import WelcomeCardStep from './WelcomeCardStep';
+import MonthlyCustomizationStep from './MonthlyCustomizationStep';
 
 
-// Define steps in our onboarding flow
+// Define steps in our onboarding flow - <<< Updated Steps >>>
 const STEPS = {
   RECIPIENT_SELECTION: 1,
   PURCHASER_INFO: 2,
   RECIPIENT_INFO: 3,
   SHIPPING_INFO: 4,
   ENVELOPE_ADDRESSEE: 5,
-  EDITION_DETAILS: 6,
-  REVIEW_CHECKOUT: 7
+  WELCOME_CARD: 6, // Renamed from EDITION_DETAILS
+  MONTHLY_CUSTOMIZATION: 7, // New step for grid/notes
+  REVIEW_CHECKOUT: 8 // Incremented
 } as const;
 
 interface OnboardingFlowProps {
@@ -33,7 +37,7 @@ interface OnboardingFlowProps {
   onBack?: () => void;
 }
 
-// Helper to check if data for a step is valid (more comprehensive)
+// Helper to check if data for a step is valid (more comprehensive) - <<< Updated Logic >>>
 const isStepDataValid = (session: SessionData | null | undefined, step: number): boolean => {
   if (!session) return false;
   if (step <= 0) return false;
@@ -46,29 +50,35 @@ const isStepDataValid = (session: SessionData | null | undefined, step: number):
     case STEPS.RECIPIENT_INFO:
       return !!session.purchaser?.fullName && !!session.purchaser?.email; 
     case STEPS.SHIPPING_INFO: 
-      // Correct boolean check: returns true if *either* firstName or recipient1FirstName exists
       return !!session.recipient && (!!session.recipient.firstName || !!session.recipient.recipient1FirstName);
     case STEPS.ENVELOPE_ADDRESSEE:
-      // Use the correct field name 'street' from the ShippingAddress interface
       return !!session?.recipient?.shippingAddress?.street; 
-    case STEPS.EDITION_DETAILS:
+    case STEPS.WELCOME_CARD: // Data needed TO ENTER Welcome Card step
       return !!session.recipient?.cardAddresseeName;
-    case STEPS.REVIEW_CHECKOUT:
-       if (!session.selectedEdition) return false;
-       return true; // Placeholder
+    case STEPS.MONTHLY_CUSTOMIZATION: // Data needed TO ENTER Customization step
+      // No specific new data required from Welcome Card step itself
+      return isStepDataValid(session, STEPS.WELCOME_CARD); // Depends on previous step being valid
+    case STEPS.REVIEW_CHECKOUT: // Data needed TO ENTER Review step
+      if (!session.selectedEdition) return false;
+      // Check previous step is valid
+      return isStepDataValid(session, STEPS.MONTHLY_CUSTOMIZATION);
     default:
       return false;
   }
 };
 
-// Helper to find the first step for which data is *missing*
+// Helper to find the first step for which data is *missing* - <<< Updated Logic >>>
 const findFirstIncompleteStep = (session: SessionData): number => {
-  for (let i = 1; i <= STEPS.REVIEW_CHECKOUT; i++) {
-    if (!isStepDataValid(session, i + 1)) { // Check if data for the *next* step is missing
-      return i; // Return the current step as incomplete
-    }
-  }
-  return STEPS.REVIEW_CHECKOUT; // If all steps are valid, return the last one
+  // Check steps sequentially
+  if (!isStepDataValid(session, STEPS.PURCHASER_INFO)) return STEPS.RECIPIENT_SELECTION;
+  if (!isStepDataValid(session, STEPS.RECIPIENT_INFO)) return STEPS.PURCHASER_INFO;
+  if (!isStepDataValid(session, STEPS.SHIPPING_INFO)) return STEPS.RECIPIENT_INFO;
+  if (!isStepDataValid(session, STEPS.ENVELOPE_ADDRESSEE)) return STEPS.SHIPPING_INFO;
+  if (!isStepDataValid(session, STEPS.WELCOME_CARD)) return STEPS.ENVELOPE_ADDRESSEE;
+  if (!isStepDataValid(session, STEPS.MONTHLY_CUSTOMIZATION)) return STEPS.WELCOME_CARD;
+  if (!isStepDataValid(session, STEPS.REVIEW_CHECKOUT)) return STEPS.MONTHLY_CUSTOMIZATION;
+  
+  return STEPS.REVIEW_CHECKOUT; // If all valid, default to last step
 };
 
 const OnboardingFlow: React.FC<OnboardingFlowProps> = ({ 
@@ -166,24 +176,28 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     // <<< Add effect to manage validation status for the specific step >>>
     useEffect(() => {
         console.log(`[ValidationEffect] Running for stepToRender: ${stepToRender}, editionType: ${session.selectedEdition?.type}`);
-        // Step 6 (EDITION_DETAILS) is generally considered valid immediately,
-        // especially for Signature/Concierge where user input isn't strictly required to proceed.
-        // Custom requires all months complete, which is handled internally by CustomEditionFlow.
-        if (stepToRender === STEPS.EDITION_DETAILS) {
-            const editionType = session.selectedEdition?.type;
+        const editionType = session.selectedEdition?.type;
+
+        // Steps 6 (Welcome) is always valid initially for all types (optional message)
+        if (stepToRender === STEPS.WELCOME_CARD) { 
+            console.log(`[ValidationEffect] Step ${stepToRender} (WELCOME_CARD) is active, CALLING updateValidationStatus(true).`);
+            updateValidationStatus(true);
+        }
+        // Step 7 (Monthly Customization) is valid initially for Signature/Concierge
+        else if (stepToRender === STEPS.MONTHLY_CUSTOMIZATION) { 
             if (editionType === 'signature' || editionType === 'concierge') {
                 console.log(`[ValidationEffect] Step ${stepToRender} (${editionType}) is active, CALLING updateValidationStatus(true).`);
                 updateValidationStatus(true);
-            } else {
-                console.log(`[ValidationEffect] Step ${stepToRender} (${editionType}) is active, but validation handled by component.`);
+            } else if (editionType === 'custom'){
+                 // For custom edition on step 7, validation is handled within CustomEditionFlow
+                 console.log(`[ValidationEffect] Step ${stepToRender} (custom) is active, but validation handled by component.`);
+                 // We might need to reset it here? Let's leave it for now.
+                 // updateValidationStatus(false); 
             }
         } 
-        // You might add else if clauses here for other steps that should be
-        // considered valid immediately upon rendering, if any.
         else {
             // For other steps, rely on the component's internal logic to set validation
-            console.log(`[ValidationEffect] Step ${stepToRender} is not EDITION_DETAILS, validation handled by component.`);
-            // updateValidationStatus(false); // Optionally reset if needed, but might cause flashes
+            console.log(`[ValidationEffect] Step ${stepToRender} is not WELCOME_CARD or MONTHLY_CUSTOMIZATION, validation handled by component.`);
         }
     }, [stepToRender, session.selectedEdition?.type, updateValidationStatus]);
 
@@ -203,29 +217,32 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       case STEPS.ENVELOPE_ADDRESSEE:
         return <EnvelopeAddresseeCard />;
 
-      case STEPS.EDITION_DETAILS:
-        // Use selectedEdition.type from the session data
-        const editionType = session.selectedEdition?.type; // Use .type directly
-        console.log(`Rendering EDITION_DETAILS for edition type: ${editionType}`);
-        
-        switch (editionType) {
-          case 'custom':
-            return <CustomEditionFlow />;
-          case 'concierge':
-            return <ConciergeEditionFlow />;
+      case STEPS.WELCOME_CARD:
+        const editionTypeStep6 = session.selectedEdition?.type;
+        console.log(`Rendering WELCOME_CARD for edition type: ${editionTypeStep6}`);
+        switch (editionTypeStep6) {
           case 'signature':
-            // Pass hideCustomization prop correctly
-            return <SignatureEditionFlow hideCustomization={false} />;
+          case 'custom': // Custom also has welcome card step
+          case 'concierge': // Concierge also has welcome card step
+             return <WelcomeCardStep />;
           default:
-            console.error(`Invalid or missing editionType: ${editionType}`);
-            // Fallback or redirect logic
-            return (
-              <div className="flex flex-col items-center justify-center p-8">
-                <p className="text-lg text-red-600 mb-4">Error: Edition details cannot be loaded.</p>
-                <p>Please go back and select an edition.</p>
-                {/* Optionally add a button to go back? */}
-              </div>
-            );
+            console.error(`Invalid or missing editionType for WELCOME_CARD: ${editionTypeStep6}`);
+            return <div>Error loading welcome card step.</div>; // Fallback
+        }
+
+      case STEPS.MONTHLY_CUSTOMIZATION:
+        const editionTypeStep7 = session.selectedEdition?.type;
+        console.log(`Rendering MONTHLY_CUSTOMIZATION for edition type: ${editionTypeStep7}`);
+        switch (editionTypeStep7) {
+          case 'signature':
+             return <MonthlyCustomizationStep />; // Contains notes header + grid
+          case 'custom':
+            return <CustomEditionFlow />; // Custom handles its own full flow here
+          case 'concierge':
+            return <ConciergeEditionFlow />; // Concierge handles its own flow here
+          default:
+            console.error(`Invalid or missing editionType for MONTHLY_CUSTOMIZATION: ${editionTypeStep7}`);
+             return <div>Error loading customization step.</div>; // Fallback
         }
 
       case STEPS.REVIEW_CHECKOUT:

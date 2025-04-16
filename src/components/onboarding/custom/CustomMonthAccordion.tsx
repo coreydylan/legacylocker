@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSessionStore } from '@/lib/sessionStore';
 import { Accordion } from "@/components/ui/accordion";
 import CustomMonthCard from './CustomMonthCard';
+import type { CustomMonthTab } from './CustomMonthCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { getMonth, addMonths, getYear } from 'date-fns';
 
@@ -39,7 +40,7 @@ const CustomMonthAccordion: React.FC = () => {
   // State to manage which accordion item is open
   const [openAccordionValue, setOpenAccordionValue] = useState<string | undefined>(undefined);
   // State to manage which tab to open initially when an item is opened via section tracker
-  const [initialTabTarget, setInitialTabTarget] = useState<'story' | 'artwork' | 'footer'>('story');
+  const [initialTabTarget, setInitialTabTarget] = useState<CustomMonthTab>('story');
   // State to track if initial open has been attempted
   const [initialOpenAttempted, setInitialOpenAttempted] = useState(false);
 
@@ -61,6 +62,8 @@ const CustomMonthAccordion: React.FC = () => {
      if (isHydrated && customDataMap.size === 12 && !initialOpenAttempted) {
          // Check if something isn't already open (e.g., potentially restored)
          if (openAccordionValue === undefined) {
+             // <<< Comment out the logic that finds and opens the first incomplete item >>>
+             /*
              const firstIncomplete = orderedMonths.find(({ month, year }) => {
                  const data = customDataMap.get(`${month}-${year}`);
                  const status = data ? getCompletionStatus(data).overall : 'not-started';
@@ -70,8 +73,10 @@ const CustomMonthAccordion: React.FC = () => {
                  console.log("[CustomMonthAccordion Effect]: Automatically opening first incomplete month:", `${firstIncomplete.month}-${firstIncomplete.year}`);
                  setOpenAccordionValue(`${firstIncomplete.month}-${firstIncomplete.year}`);
              }
+             */
+             console.log("[CustomMonthAccordion Effect]: Skipping auto-open logic.");
          }
-         // Mark that we've attempted the initial open
+         // Mark that we've attempted the initial open (or skip logic)
          setInitialOpenAttempted(true);
      }
   // Only depend on hydration status, data readiness, and the attempt flag
@@ -82,7 +87,7 @@ const CustomMonthAccordion: React.FC = () => {
        const sections = {
             story: !!(data.title && data.story),
             artwork: data.artworkOption !== null,
-            footer: !data.footerEnabled || !!data.footerMessage,
+            footer: data.enabled || !!data.footerMessage,
         };
         const isComplete = sections.story && sections.artwork && sections.footer;
         const isInProgress = !isComplete && (sections.story || sections.artwork || sections.footer);
@@ -91,13 +96,13 @@ const CustomMonthAccordion: React.FC = () => {
         return { overall: 'not-started' };
     };
 
-  // Handler for when a section icon is clicked in the header
-  const handleSectionClick = (accordionValue: string, tab: 'story' | 'artwork' | 'footer') => {
-      console.log(`Section click: Accordion ${accordionValue}, Tab ${tab}`);
-      setInitialTabTarget(tab);
-      // Ensure the accordion item is open or opens it
-      setOpenAccordionValue(accordionValue);
-  };
+  // Handler for when a section icon is clicked in the header - REMOVED as unused
+  // const handleSectionClick = (accordionValue: string, tab: CustomMonthTab) => {
+  //     console.log(`Section click: Accordion ${accordionValue}, Tab ${tab}`);
+  //     setInitialTabTarget(tab);
+  //     // Ensure the accordion item is open or opens it
+  //     setOpenAccordionValue(accordionValue);
+  // };
 
   if (isLoading || !isHydrated) {
     return (
@@ -121,7 +126,7 @@ const CustomMonthAccordion: React.FC = () => {
         collapsible // Allow closing the open item
         value={openAccordionValue} // Controlled component
         onValueChange={setOpenAccordionValue} // Update state on change
-        className="space-y-4"
+        className=""
       >
         {orderedMonths.map(({ month, year }) => {
           const accordionValue = `${month}-${year}`;
@@ -146,7 +151,7 @@ const CustomMonthAccordion: React.FC = () => {
               onUpdate={updateCustomMonth}
               accordionValue={accordionValue}
               initialTab={effectiveInitialTab} // Pass calculated initial tab
-              onSectionClick={(tab) => handleSectionClick(accordionValue, tab)} // Pass handler down
+              // onSectionClick={(tab) => handleSectionClick(accordionValue, tab)} // REMOVED prop
             />
           );
         })}

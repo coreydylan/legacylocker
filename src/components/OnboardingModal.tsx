@@ -15,6 +15,8 @@ import { SafeAreaWrapper } from '@/components/utils/SafeAreaWrapper';
 import MobileNavFooter from './onboarding/MobileNavFooter';
 import { cn } from '@/lib/utils';
 import useMediaQuery from '@/hooks/useMediaQuery';
+import { saveSessionToSupabase } from '@/lib/sessionService';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 
 export type { FormData } from '@/types/onboarding';
 
@@ -34,9 +36,10 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const { 
     session, 
     sessionMetadata,
-    initialize, 
+    initialize,
     updateSession,
     isLoading,
+    isHydrated,
     prevStep,
     nextStep,
     setCurrentStep,
@@ -56,38 +59,42 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
-    if (isOpen) {
-      console.log("OnboardingModal: Initializing/Resuming session...");
-      
-      // Only initialize once when opening
+    if (isOpen && isHydrated) {
+      console.log("OnboardingModal: Modal open and store hydrated. Checking initialization...");
+
       if (!hasInitialized.current) {
-        // Check if session already has series data
-        const hasExistingSeries = !!session.selectedSeries;
+        console.log("OnboardingModal: Running initialization logic...");
         
+        const hasExistingSeries = !!session.selectedSeries;
+
         if (!hasExistingSeries) {
-          initialize();
-          
-          // Only update the session if the selectedSeries prop is provided
+           console.log("OnboardingModal: No existing series found, calling initialize().");
+           initialize();
+
           if (selectedSeries) {
             console.log("OnboardingModal: Setting selected series in session:", selectedSeries);
             updateSession('selectedSeries', selectedSeries);
             updateSession('selectedEdition', selectedSeries);
             updateSession('editionFlow.type', selectedSeries.type || 'signature');
-            
-            // We no longer activate the session here - it will be activated after the user
-            // completes the PurchaserInfo step
           }
         } else {
           console.log("OnboardingModal: Using existing session with series:", session.selectedSeries);
+           console.log("OnboardingModal: Re-calling initialize() to ensure data consistency after hydration.");
+           initialize();
         }
-        
+
         hasInitialized.current = true;
+        console.log("OnboardingModal: Initialization marked as complete.");
+      } else {
+         console.log("OnboardingModal: Initialization already completed for this session.");
       }
-    } else {
-      // Reset the initialization flag when modal is closed
+    } else if (!isOpen) {
+      console.log("OnboardingModal: Modal closed, resetting initialization flag.");
       hasInitialized.current = false;
+    } else if (isOpen && !isHydrated) {
+      console.log("OnboardingModal: Modal open but store NOT hydrated yet. Waiting...");
     }
-  }, [isOpen, resumeToken, selectedSeries, initialize, updateSession]);
+  }, [isOpen, isHydrated, initialize, selectedSeries, session.selectedSeries, updateSession]);
 
   useEffect(() => {
     if (session.updatedAt) {

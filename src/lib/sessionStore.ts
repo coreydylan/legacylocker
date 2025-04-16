@@ -25,13 +25,16 @@ export interface CustomMonthData {
   useExactTitle: boolean;
   story: string;
   useExactStory: boolean;
+  storyLocked?: boolean; // <<< Add lock state for Story
   // Artwork Tab
   artworkOption: 'from-story' | 'use-photo' | 'from-photo' | null; // null = not selected
   photoUrl?: string; // URL if photo uploaded
+  artworkLocked?: boolean; // <<< Add lock state for Artwork
   // Footer Tab
-  footerEnabled: boolean;
+  enabled: boolean;
   footerMessage: string;
-  shipDate?: string | null; // Add optional shipDate (ISO string YYYY-MM-DD)
+  shipDate: string;
+  notesLocked?: boolean; // <<< Add lock state for Notes/Footer
 }
 
 export interface SessionData {
@@ -181,6 +184,17 @@ interface SessionMetadata {
   lastSaved: Date | null;
 }
 
+// --- NEW: Interface for the result of the shared calculation logic ---
+interface MonthlyEventDetail {
+  month: string;
+  year: number;
+  calculatedShipDate: string; // "" if none applicable
+  calculatedFooterMessage: string; // "" if none applicable
+  calculatedEnabled: boolean; // True if either date or message was generated
+  occasions: (string | 'birthday' | 'anniversary' | 'other')[]; // Keep track of all relevant occasions for the month
+  recipients: string[]; // Keep track of all relevant recipients for the month
+}
+
 interface SessionStore {
   session: SessionData;
   sessionMetadata: SessionMetadata; // Added sessionMetadata state
@@ -206,6 +220,7 @@ interface SessionStore {
   startSession: (editionType: EditionType) => void;
   endSession: () => void;
   saveSession: () => void;
+  initializeCustomDataDates: () => void; // <<< Add action interface
 }
 
 const ALL_MONTHS = [
@@ -240,12 +255,304 @@ const getChronologicalMonths = (): { month: string; year: number }[] => {
   return chronologicalMonths;
 };
 
+// --- NEW: Shared calculation logic extracted into a helper function ---
+const calculateMonthlyEventDetails = async (
+  recipient: SessionData['recipient'],
+  purchaser: SessionData['purchaser'],
+  recipientType: SessionData['recipientType'],
+  chronologicalMonths: { month: string; year: number }[]
+): Promise<MonthlyEventDetail[]> => {
+  const LOG_PREFIX = "[calculateMonthlyEventDetails]";
+  console.log(`${LOG_PREFIX}: Running calculation...`);
+
+  if (!recipient || !purchaser || !recipientType) {
+      console.log(`${LOG_PREFIX}: Missing recipient, purchaser, or recipientType. Returning empty details.`);
+      return chronologicalMonths.map(cm => ({
+          ...cm,
+          calculatedShipDate: '',
+          calculatedFooterMessage: '',
+          calculatedEnabled: false,
+          occasions: [],
+          recipients: [],
+      }));
+  }
+
+  // --- Logic largely copied from initializeSignatureData ---
+  const CALENDARIFIC_API_KEY = '97c7s5VRboUw0XCPNq4mKkdKwOdJ0klU'; // Consider moving to env variables
+  const CALENDARIFIC_COUNTRY = 'US';
+  const currentYear = getYear(new Date()); // Fetch for current year initially
+  let holidaysFromApi: any[] = [];
+
+  type Event = {
+      occasion: string | 'birthday' | 'anniversary';
+      recipient: string;
+      date: string; // ISO Format YYYY-MM-DD
+      holidayName?: string; // For holiday identification
+  };
+
+  try {
+      console.log(`${LOG_PREFIX}: Fetching holidays for ${CALENDARIFIC_COUNTRY}, year ${currentYear}...`);
+      const response = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_API_KEY}&country=${CALENDARIFIC_COUNTRY}&year=${currentYear}`);
+      if (!response.ok) throw new Error(`Calendarific API error: ${response.status}`);
+      const data = await response.json();
+      holidaysFromApi = data.response?.holidays || [];
+      console.log(`${LOG_PREFIX}: Fetched ${holidaysFromApi.length} holidays for ${currentYear}.`);
+      // Fetch next year's holidays if needed
+      const nextYear = currentYear + 1;
+      if (chronologicalMonths.some(cm => cm.year === nextYear)) {
+           console.log(`${LOG_PREFIX}: Fetching holidays for ${CALENDARIFIC_COUNTRY}, year ${nextYear}...`);
+           const nextYearResponse = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_API_KEY}&country=${CALENDARIFIC_COUNTRY}&year=${nextYear}`);
+           if(nextYearResponse.ok) {
+               const nextYearData = await nextYearResponse.json();
+               const nextYearHolidays = nextYearData.response?.holidays || [];
+               holidaysFromApi.push(...nextYearHolidays);
+                console.log(`${LOG_PREFIX}: Added ${nextYearHolidays.length} holidays for ${nextYear}. Total: ${holidaysFromApi.length}`);
+           } else {
+                console.warn(`${LOG_PREFIX}: Failed to fetch holidays for ${nextYear}. Status: ${nextYearResponse.status}`);
+           }
+      }
+
+  } catch (error) {
+      console.error(`${LOG_PREFIX}: Failed to fetch holidays:`, error);
+  }
+
+  const purchaserFirstName = purchaser.fullName?.split(' ')[0] || 'Me';
+
+  const relationshipHolidayMap: { [key: string]: { recipientLabel: string; holidayNames: string[] }[] } = {
+      'Mom': [{ recipientLabel: 'Mom', holidayNames: ["Mother's Day"] }],
+      'Dad': [{ recipientLabel: 'Dad', holidayNames: ["Father's Day"] }],
+      'Grandma': [{ recipientLabel: 'Grandma', holidayNames: ["Mother's Day", "Grandparents Day"] }],
+      'Grandpa': [{ recipientLabel: 'Grandpa', holidayNames: ["Father's Day", "Grandparents Day"] }],
+      'Parent': [{ recipientLabel: 'Parent', holidayNames: ["Mother's Day", "Father's Day"] }],
+      'Grandparent': [{ recipientLabel: 'Grandparent', holidayNames: ["Mother's Day", "Father's Day", "Grandparents Day"] }],
+      'Spouse': [{ recipientLabel: 'My Love', holidayNames: ["Valentine's Day"] }],
+      'Partner': [{ recipientLabel: 'My Love', holidayNames: ["Valentine's Day"] }],
+      'Sibling': [{ recipientLabel: 'Sibling', holidayNames: ["National Siblings Day"] }],
+  };
+
+  const allRelevantEvents: Event[] = [];
+  const relationship = recipient?.relationship;
+
+  // Add relevant holidays based on relationship
+  if (relationship && relationshipHolidayMap[relationship] && holidaysFromApi.length > 0) {
+      relationshipHolidayMap[relationship].forEach(mapping => {
+          mapping.holidayNames.forEach(holidayName => {
+              // Find holiday matching the name AND the year it occurs in based on chrono months
+              const apiHoliday = holidaysFromApi.find(h => {
+                 if (h.name !== holidayName) return false;
+                 // Check if this holiday's year matches any year in our 12-month target range
+                 try {
+                    const holidayYear = getYear(parseISO(h.date?.iso));
+                    return chronologicalMonths.some(cm => cm.year === holidayYear);
+                 } catch (e) { return false; }
+              });
+              if (apiHoliday?.date?.iso) {
+                  allRelevantEvents.push({
+                      occasion: holidayName,
+                      recipient: mapping.recipientLabel,
+                      date: apiHoliday.date.iso, // YYYY-MM-DD format
+                      holidayName: holidayName
+                  });
+              }
+          });
+      });
+  }
+
+  // Determine recipient names for personal events
+  let coupleRecipientName = '';
+  let individualRecipientName = '';
+  const recipientNamesByDate: { [key: string]: string } = {}; // Map birthday/anniv date to name
+  if (recipientType === 'myself') {
+      const name = purchaser.fullName?.split(' ')[0] || 'You';
+      individualRecipientName = name;
+      if (recipient.birthday) recipientNamesByDate[recipient.birthday] = name;
+  } else if (recipientType === 'individual' && recipient.firstName) {
+      individualRecipientName = recipient.firstName;
+      if (recipient.birthday) recipientNamesByDate[recipient.birthday] = recipient.firstName;
+  } else if (recipientType === 'couple') {
+      const r1 = recipient.recipient1FirstName;
+      const r2 = recipient.recipient2FirstName;
+      if (r1 && r2) coupleRecipientName = `${r1} & ${r2}`;
+      else if (r1) coupleRecipientName = r1;
+      else if (r2) coupleRecipientName = r2;
+      if (r1 && recipient.recipient1Birthday) recipientNamesByDate[recipient.recipient1Birthday] = r1;
+      if (r2 && recipient.recipient2Birthday) recipientNamesByDate[recipient.recipient2Birthday] = r2;
+  }
+
+  // Add personal events
+  const potentialPersonalEvents: { date?: string; occasion: 'birthday' | 'anniversary'; }[] = [];
+  if (recipientType === 'individual' || recipientType === 'myself') {
+      if (recipient.birthday) potentialPersonalEvents.push({ date: recipient.birthday, occasion: 'birthday' });
+  } else if (recipientType === 'couple') {
+      if (recipient.recipient1Birthday) potentialPersonalEvents.push({ date: recipient.recipient1Birthday, occasion: 'birthday' });
+      if (recipient.recipient2Birthday) potentialPersonalEvents.push({ date: recipient.recipient2Birthday, occasion: 'birthday' });
+      if (recipient.anniversary) potentialPersonalEvents.push({ date: recipient.anniversary, occasion: 'anniversary' });
+  }
+
+  potentialPersonalEvents.forEach(({ date, occasion }) => {
+      if (date) {
+          const recipientName = occasion === 'anniversary'
+              ? (coupleRecipientName || 'You Two')
+              : (recipientNamesByDate[date] || individualRecipientName || 'Recipient');
+          allRelevantEvents.push({ occasion, recipient: recipientName, date: date, holidayName: undefined });
+      }
+  });
+
+   console.log(`${LOG_PREFIX}: All relevant events identified:`, allRelevantEvents);
+
+  // Group events by month name for easier lookup
+  const eventsByMonthName = new Map<string, Event[]>();
+  allRelevantEvents.forEach(event => {
+      const monthName = getMonthNameFromDate(event.date);
+      if (monthName) {
+          const monthEvents = eventsByMonthName.get(monthName) || [];
+          monthEvents.push(event);
+          eventsByMonthName.set(monthName, monthEvents);
+      }
+  });
+
+  // Iterate through the chronological months and calculate details for each slot
+  const monthlyDetails = chronologicalMonths.map(chronoMonth => {
+      const { month: currentMonthName, year: currentYear } = chronoMonth;
+      const eventsThisMonthName = eventsByMonthName.get(currentMonthName) || [];
+      
+      const eventsThisMonthAndYear = eventsThisMonthName.filter(event => {
+           if (!event.date) return false;
+            try {
+               const eventYear = getYear(parseISO(event.date)); 
+               return eventYear === currentYear || event.occasion === 'birthday' || event.occasion === 'anniversary';
+            } catch (e) {
+                console.error(`${LOG_PREFIX}: Error parsing year for event date ${event.date}`);
+                return false;
+            }
+      });
+
+      let finalShipDate = '';
+      let finalFooterMessage = '';
+      let finalEnabled = false;
+      let finalOccasions: (string | 'birthday' | 'anniversary' | 'other')[] = [];
+      let finalRecipients: string[] = [];
+
+      if (eventsThisMonthAndYear.length > 0) {
+           console.log(`${LOG_PREFIX}: Processing ${currentMonthName} ${currentYear}. Found events for this year:`, eventsThisMonthAndYear);
+           finalEnabled = true; // Enable if any events match the month/year
+
+           const personalEventsThisMonth = eventsThisMonthAndYear.filter(e => e.occasion === 'birthday' || e.occasion === 'anniversary');
+           const holidayEventsThisMonth = eventsThisMonthAndYear.filter(e => e.occasion !== 'birthday' && e.occasion !== 'anniversary');
+           
+           // <<< MODIFIED: Prioritize relationship holiday >>>
+           let priorityHolidayEvent: Event | undefined = undefined;
+           const relationshipHolidays = relationship ? (relationshipHolidayMap[relationship] || []) : [];
+           const priorityHolidayNames = relationshipHolidays.flatMap(mapping => mapping.holidayNames); 
+           priorityHolidayEvent = holidayEventsThisMonth.find(hEvent => priorityHolidayNames.includes(hEvent.occasion)); 
+
+           if(priorityHolidayEvent) {
+                console.log(`${LOG_PREFIX}: ${currentMonthName} ${currentYear} - Found priority holiday: ${priorityHolidayEvent.occasion}`);
+           }
+
+           finalOccasions = eventsThisMonthAndYear.map(e => e.occasion);
+           finalRecipients = eventsThisMonthAndYear.map(e => e.recipient).filter((v, i, a) => a.indexOf(v) === i);
+
+           let footerParts: string[] = [];
+           let shipDateSourceEvent: Event | undefined = undefined;
+
+           // 1. Handle Priority Holiday (sets baseline and date precedence)
+           if (priorityHolidayEvent) {
+                footerParts.push(`Happy ${priorityHolidayEvent.occasion}`);
+                shipDateSourceEvent = priorityHolidayEvent; 
+           }
+
+           // 2. Handle Personal Events (adds to footer, sets date ONLY if no priority holiday)
+           if (personalEventsThisMonth.length > 0) {
+               const hasBirthday = personalEventsThisMonth.some(e => e.occasion === 'birthday');
+               const hasAnniversary = personalEventsThisMonth.some(e => e.occasion === 'anniversary');
+               const birthdayEvents = personalEventsThisMonth.filter(e => e.occasion === 'birthday');
+               const anniversaryEvent = personalEventsThisMonth.find(e => e.occasion === 'anniversary');
+               let personalFooterPart = '';
+               if (hasBirthday && hasAnniversary && anniversaryEvent) {
+                    const birthdayNames = birthdayEvents.map(b => b.recipient).join(' & ');
+                   personalFooterPart = `Happy Anniversary ${anniversaryEvent.recipient || 'You Two'} & Happy Birthday ${birthdayNames}`;
+               } else if (birthdayEvents.length > 1) { 
+                   const names = birthdayEvents.map(e => e.recipient).join(' & ');
+                   personalFooterPart = `Happy birthday ${names}`;
+               } else if (birthdayEvents.length === 1) { 
+                   personalFooterPart = `Happy birthday ${birthdayEvents[0].recipient}`;
+               } else if (anniversaryEvent) { 
+                   personalFooterPart = `Happy Anniversary ${anniversaryEvent.recipient || 'You Two'}`;
+               }
+               
+               if (personalFooterPart) {
+                   footerParts.push(personalFooterPart); 
+               }
+               
+               if (!shipDateSourceEvent) { // Only use personal event date if no priority holiday
+                   shipDateSourceEvent = personalEventsThisMonth[0]; 
+               }
+           }
+           
+           // 3. Handle Non-Priority Holidays (only if footer is still empty)
+           if (footerParts.length === 0 && holidayEventsThisMonth.length > 0) {
+               // This handles cases like Valentine's Day if no personal/priority events exist
+               const nonPriorityHoliday = holidayEventsThisMonth[0]; 
+               footerParts.push(`Happy ${nonPriorityHoliday.occasion}`);
+               if (!shipDateSourceEvent) { // Should already be false if we are here
+                  shipDateSourceEvent = nonPriorityHoliday;
+               }
+           }
+           
+           // 4. Construct Final Footer
+           let generatedFooter = footerParts.join(' & '); 
+           if (generatedFooter) {
+               generatedFooter += `! Love, ${purchaserFirstName}`;
+           }
+           finalFooterMessage = truncate(generatedFooter.trim(), { length: 80, omission: '...' });
+
+           // 5. Calculate Final Ship Date from the determined source event
+           if (shipDateSourceEvent?.date) {
+               try {
+                   const originalEventDate = parseISO(shipDateSourceEvent.date);
+                   const eventDay = originalEventDate.getDate();
+                   const eventMonth = getMonth(originalEventDate); 
+                   const targetDate = new Date(currentYear, eventMonth, eventDay);
+                   if (isValid(targetDate)) {
+                       finalShipDate = format(targetDate, 'yyyy-MM-dd');
+                       console.log(`${LOG_PREFIX}: ${currentMonthName} ${currentYear} - Final Ship Date from ${shipDateSourceEvent.occasion}: ${finalShipDate}`);
+                   } else { finalShipDate = ''; }
+               } catch (e) { finalShipDate = ''; }
+           } else {
+               finalShipDate = '';
+           }
+           
+      } else {
+          // No events for this specific month/year
+          finalEnabled = false;
+          finalFooterMessage = '';
+          finalShipDate = '';
+      }
+
+      // Return the calculated details 
+      return {
+          month: currentMonthName,
+          year: currentYear,
+          calculatedShipDate: finalShipDate,
+          calculatedFooterMessage: finalFooterMessage,
+          calculatedEnabled: finalEnabled,
+          occasions: finalOccasions,
+          recipients: finalRecipients,
+      };
+  });
+
+  console.log(`${LOG_PREFIX}: Calculation complete. Result:`, monthlyDetails);
+  return monthlyDetails;
+};
+// --- END of new helper function ---
+
 // Define createNewSession *before* useSessionStore
 const createNewSession = (): SessionData => {
   const now = new Date().toISOString();
   const defaultSignatureData = ALL_MONTHS.map(month => ({
     month,
-    shipDate: '', 
+    shipDate: '',
     footerMessage: '',
     enabled: false,
     occasions: [],
@@ -258,11 +565,14 @@ const createNewSession = (): SessionData => {
     useExactTitle: false,
     story: '',
     useExactStory: false,
+    storyLocked: false, // <<< Initialize Story lock state
     artworkOption: null,
     photoUrl: undefined,
-    footerEnabled: false,
+    artworkLocked: false, // <<< Initialize Artwork lock state
+    enabled: false,
     footerMessage: '',
-    shipDate: undefined,
+    shipDate: '',
+    notesLocked: false, // <<< Initialize Notes lock state
   }));
 
   return {
@@ -371,16 +681,15 @@ export const useSessionStore = create<SessionStore>()(
       submitTriggerCount: 0, // <<< Initialize trigger state
   
   initialize: () => {
-        // This function is called by the consuming component (e.g., _app.tsx or layout)
-        // after the store is potentially hydrated.
+        console.log("[StoreAction initialize]: Running...");
+        // This function now ONLY handles isLoading based on hydration.
+        // Initializers (SignatureData, CustomDataDates) will be called elsewhere (e.g., relevant component mount).
         if (get().isHydrated) {
+          console.log("[StoreAction initialize]: Store is hydrated, setting isLoading=false.");
           set({ isLoading: false });
-          // Call initialization logic if hydrated
-          get().initializeSignatureData();
         } else {
-          // Still waiting for hydration
-    set({ isLoading: true });
-          // The onRehydrateStorage logic will eventually set isHydrated and call initializeSignatureData
+          console.log("[StoreAction initialize]: Store not hydrated yet, setting isLoading=true.");
+          set({ isLoading: true });
         }
       },
       
@@ -475,226 +784,78 @@ export const useSessionStore = create<SessionStore>()(
   },
 
       initializeSignatureData: async () => {
-        console.log("[\'initializeSignatureData\']: Running...");
-        const CALENDARIFIC_API_KEY = '97c7s5VRboUw0XCPNq4mKkdKwOdJ0klU';
-        const CALENDARIFIC_COUNTRY = 'US';
-        const currentYear = getYear(new Date());
-        let holidaysFromApi: any[] = [];
+        console.log("['initializeSignatureData']: Running...");
+        const { recipient, purchaser, recipientType } = get().session;
+        const chronologicalMonths = getChronologicalMonths(); // Needed for calculation
 
-        // Update Event type definition for occasion
-        type Event = {
-            occasion: string | 'birthday' | 'anniversary'; // Allow general strings
-            recipient: string;
-            date: string; // ISO Format YYYY-MM-DD
-            holidayName?: string; // Still useful internally
-        };
-
-        try {
-          console.log(`[\'initializeSignatureData\']: Fetching holidays for ${CALENDARIFIC_COUNTRY}, year ${currentYear}...`);
-          const response = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_API_KEY}&country=${CALENDARIFIC_COUNTRY}&year=${currentYear}`);
-          if (!response.ok) throw new Error(`Calendarific API error: ${response.status}`);
-          const data = await response.json();
-          holidaysFromApi = data.response?.holidays || [];
-          console.log(`[\'initializeSignatureData\']: Fetched ${holidaysFromApi.length} holidays.`);
-        } catch (error) {
-          console.error("[\'initializeSignatureData\']: Failed to fetch holidays:", error);
-        }
+        // Call the shared calculation function
+         const monthlyEventDetails = await calculateMonthlyEventDetails(recipient, purchaser, recipientType, chronologicalMonths);
 
         set(state => {
-          if (!state.isHydrated || state.isLoading) return {};
+            // Map the calculated details to the signatureData structure
+            const updatedSignatureData = ALL_MONTHS.map(monthName => {
+                // Find the *first* chronological detail matching this month name
+                const relevantDetail = monthlyEventDetails.find(detail => detail.month === monthName);
+                const existingMonthData = state.session.signatureData.find(sd => sd.month === monthName) || { month: monthName, shipDate: '', footerMessage: '', enabled: false, occasions: [], recipients: []}; 
 
-          const { recipient, purchaser, recipientType } = state.session;
-          const purchaserFirstName = purchaser.fullName?.split(' ')[0] || 'Me';
-          let currentSignatureData = cloneDeep(state.session.signatureData);
+                return {
+                    ...existingMonthData, 
+                    enabled: relevantDetail?.calculatedEnabled ?? false,
+                    shipDate: relevantDetail?.calculatedShipDate ?? '',
+                    footerMessage: relevantDetail?.calculatedFooterMessage ?? '',
+                    occasions: relevantDetail?.occasions ?? [], 
+                    recipients: relevantDetail?.recipients ?? [], 
+                };
+            });
 
-          if (!currentSignatureData || currentSignatureData.length !== 12) {
-             currentSignatureData = ALL_MONTHS.map(month => ({
-              month, shipDate: '', footerMessage: '', enabled: false, occasions: [], recipients: [],
-            }));
-          }
-
-          // --- Get the chronological month/year sequence --- 
-          const chronologicalMonths = getChronologicalMonths();
-          console.log("[\'initializeSignatureData\']: Chronological Months Sequence:", chronologicalMonths);
-
-          const relationshipHolidayMap: { [key: string]: { recipientLabel: string; holidayNames: string[] }[] } = {
-             'Mom': [{ recipientLabel: 'Mom', holidayNames: ["Mother's Day"] }],
-             'Dad': [{ recipientLabel: 'Dad', holidayNames: ["Father's Day"] }],
-             'Grandma': [{ recipientLabel: 'Grandma', holidayNames: ["Mother's Day", "Grandparents Day"] }],
-             'Grandpa': [{ recipientLabel: 'Grandpa', holidayNames: ["Father's Day", "Grandparents Day"] }],
-             'Parent': [{ recipientLabel: 'Parent', holidayNames: ["Mother's Day", "Father's Day"] }],
-             'Grandparent': [{ recipientLabel: 'Grandparent', holidayNames: ["Mother's Day", "Father's Day", "Grandparents Day"] }],
-             'Spouse': [{ recipientLabel: 'My Love', holidayNames: ["Valentine's Day"] }],
-             'Partner': [{ recipientLabel: 'My Love', holidayNames: ["Valentine's Day"] }],
-             'Sibling': [{ recipientLabel: 'Sibling', holidayNames: ["National Siblings Day"] }],
-          };
-          const relevantHolidays: Event[] = [];
-          const relationship = recipient?.relationship;
-          if (relationship && relationshipHolidayMap[relationship] && holidaysFromApi.length > 0) {
-              relationshipHolidayMap[relationship].forEach(mapping => {
-                  mapping.holidayNames.forEach(holidayName => {
-                      const apiHoliday = holidaysFromApi.find(h => h.name === holidayName);
-                      if (apiHoliday?.date?.iso) {
-                          relevantHolidays.push({ occasion: holidayName, recipient: mapping.recipientLabel, date: apiHoliday.date.iso, holidayName: holidayName });
-                      }
-                  });
-              });
-          }
-
-          const hasPersonalDates = recipient.birthday || recipient.anniversary || recipient.recipient1Birthday || recipient.recipient2Birthday;
-          if (!recipientType || (!hasPersonalDates && relevantHolidays.length === 0)) {
-            console.log("[\'initializeSignatureData\']: Skipping prefill.");
-            return {};
-          }
-
-          const eventsByMonth = new Map<string, Event[]>();
-          let coupleRecipientName = '';
-          let individualRecipientName = '';
-          const recipientNames: { [key: string]: string } = {};
-           if (recipientType === 'myself') {
-              const name = purchaser.fullName?.split(' ')[0] || 'You';
-              individualRecipientName = name;
-              if(recipient.birthday) recipientNames[recipient.birthday] = name;
-           } else if (recipientType === 'individual' && recipient.firstName) {
-             individualRecipientName = recipient.firstName;
-              if(recipient.birthday) recipientNames[recipient.birthday] = recipient.firstName;
-           } else if (recipientType === 'couple') {
-             const r1 = recipient.recipient1FirstName; const r2 = recipient.recipient2FirstName;
-             if (r1 && r2) coupleRecipientName = `${r1} & ${r2}`;
-             else if (r1) coupleRecipientName = r1; else if (r2) coupleRecipientName = r2;
-             if(r1 && recipient.recipient1Birthday) recipientNames[recipient.recipient1Birthday] = r1;
-             if(r2 && recipient.recipient2Birthday) recipientNames[recipient.recipient2Birthday] = r2;
-           }
-
-          const potentialPersonalEvents: { date?: string; occasion: 'birthday' | 'anniversary'; }[] = [];
-          if (recipientType === 'individual' || recipientType === 'myself') {
-              if (recipient.birthday) potentialPersonalEvents.push({ date: recipient.birthday, occasion: 'birthday' });
-          } else if (recipientType === 'couple') {
-              if (recipient.recipient1Birthday) potentialPersonalEvents.push({ date: recipient.recipient1Birthday, occasion: 'birthday' });
-              if (recipient.recipient2Birthday) potentialPersonalEvents.push({ date: recipient.recipient2Birthday, occasion: 'birthday' });
-              if (recipient.anniversary) potentialPersonalEvents.push({ date: recipient.anniversary, occasion: 'anniversary' });
-          }
-
-          potentialPersonalEvents.forEach(({ date, occasion }) => {
-            if (date) {
-              const monthName = getMonthNameFromDate(date);
-              const recipientName = occasion === 'anniversary' ? (coupleRecipientName || 'You') : (recipientNames[date] || individualRecipientName || 'Recipient');
-              if (monthName) {
-                const monthEvents = eventsByMonth.get(monthName) || [];
-                 try {
-                    monthEvents.push({ occasion, recipient: recipientName, date: date, holidayName: undefined });
-                    eventsByMonth.set(monthName, monthEvents);
-                 } catch (e) { console.error(`Error processing personal event date: ${date}`, e); }
-              }
+            console.log("['initializeSignatureData']: Final signatureData:", updatedSignatureData);
+            if (JSON.stringify(state.session.signatureData) !== JSON.stringify(updatedSignatureData)) {
+               return { session: { ...state.session, signatureData: updatedSignatureData, updatedAt: new Date().toISOString() } };
             }
-          });
-          relevantHolidays.forEach(holiday => {
-              const monthName = getMonthNameFromDate(holiday.date);
-              if (monthName) {
-                  const monthEvents = eventsByMonth.get(monthName) || [];
-                  monthEvents.push(holiday);
-                  eventsByMonth.set(monthName, monthEvents);
-              }
-          });
-
-          currentSignatureData = currentSignatureData.map(monthData => {
-            const monthName = monthData.month;
-            const events: Event[] = eventsByMonth.get(monthName) || [];
-            if (events.length === 0) return monthData;
-
-            let newFooter = '';
-            let newOccasions: (string | 'birthday' | 'anniversary' | 'other')[] = [];
-            let newRecipients: string[] = [];
-            let newEnabled = true;
-            let newShipDate = monthData.shipDate;
-
-            const personalEvents = events.filter((e: Event) => e.occasion === 'birthday' || e.occasion === 'anniversary');
-            const holidayEvents = events.filter((e: Event) => e.occasion !== 'birthday' && e.occasion !== 'anniversary');
-
-            if (personalEvents.length > 0 && personalEvents[0]) {
-                 const firstPersonalEvent = personalEvents[0];
-                 newOccasions.push(...personalEvents.map((e: Event) => e.occasion));
-                 newRecipients.push(...personalEvents.map((e: Event) => e.recipient));
-                 const hasBirthday = personalEvents.some((e: Event) => e.occasion === 'birthday');
-                 const hasAnniversary = personalEvents.some((e: Event) => e.occasion === 'anniversary');
-                 const birthdayEvent = personalEvents.find((e: Event) => e.occasion === 'birthday');
-                 if (hasBirthday && hasAnniversary && birthdayEvent) {
-                     newFooter = `Happy anniversary ${coupleRecipientName || 'you two'} & happy birthday ${birthdayEvent.recipient}! Love, ${purchaserFirstName}`;
-                 } else if (personalEvents.length > 1) {
-                      const names = personalEvents.map((e: Event) => e.recipient).join(' & ');
-                      newFooter = `Happy birthday ${names}! Love, ${purchaserFirstName}`;
-                  } else if (hasBirthday) {
-                      newFooter = `Happy birthday ${firstPersonalEvent.recipient}! Love, ${purchaserFirstName}`;
-                  } else if (hasAnniversary) {
-                      newFooter = `Happy Anniversary ${coupleRecipientName || ''}! Love, ${purchaserFirstName}`;
-                  }
-
-                 if (!newShipDate && firstPersonalEvent.date) {
-                      try {
-                          const originalDate = parseISO(firstPersonalEvent.date);
-                          const eventMonth = getMonth(originalDate); // 0-indexed
-                          const eventDay = originalDate.getDate(); // Original day
-                          const eventMonthName = ALL_MONTHS[eventMonth];
-
-                          // Find the target year from the chronological sequence
-                          const targetMonthInfo = chronologicalMonths.find(m => m.month === eventMonthName);
-                          const targetYear = targetMonthInfo ? targetMonthInfo.year : getYear(new Date()); // Fallback to current year
-
-                          // Construct the date with the correct year
-                          const targetDate = new Date(targetYear, eventMonth, eventDay);
-                          newShipDate = format(targetDate, 'yyyy-MM-dd');
-                           console.log(`[\'initializeSignatureData\']: Calculated target ship date for ${firstPersonalEvent.occasion} (${eventMonthName} ${eventDay}): ${newShipDate}`);
-                      } catch(e) { console.error("Error calculating target personal ship date:", e); }
-                 }
-
-            } else if (holidayEvents.length > 0 && holidayEvents[0]) {
-                 const firstHoliday = holidayEvents[0];
-                 newOccasions.push(firstHoliday.occasion);
-                 newRecipients.push(...holidayEvents.map((e: Event) => e.recipient).filter((v, i, a) => a.indexOf(v) === i));
-                 newFooter = `Happy ${firstHoliday.occasion}! Love, ${purchaserFirstName}`;
-
-                 if (!newShipDate && firstHoliday.date) {
-                     try {
-                         // Date from API is already YYYY-MM-DD
-                         newShipDate = firstHoliday.date;
-                     } catch(e) { console.error("Error setting holiday ship date:", e); }
-                 }
-            }
-
-            if (personalEvents.length > 0 && holidayEvents.length > 0) {
-                 holidayEvents.forEach((hEvent: Event) => {
-                     if (!newOccasions.includes(hEvent.occasion)) newOccasions.push(hEvent.occasion);
-                     if (!newRecipients.includes(hEvent.recipient)) newRecipients.push(hEvent.recipient);
-                 });
-            }
-
-            newFooter = truncate(newFooter.trim(), { length: 80, omission: '...' });
-
-            if (newEnabled && !newShipDate) {
-                  // Find target year for this specific month in the sequence
-                  const targetMonthInfo = chronologicalMonths.find(m => m.month === monthName);
-                  const targetYear = targetMonthInfo ? targetMonthInfo.year : getYear(new Date());
-                  const monthNumber = ALL_MONTHS.indexOf(monthName);
-                  try {
-                      newShipDate = format(new Date(targetYear, monthNumber, 1), 'yyyy-MM-dd');
-                      console.log(`[\'initializeSignatureData\']: Setting fallback ship date for ${monthName}: ${newShipDate}`);
-                  } catch (e) { console.error("Error calculating default ship date:", e); newShipDate = '';}
-              }
-
-            return {
-              ...monthData,
-              enabled: newEnabled,
-              occasions: newOccasions.length > 0 ? newOccasions : monthData.occasions,
-              recipients: newRecipients.length > 0 ? newRecipients : monthData.recipients,
-              footerMessage: newFooter || monthData.footerMessage,
-              shipDate: newShipDate || '',
-            };
-          });
-
-           console.log("[\'initializeSignatureData\']: Final signatureData:", currentSignatureData);
-           return { session: { ...state.session, signatureData: currentSignatureData, updatedAt: new Date().toISOString() } };
-
+            return {}; 
         });
+    },
+
+      initializeCustomDataDates: async () => {
+          console.log("['initializeCustomDataDates']: Running...");
+          const { recipient, purchaser, recipientType } = get().session;
+          const chronologicalMonths = getChronologicalMonths();
+
+          // Call the shared calculation function
+          const monthlyEventDetails = await calculateMonthlyEventDetails(recipient, purchaser, recipientType, chronologicalMonths);
+
+           set(state => {
+               // Map the calculated details directly to the customData structure
+               const updatedCustomData = state.session.customData.map(customMonthData => {
+                   // Find the *exact* detail matching this month AND year
+                   const relevantDetail = monthlyEventDetails.find(detail =>
+                       detail.month === customMonthData.month && detail.year === customMonthData.year
+                   );
+
+                   if (relevantDetail) {
+                       // Update the fields using the calculated values
+                       return {
+                           ...customMonthData,
+                           enabled: relevantDetail.calculatedEnabled, 
+                           shipDate: relevantDetail.calculatedShipDate, 
+                           footerMessage: relevantDetail.calculatedFooterMessage,
+                       };
+                   }
+                   return customMonthData;
+               });
+
+               console.log("['initializeCustomDataDates']: Final customData:", updatedCustomData);
+               if (JSON.stringify(state.session.customData) !== JSON.stringify(updatedCustomData)) {
+                 return {
+                     session: {
+                         ...state.session,
+                         customData: updatedCustomData,
+                         updatedAt: new Date().toISOString()
+                     }
+                 };
+               }
+               return {}; 
+           });
       },
 
       updateSignatureMonth: (month: string, data: Partial<SignatureMonthCustomization>) => {
@@ -721,17 +882,35 @@ export const useSessionStore = create<SessionStore>()(
       },
 
       updateCustomMonth: (month: string, year: number, data: Partial<CustomMonthData>) => {
-          if (data.footerMessage && typeof data.footerMessage === 'string') {
-              data.footerMessage = truncate(data.footerMessage, { length: 80, omission: '' });
-          }
+           console.log(`[updateCustomMonth] Updating ${month} ${year} with:`, data);
+           if (data.footerMessage && typeof data.footerMessage === 'string') {
+               data.footerMessage = truncate(data.footerMessage, { length: 80, omission: '' });
+           }
+           const updateData: Partial<CustomMonthData> = {
+               ...data,
+               enabled: data.enabled !== undefined ? data.enabled : undefined, 
+               shipDate: data.shipDate !== undefined ? data.shipDate : undefined, 
+           };
+            delete (updateData as any).footerEnabled;
+
+
           set(state => {
               const updatedCustomData = state.session.customData.map(monthData => {
                   if (monthData.month === month && monthData.year === year) {
-                      return { ...monthData, ...data };
+                      return { ...monthData, ...updateData };
                   }
                   return monthData;
               });
-              const finalCustomData = updatedCustomData.length === 12 ? updatedCustomData : getChronologicalMonths().map(m => ({ ...state.session.customData.find(cd => cd.month === m.month && cd.year === m.year)!, ...({month: m.month, year: m.year}) }));
+              const currentChronologicalMonths = getChronologicalMonths();
+              const finalCustomData = currentChronologicalMonths.map(chronoMonth => {
+                  const existingData = updatedCustomData.find(cd => cd.month === chronoMonth.month && cd.year === chronoMonth.year);
+                  return existingData || {
+                      month: chronoMonth.month, year: chronoMonth.year,
+                      title: '', useExactTitle: false, story: '', useExactStory: false,
+                      artworkOption: null, photoUrl: undefined,
+                      enabled: false, footerMessage: '', shipDate: '' 
+                  };
+              });
 
               return {
                   session: {
@@ -739,7 +918,7 @@ export const useSessionStore = create<SessionStore>()(
                       customData: finalCustomData,
                       updatedAt: new Date().toISOString(),
                   },
-                  isCurrentStepValid: false // <<< Reset validation status on data change
+                  isCurrentStepValid: false
               };
           });
       },
@@ -844,7 +1023,10 @@ export const useSessionStore = create<SessionStore>()(
              // Do not reset submitTriggerCount on rehydrate, let it persist
              if (hydrationComplete && !finalError) {
                 console.log("Post-hydration: Initializing signature data...");
-                Promise.resolve().then(() => finalState.initializeSignatureData());
+                Promise.resolve().then(() => {
+                   finalState.initializeSignatureData();
+                   finalState.initializeCustomDataDates(); // <<< Call new action after hydration
+                });
              } else {
                 console.log("Post-hydration: Skipping signature data initialization due to error or incomplete hydration.");
              }

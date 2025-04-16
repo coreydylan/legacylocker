@@ -10,11 +10,15 @@ import { cn } from "@/lib/utils";
 interface StoryTabProps {
   data: CustomMonthData;
   onUpdate: (update: Partial<CustomMonthData>) => void;
+  isLocked?: boolean;
 }
 
-const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
+const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate, isLocked }) => {
   return (
-    <div className="space-y-6 p-1">
+    <div className={cn(
+      "space-y-6 p-1",
+      isLocked && "opacity-50 cursor-not-allowed pointer-events-none"
+    )}>
       {/* Title Section */}
       <div className="space-y-2">
         <Label htmlFor={`title-${data.month}-${data.year}`}>Card Title</Label>
@@ -24,6 +28,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
           onChange={(e) => onUpdate({ title: e.target.value })}
           placeholder='e.g., "The First Snowfall" or "You Always Knew"'
           className="rounded-lg border-gray-200 px-4 py-3 focus:ring-1 focus:ring-neutral-300"
+          disabled={isLocked}
         />
         <div className="flex space-x-1 rounded-lg bg-muted p-0.5 mt-2">
              <Button
@@ -33,6 +38,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
                      data.useExactTitle ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactTitle: true })}
+                 disabled={isLocked}
              >
                  <Pencil size={16} className="mr-1 md:mr-2"/>
                  Use my exact title
@@ -44,6 +50,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
                     !data.useExactTitle ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactTitle: false })}
+                 disabled={isLocked}
              >
                  <Sparkles size={16} className="mr-1 md:mr-2"/>
                  Let Legacy Locker polish it
@@ -61,6 +68,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
            onChange={(e) => onUpdate({ story: e.target.value })}
            placeholder="Tell us the moment — we'll help turn it into magic."
            className="min-h-[120px] rounded-lg border-gray-200 px-4 py-3 focus:ring-1 focus:ring-neutral-300"
+           disabled={isLocked}
         />
          <div className="flex space-x-1 rounded-lg bg-muted p-0.5 mt-2">
              <Button
@@ -70,6 +78,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
                      data.useExactStory ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactStory: true })}
+                 disabled={isLocked}
              >
                  <Pencil size={16} className="mr-1 md:mr-2"/>
                  Use my exact text
@@ -81,6 +90,7 @@ const StoryTab: React.FC<StoryTabProps> = ({ data, onUpdate }) => {
                     !data.useExactStory ? "bg-white border-gray-300 text-gray-700" : "bg-gray-200 text-gray-600 border-transparent"
                  )}
                  onClick={() => onUpdate({ useExactStory: false })}
+                 disabled={isLocked}
              >
                  <Sparkles size={16} className="mr-1 md:mr-2"/>
                  Let Legacy Locker craft it

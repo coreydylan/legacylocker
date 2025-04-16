@@ -53,9 +53,10 @@ const FileUploadPlaceholder: React.FC<FileUploadProps> = ({ onUploadSuccess, cur
 interface ArtworkTabProps {
   data: CustomMonthData;
   onUpdate: (update: Partial<CustomMonthData>) => void;
+  isLocked?: boolean; // Add isLocked prop
 }
 
-const ArtworkTab: React.FC<ArtworkTabProps> = ({ data, onUpdate }) => {
+const ArtworkTab: React.FC<ArtworkTabProps> = ({ data, onUpdate, isLocked }) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -145,11 +146,15 @@ const ArtworkTab: React.FC<ArtworkTabProps> = ({ data, onUpdate }) => {
   };
 
   return (
-    <div className="space-y-6 p-1">
+    <div className={cn(
+      "space-y-6 p-1",
+      isLocked && "opacity-50 cursor-not-allowed pointer-events-none" // Apply disabled styles if locked
+    )}>
       <RadioGroup 
         value={data.artworkOption ?? ''}
         onValueChange={handleRadioChange}
         className="space-y-3"
+        disabled={isLocked} // Disable radio group if locked
       >
         {/* Option 1: Generate from Story */}
         <Label 
@@ -229,6 +234,7 @@ const ArtworkTab: React.FC<ArtworkTabProps> = ({ data, onUpdate }) => {
                    className="absolute top-1 right-1 bg-white/80 hover:bg-white text-xs h-auto px-2 py-1"
                    onClick={() => document.getElementById('photo-upload')?.click()} 
                    aria-label="Change photo"
+                   disabled={isLocked} // Disable change button if locked
                  > 
                     Change
                  </Button> 
@@ -266,7 +272,7 @@ const ArtworkTab: React.FC<ArtworkTabProps> = ({ data, onUpdate }) => {
                   className="hidden" 
                   accept="image/png, image/jpeg, image/gif" 
                   onChange={handleFileChange} 
-                  disabled={isUploading}
+                  disabled={isLocked || isUploading} // Disable file input if locked OR uploading
               />
             </Label>
           )}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import {
   AccordionContent,
   AccordionItem,
@@ -10,8 +10,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, CircleEllipsis, XCircle, Edit3, ImageIcon, MessageSquareText, ChevronDown } from 'lucide-react'; // Icons
+import { ChevronDown, Lock, Unlock } from 'lucide-react';
 import { CustomMonthData } from '@/lib/sessionStore';
 import StoryTab from './StoryTab';
 import ArtworkTab from './ArtworkTab';
@@ -24,148 +23,328 @@ import { saveSessionToSupabase } from '@/lib/sessionService';
 type CompletionStatus = 'complete' | 'in-progress' | 'not-started';
 type SectionStatus = { story: boolean; artwork: boolean; footer: boolean };
 
+// Define the possible tab values
+export type CustomMonthTab = 'story' | 'artwork' | 'custom-notes'; // <<< Rename 'footer'
+
+// Define Lock Status types
+type LockStatus = 'locked' | 'in-progress' | 'not-started';
+interface SectionLockStatus {
+  story: LockStatus;
+  artwork: LockStatus;
+  notes: LockStatus;
+}
+
 interface CustomMonthCardProps {
   monthData: CustomMonthData;
   onUpdate: (month: string, year: number, update: Partial<CustomMonthData>) => void;
   accordionValue: string; // e.g., "January-2024"
-  initialTab?: 'story' | 'artwork' | 'footer'; // Optional: To open to a specific tab
-  onSectionClick: (tab: 'story' | 'artwork' | 'footer') => void; // Callback when section tracker icon clicked
+  initialTab?: CustomMonthTab; // Optional: To open to a specific tab
 }
 
-// Helper function to determine completion status
-const getCompletionStatus = (data: CustomMonthData): { overall: CompletionStatus; sections: SectionStatus } => {
-  const sections: SectionStatus = {
-    story: !!(data.title && data.story),
-    artwork: data.artworkOption !== null,
-    footer: !data.footerEnabled || !!data.footerMessage,
+// Updated helper function for Lock Status
+const getSectionLockStatus = (data: CustomMonthData): SectionLockStatus => {
+  const getStatus = (
+    isLocked: boolean | undefined,
+    hasProgress: boolean
+  ): LockStatus => {
+    if (isLocked) return 'locked';
+    if (hasProgress) return 'in-progress';
+    return 'not-started';
   };
 
-  const isComplete = sections.story && sections.artwork && sections.footer;
-  const isInProgress = !isComplete && (sections.story || sections.artwork || sections.footer);
+  const storyInProgress = !!(data.title || data.story);
+  const artworkInProgress = data.artworkOption !== null;
+  // Notes are in progress if enabled=true OR if disabled but has content (user might disable later)
+  const notesInProgress = data.enabled || !!(data.footerMessage || data.shipDate);
 
-  let overall: CompletionStatus;
-  if (isComplete) {
-    overall = 'complete';
-  } else if (isInProgress) {
-    overall = 'in-progress';
-  } else {
-    overall = 'not-started';
-  }
-
-  return { overall, sections };
+  return {
+    story: getStatus(data.storyLocked, storyInProgress),
+    artwork: getStatus(data.artworkLocked, artworkInProgress),
+    notes: getStatus(data.notesLocked, notesInProgress),
+  };
 };
 
 const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
   monthData,
   onUpdate,
   accordionValue,
-  initialTab = 'story', // Default to story tab
-  onSectionClick,
+  initialTab = 'story',
 }) => {
   const { month, year } = monthData;
-  const { overall: overallStatus, sections: sectionStatus } = getCompletionStatus(monthData);
+  const sectionLockStatus = useMemo(() => getSectionLockStatus(monthData), [monthData]);
+  const [isOpen, setIsOpen] = useState(false);
+  const itemRef = useRef<HTMLDivElement>(null);
+
+  // <<< Add derived state to check if all sections are locked >>>
+  const isAllLocked = useMemo(() => {
+    return sectionLockStatus.story === 'locked' && 
+           sectionLockStatus.artwork === 'locked' && 
+           sectionLockStatus.notes === 'locked';
+  }, [sectionLockStatus]);
 
   // --- Debounced Save Logic --- 
   const debouncedSave = useDebouncedCallback(() => {
     console.log(`[Autosave] CustomMonthCard (${month}-${year}): Triggering Supabase save...`);
     saveSessionToSupabase();
   }, 1000); // 1 second debounce
-  // --- End Debounced Save Logic ---
 
-  // This function is called by the child tabs
+  // Use initialTab prop to set the default value for the Tabs component
+  const [activeTab, setActiveTab] = useState<CustomMonthTab>(initialTab);
+  
+  // Update active tab if initialTab prop changes (when opened via section tracker)
+  React.useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  // Helper to handle tab navigation click
+  const handleTabNavigationClick = (e: React.MouseEvent | React.KeyboardEvent, tab: CustomMonthTab) => {
+    e.stopPropagation(); // Stop propagation to prevent accordion toggle
+    console.log(`[TabClick Ref] Clicked tab: ${tab}. IsOpen: ${isOpen}`);
+    setActiveTab(tab);
+    
+    // If the month is closed, find and click the accordion trigger to open it
+    if (!isOpen && itemRef.current) {
+      console.log(`[TabClick Ref] Accordion is closed (isOpen=${isOpen}). Attempting to open...`);
+      const accordionElement = itemRef.current;
+      console.log(`[TabClick Ref] Found accordion element for ${accordionValue}:`, accordionElement);
+      if (accordionElement.getAttribute('data-state') === 'closed') {
+        const trigger = accordionElement.querySelector<HTMLElement>('button[data-state="closed"]');
+        console.log(`[TabClick Ref] Found trigger element:`, trigger);
+        if (trigger) {
+          console.log(`[TabClick Ref] Clicking trigger for ${accordionValue}...`);
+          trigger.click();
+        } else {
+          console.warn(`[TabClick Ref] Could not find trigger button element within itemRef for ${accordionValue}`);
+        }
+      } else {
+        console.warn(`[TabClick Ref] Accordion element not found via ref or not closed for ${accordionValue}. State: ${accordionElement?.getAttribute('data-state')}`);
+      }
+    } else {
+       console.log(`[TabClick Ref] Accordion already open (isOpen=${isOpen}) or itemRef is null. Only setting active tab.`);
+    }
+  };
+
+  // This function is called by the child tabs AND the lock icons
   const handleUpdate = (update: Partial<CustomMonthData>) => {
-    // Update the Zustand store first
     onUpdate(month, year, update);
-    // Then trigger the debounced save
-    debouncedSave(); 
+    debouncedSave();
   };
 
-  const statusMap: Record<CompletionStatus, { text: string; icon: React.ElementType; className: string }> = {
-    'complete': { text: 'Complete', icon: CheckCircle2, className: 'border-green-200 bg-green-100 text-green-700' },
-    'in-progress': { text: 'In Progress', icon: CircleEllipsis, className: 'border-amber-200 bg-amber-100 text-amber-700' },
-    'not-started': { text: 'Not Started', icon: XCircle, className: 'border-gray-200 bg-gray-100 text-gray-600' },
+  // Effect to track accordion open state
+  useEffect(() => {
+    const node = itemRef.current;
+    if (!node) {
+        console.warn(`[Effect Ref ${accordionValue}] itemRef.current is null on mount. Observer not set up yet.`);
+        return; // Don't proceed if the node isn't available yet
+    }
+
+    console.log(`[Effect Ref ${accordionValue}] Setting up MutationObserver on:`, node);
+    
+    const handleAccordionChange = (mutationsList: MutationRecord[]) => {
+        for(const mutation of mutationsList) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'data-state') {
+                const targetElement = mutation.target as HTMLElement;
+                const newState = targetElement.getAttribute('data-state');
+                console.log(`[Observer Ref ${accordionValue}] data-state changed to: ${newState}`);
+                const isAccordionOpen = newState === 'open';
+                setIsOpen(isAccordionOpen);
+            }
+        }
+    };
+
+    // Initial check - Get initial state directly from the ref'd node
+    const initialState = node.getAttribute('data-state');
+    console.log(`[Effect Ref ${accordionValue}] Initial state check from node: ${initialState}`);
+    setIsOpen(initialState === 'open');
+    
+    // Set up mutation observer to watch for data-state changes on the specific node
+    const observer = new MutationObserver(handleAccordionChange);
+    console.log(`[Effect Ref ${accordionValue}] Observing element:`, node);
+    observer.observe(node, {
+        attributes: true,
+        attributeFilter: ['data-state']
+    });
+    
+
+    return () => {
+        console.log(`[Effect Ref ${accordionValue}] Disconnecting MutationObserver.`);
+        observer.disconnect();
+    };
+  }, [accordionValue]); // Rerun effect if accordionValue changes (though unlikely)
+
+  // Helper to get lock icon class based on status
+  const getLockClass = (status: LockStatus): string => {
+    switch (status) {
+      case 'locked':
+        return 'text-green-600'; // Green for locked
+      case 'in-progress':
+        return 'text-yellow-600'; // Yellow for in-progress
+      case 'not-started':
+      default:
+        return 'text-gray-400'; // Gray for not-started
+    }
   };
 
-  const statusInfo = statusMap[overallStatus];
+  // Helper to handle lock clicks
+  const handleLockClick = (
+    e: React.MouseEvent<HTMLButtonElement>,
+    section: keyof SectionLockStatus
+  ) => {
+    e.stopPropagation(); // Prevent accordion toggle
+    const lockKey = `${section}Locked` as keyof Pick<CustomMonthData, 'storyLocked' | 'artworkLocked' | 'notesLocked'>;
+    const currentLockedState = monthData[lockKey];
+    handleUpdate({ [lockKey]: !currentLockedState });
+  };
+
+  // Log state values just before rendering
+  console.log(`[Render ${accordionValue}] isOpen: ${isOpen}, activeTab: ${activeTab}`);
 
   return (
-    <AccordionItem value={accordionValue} className="group border bg-white rounded-lg shadow-sm overflow-hidden">
+    <AccordionItem 
+      ref={itemRef}
+      value={accordionValue} 
+      className="group overflow-hidden [&_[data-state]]:no-underline border-b-0 my-0 py-0"
+    >
       {/* Accordion Header / Trigger */}
-      <AccordionTrigger className="px-4 py-3 hover:bg-gray-50 data-[state=open]:bg-gray-50/80">
-        <div className="flex justify-between items-center w-full">
-          {/* Left Side: Month/Year and Section Tracker */}
-          <div className="flex flex-col items-start text-left space-y-1.5">
-            <span className="text-lg font-semibold text-neutral-800">
-                {month} {year}
+      <AccordionTrigger className="flex w-full group/trigger no-underline hover:no-underline data-[state=open]:no-underline [&>svg]:hidden [&_*]:no-underline">
+        <div className={cn(
+          "flex items-center w-full rounded-lg border shadow-sm transition-colors duration-200", // Base styles
+          isAllLocked ? 'bg-green-50 border-green-200' : 'bg-white border-gray-200' // Conditional background and border
+        )}>
+          {/* Left Side: Chevron and Month/Year */}
+          <div className="flex items-center gap-2 md:gap-3 px-2 py-2 md:px-4 md:py-3">
+            <ChevronDown className="h-4 w-4 text-gray-400 transition-transform duration-200 group-data-[state=open]/trigger:rotate-180" />
+            <span className="text-xs md:text-sm font-medium text-neutral-800 no-underline hover:no-underline">
+              {month} {year}
             </span>
-            {/* Inline Section Tracker */}
-            <div className="flex items-center space-x-3 text-xs text-gray-500">
-                <button 
-                    onClick={(e) => { e.stopPropagation(); onSectionClick('story'); }} 
-                    className={cn("flex items-center space-x-1 hover:text-legacy-blue", sectionStatus.story ? 'text-green-600 font-medium' : 'text-gray-400')}
-                    aria-label="Go to Story section"
-                 >
-                    <Edit3 size={14} /> <span>Story</span>
-                 </button>
-                 <button 
-                    onClick={(e) => { e.stopPropagation(); onSectionClick('artwork'); }}
-                    className={cn("flex items-center space-x-1 hover:text-legacy-blue", sectionStatus.artwork ? 'text-green-600 font-medium' : 'text-gray-400')}
-                    aria-label="Go to Artwork section"
-                 >
-                     <ImageIcon size={14} /> <span>Artwork</span>
-                 </button>
-                 <button 
-                    onClick={(e) => { e.stopPropagation(); onSectionClick('footer'); }}
-                    className={cn("flex items-center space-x-1 hover:text-legacy-blue", sectionStatus.footer ? 'text-green-600 font-medium' : 'text-gray-400')}
-                    aria-label="Go to Footer section"
-                 >
-                     <MessageSquareText size={14} /> <span>Footer</span>
-                 </button>
+          </div>
+
+          {/* Right Side: Tab-like Status Indicators */}
+          <div className="flex items-stretch ml-auto h-full">
+            {/* Story Tab/Indicator */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={(e) => handleTabNavigationClick(e, 'story')}
+              onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? handleTabNavigationClick(e, 'story') : null}
+              className={cn(
+                "flex items-center gap-1 md:gap-2 px-3 py-2 md:px-6 md:py-3 cursor-pointer relative transition-colors no-underline hover:bg-gray-50/50",
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-inset focus-visible:ring-legacy-blue/60",
+                {
+                  'bg-gray-50': isOpen && activeTab === 'story' && !isAllLocked,
+                  'bg-green-100': isOpen && activeTab === 'story' && isAllLocked,
+                  'hover:bg-green-200': isOpen && activeTab === 'story' && isAllLocked
+                }
+              )}
+              aria-label={`Navigate to Story tab. Status: ${sectionLockStatus.story}`}
+            >
+              {/* Lock/Unlock Icon Button */}
+              <button
+                onClick={(e) => handleLockClick(e, 'story')}
+                className={cn(
+                  "z-10 rounded-full p-1 md:p-1.5 flex items-center justify-center focus-visible:outline-none",
+                  "transition-colors hover:bg-gray-100", // Neutral hover
+                  getLockClass(sectionLockStatus.story), // Apply color based on status
+                  monthData.storyLocked ? 'bg-green-50' : 'bg-gray-50' // Optional: subtle bg based on lock state
+                )}
+                aria-label={`Story section is ${sectionLockStatus.story}. Click to ${monthData.storyLocked ? 'unlock' : 'lock'}.`}
+              >
+                {monthData.storyLocked ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
+              {/* Tab Text */}
+              <span className="text-xs md:text-sm font-medium text-gray-700 no-underline hover:no-underline">Story</span>
+            </div>
+
+            {/* Artwork Tab/Indicator */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={(e) => handleTabNavigationClick(e, 'artwork')}
+              onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? handleTabNavigationClick(e, 'artwork') : null}
+              className={cn(
+                "flex items-center gap-1 md:gap-2 px-3 py-2 md:px-6 md:py-3 cursor-pointer relative transition-colors border-l border-gray-200 no-underline hover:bg-gray-50/50",
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-inset focus-visible:ring-legacy-blue/60",
+                {
+                  'bg-gray-50': isOpen && activeTab === 'artwork' && !isAllLocked,
+                  'bg-green-100': isOpen && activeTab === 'artwork' && isAllLocked,
+                  'hover:bg-green-200': isOpen && activeTab === 'artwork' && isAllLocked
+                }
+              )}
+              aria-label={`Navigate to Artwork tab. Status: ${sectionLockStatus.artwork}`}
+            >
+              <button
+                onClick={(e) => handleLockClick(e, 'artwork')}
+                className={cn(
+                  "z-10 rounded-full p-1 md:p-1.5 flex items-center justify-center focus-visible:outline-none",
+                  "transition-colors hover:bg-gray-100", // Neutral hover
+                  getLockClass(sectionLockStatus.artwork), // Apply color based on status
+                  monthData.artworkLocked ? 'bg-green-50' : 'bg-gray-50' // Optional: subtle bg based on lock state
+                )}
+                aria-label={`Artwork section is ${sectionLockStatus.artwork}. Click to ${monthData.artworkLocked ? 'unlock' : 'lock'}.`}
+              >
+                {monthData.artworkLocked ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
+              <span className="text-xs md:text-sm font-medium text-gray-700 no-underline hover:no-underline">Artwork</span>
+            </div>
+
+            {/* Notes Tab/Indicator */}
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={(e) => handleTabNavigationClick(e, 'custom-notes')}
+              onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? handleTabNavigationClick(e, 'custom-notes') : null}
+              className={cn(
+                "flex items-center gap-1 md:gap-2 px-3 py-2 md:px-6 md:py-3 cursor-pointer relative transition-colors border-l border-gray-200 no-underline hover:bg-gray-50/50",
+                "focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-offset-0 focus-visible:ring-inset focus-visible:ring-legacy-blue/60",
+                {
+                   'bg-gray-50': isOpen && activeTab === 'custom-notes' && !isAllLocked,
+                   'bg-green-100': isOpen && activeTab === 'custom-notes' && isAllLocked,
+                   'hover:bg-green-200': isOpen && activeTab === 'custom-notes' && isAllLocked
+                }
+              )}
+              aria-label={`Navigate to Custom Notes tab. Status: ${sectionLockStatus.notes}`}
+            >
+              <button
+                onClick={(e) => handleLockClick(e, 'notes')}
+                className={cn(
+                  "z-10 rounded-full p-1 md:p-1.5 flex items-center justify-center focus-visible:outline-none",
+                  "transition-colors hover:bg-gray-100", // Neutral hover
+                  getLockClass(sectionLockStatus.notes), // Apply color based on status
+                  monthData.notesLocked ? 'bg-green-50' : 'bg-gray-50' // Optional: subtle bg based on lock state
+                )}
+                aria-label={`Custom Notes section is ${sectionLockStatus.notes}. Click to ${monthData.notesLocked ? 'unlock' : 'lock'}.`}
+              >
+                {monthData.notesLocked ? <Lock size={14} /> : <Unlock size={14} />}
+              </button>
+              <span className="text-xs md:text-sm font-medium text-gray-700 no-underline hover:no-underline">Custom Notes</span>
             </div>
           </div>
-          
-          {/* Right Side: Status Badge & Chevron */}
-          <div className="flex items-center gap-3">
-            <Badge variant="outline" className={cn("ml-auto text-xs font-medium rounded-full px-2.5 py-0.5 border", statusInfo.className)}>
-               <statusInfo.icon size={12} className="mr-1" />
-               <span>{statusInfo.text}</span>
-             </Badge>
-             <ChevronDown className="h-5 w-5 text-gray-400 transition-transform duration-200 group-data-[state=open]:rotate-180" />
-           </div>
         </div>
       </AccordionTrigger>
 
-      {/* Accordion Content: Tabs */}
-      <AccordionContent className="p-4 border-t bg-white divide-y divide-gray-100">
-        <Tabs defaultValue={initialTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto p-1 bg-gray-100/80 rounded-lg backdrop-blur-sm shadow-sm">
-            <TabsTrigger 
-              value="story" 
-              className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors data-[state=active]:bg-white data-[state=active]:text-neutral-800 data-[state=active]:shadow rounded-md py-1.5"
-            >
-                Story
-             </TabsTrigger>
-            <TabsTrigger 
-              value="artwork" 
-              className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors data-[state=active]:bg-white data-[state=active]:text-neutral-800 data-[state=active]:shadow rounded-md py-1.5"
-            >
-                Artwork
-             </TabsTrigger>
-            <TabsTrigger 
-              value="footer" 
-              className="text-sm font-medium text-neutral-500 hover:text-neutral-700 transition-colors data-[state=active]:bg-white data-[state=active]:text-neutral-800 data-[state=active]:shadow rounded-md py-1.5"
-             >
-                Footer
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="story" className="pt-6 hover:bg-gray-50/50 rounded-b-lg -mx-4 px-4 pb-4">
-            <StoryTab data={monthData} onUpdate={handleUpdate} />
+      {/* Accordion Content */}
+      <AccordionContent className="">
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as CustomMonthTab)} className="w-full">
+          <TabsContent value="story" className="focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-legacy-blue/50">
+            <StoryTab 
+              data={monthData} 
+              onUpdate={handleUpdate} 
+              isLocked={monthData.storyLocked}
+            />
           </TabsContent>
-          <TabsContent value="artwork" className="pt-6 hover:bg-gray-50/50 rounded-b-lg -mx-4 px-4 pb-4">
-            <ArtworkTab data={monthData} onUpdate={handleUpdate} />
+          <TabsContent value="artwork" className="focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-legacy-blue/50">
+            <ArtworkTab 
+              data={monthData} 
+              onUpdate={handleUpdate} 
+              isLocked={monthData.artworkLocked}
+            />
           </TabsContent>
-          <TabsContent value="footer" className="pt-6 hover:bg-gray-50/50 rounded-b-lg -mx-4 px-4 pb-4">
-            <FooterTab data={monthData} onUpdate={handleUpdate} />
+          <TabsContent value="custom-notes" className="focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-legacy-blue/50">
+            <FooterTab 
+              data={monthData} 
+              onUpdate={handleUpdate} 
+              isLocked={monthData.notesLocked}
+            />
           </TabsContent>
         </Tabs>
       </AccordionContent>
