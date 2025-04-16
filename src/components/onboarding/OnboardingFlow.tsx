@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSessionStore } from '@/lib/sessionStore';
 import RecipientSelector from './RecipientSelector';
 import PurchaserInfo from './PurchaserInfo';
@@ -100,7 +100,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [prevStepRendered, setPrevStepRendered] = useState<number | null>(null);
-  const [emailSentAfterRecipientInfo, setEmailSentAfterRecipientInfo] = useState(false);
+  const emailSentFlag = useRef(false);
   
   // --- Calculate Step to Render --- 
   // Moved this logic outside of renderCurrentStep to the top level
@@ -181,14 +181,14 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
   }, [stepToRender, session?.selectedEdition?.type, updateValidationStatus]);
 
-  // Send resume email ONLY on transition AND ONCE per transition
+  // Send resume email using useRef flag
   useEffect(() => {
     if (stepToRender === STEPS.SHIPPING_INFO && 
         prevStepRendered === STEPS.RECIPIENT_INFO && 
-        !emailSentAfterRecipientInfo) {
+        !emailSentFlag.current) {
         
-        console.log(`[EmailEffect] Conditions met: Transitioned from RECIPIENT_INFO(${prevStepRendered}) to SHIPPING_INFO(${stepToRender}), emailSent flag is ${emailSentAfterRecipientInfo}. Sending email...`);
-        setEmailSentAfterRecipientInfo(true); 
+        console.log(`[EmailEffect Ref] Conditions met: Transitioned from RECIPIENT_INFO(${prevStepRendered}) to SHIPPING_INFO(${stepToRender}), emailSent flag is ${emailSentFlag.current}. Sending email...`);
+        emailSentFlag.current = true;
         
         const purchaserEmail = session?.purchaser?.email || session?.email;
         const sessionId = session?.sessionId;
@@ -200,7 +200,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         }
         
         if (sessionId && purchaserEmail) {
-            console.log(`[EmailEffect] Attempting API call to /api/send-resume-email for ${purchaserEmail} / ${sessionId}.`);
+            console.log(`[EmailEffect Ref] Attempting API call to /api/send-resume-email for ${purchaserEmail} / ${sessionId}.`);
             fetch('/api/send-resume-email', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -213,34 +213,31 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 return response.json();
             })
             .then(data => {
-                console.log('[EmailEffect] API call successful:', data);
+                console.log('[EmailEffect Ref] API call successful:', data);
                 toast({
                     title: "Magic Link Sent",
                     description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
                 });
             })
             .catch(err => {
-                console.error('[EmailEffect] API call FAILED:', err);
-                // Reset flag on failure to allow retry if user navigates back and forth?
-                // setEmailSentAfterRecipientInfo(false); 
+                console.error('[EmailEffect Ref] API call FAILED:', err);
+                // Reset flag on failure ONLY if you want to allow retries on next render cycle
+                // emailSentFlag.current = false; 
             });
         } else {
-            console.warn('[EmailEffect] Cannot send email - missing sessionId or purchaserEmail');
-            if (!sessionId) console.warn('[EmailEffect] - Session ID missing');
-            if (!purchaserEmail) console.warn('[EmailEffect] - Purchaser email missing');
+            console.warn('[EmailEffect Ref] Cannot send email - missing sessionId or purchaserEmail');
             // Reset the flag if data was missing, allowing a send attempt if data appears later
-            setEmailSentAfterRecipientInfo(false);
+            emailSentFlag.current = false; 
         }
     } else {
       // Log why the effect didn't run
       if (stepToRender === STEPS.SHIPPING_INFO) {
-         console.log(`[EmailEffect] Conditions NOT met: Current step is SHIPPING_INFO(${stepToRender}), Previous step was ${prevStepRendered} (needed ${STEPS.RECIPIENT_INFO}), emailSent flag is ${emailSentAfterRecipientInfo}.`);
+         console.log(`[EmailEffect Ref] Conditions NOT met: Current step is SHIPPING_INFO(${stepToRender}), Previous step was ${prevStepRendered} (needed ${STEPS.RECIPIENT_INFO}), emailSent flag is ${emailSentFlag.current}.`);
       }
     }
   }, [
     stepToRender, 
     prevStepRendered, 
-    emailSentAfterRecipientInfo,
     session?.purchaser?.email, 
     session?.email, 
     session?.sessionId, 
@@ -248,16 +245,18 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     session?.recipient?.firstName, // Be specific about dependencies
     session?.recipient?.recipient1FirstName,
     toast,
-    // Do NOT include the whole session object here to avoid unnecessary runs
+    // Note: emailSentFlag ref is NOT included here
   ]); 
 
   // Reset email sent flag if user navigates away from shipping step
   useEffect(() => {
-    if (stepToRender !== STEPS.SHIPPING_INFO && emailSentAfterRecipientInfo) {
-        console.log(`[EmailEffectReset] Navigated away from SHIPPING_INFO (${stepToRender}). Resetting email sent flag.`);
-        setEmailSentAfterRecipientInfo(false);
+    if (stepToRender !== STEPS.SHIPPING_INFO) {
+      if (emailSentFlag.current) {
+        console.log(`[EmailEffectReset Ref] Navigated away from SHIPPING_INFO (${stepToRender}). Resetting email sent flag.`);
+        emailSentFlag.current = false;
+      }
     }
-  }, [stepToRender, emailSentAfterRecipientInfo]);
+  }, [stepToRender]); // Only depends on stepToRender
 
   // --- Event Handlers ---
   const handleSaveProgress = () => {
