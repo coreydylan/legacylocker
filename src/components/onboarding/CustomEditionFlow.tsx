@@ -132,12 +132,7 @@ const CustomEditionFlow: React.FC = () => {
 
   return (
     <div className="space-y-6 md:space-y-8 py-4 md:py-0">
-      <div className="space-y-2 md:space-y-3 px-4 text-left md:text-center">
-        <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-legacy-green font-playfair">Customize Your Cards</h1>
-        <p className="text-sm md:text-lg lg:text-xl text-legacy-dark/80">
-          Optionally add a welcome message, then personalize the story, artwork, and footer for each month below.
-        </p>
-      </div>
+      {/* Header removed as requested */}
       
       {/* Render Coaching Carousel or Button */}
       {isCoachingOpen ? (

@@ -191,9 +191,42 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
     section: keyof SectionLockStatus
   ) => {
     e.stopPropagation(); // Prevent accordion toggle
+    
+    // Check if the section is already locked - if so, allow unlocking
     const lockKey = `${section}Locked` as keyof Pick<CustomMonthData, 'storyLocked' | 'artworkLocked' | 'notesLocked'>;
     const currentLockedState = monthData[lockKey];
-    handleUpdate({ [lockKey]: !currentLockedState });
+    
+    // If already locked, allow unlocking
+    if (currentLockedState) {
+      handleUpdate({ [lockKey]: false });
+      return;
+    }
+    
+    // Check if the section is complete before allowing it to be locked
+    let isSectionComplete = false;
+    
+    switch (section) {
+      case 'story':
+        // Story is complete if both title and story are filled
+        isSectionComplete = !!(monthData.title && monthData.story);
+        break;
+      case 'artwork':
+        // Artwork is complete if an option is selected
+        isSectionComplete = monthData.artworkOption !== null;
+        break;
+      case 'notes':
+        // Notes are complete if enabled and has a message, or if disabled
+        isSectionComplete = monthData.enabled ? !!monthData.footerMessage : true;
+        break;
+    }
+    
+    // Only allow locking if the section is complete
+    if (isSectionComplete) {
+      handleUpdate({ [lockKey]: true });
+    } else {
+      // Optionally show a message to the user that the section needs to be completed
+      alert(`Please complete the ${section} section before locking it.`);
+    }
   };
 
   // Log state values just before rendering

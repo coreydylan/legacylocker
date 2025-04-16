@@ -18,6 +18,7 @@ import { SessionData, isValidSession } from '@/lib/sessionStore'; // Import Sess
 // <<< Import new/renamed step components (will be created next) >>>
 import WelcomeCardStep from './WelcomeCardStep';
 import MonthlyCustomizationStep from './MonthlyCustomizationStep';
+import { useToast } from '@/components/ui/use-toast';
 
 
 // Define steps in our onboarding flow - <<< Updated Steps >>>
@@ -94,6 +95,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     prevStep,
     updateValidationStatus
   } = useSessionStore();
+  const { toast } = useToast();
   
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
@@ -200,6 +202,60 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             console.log(`[ValidationEffect] Step ${stepToRender} is not WELCOME_CARD or MONTHLY_CUSTOMIZATION, validation handled by component.`);
         }
     }, [stepToRender, session.selectedEdition?.type, updateValidationStatus]);
+
+    // <<< Add effect to send resume email after recipient info step is completed >>>
+    useEffect(() => {
+        // Check if we just moved from the recipient info step to the next step
+        if (stepToRender === STEPS.SHIPPING_INFO && session.lastCompletedStep === STEPS.RECIPIENT_INFO) {
+            console.log(`[EmailEffect] User just completed recipient info step, sending resume email...`);
+            
+            // Get necessary data from the session store
+            const purchaserEmail = session.purchaser?.email || session.email;
+            const sessionId = session.sessionId;
+            
+            // Determine recipient's first name based on the recipient type
+            let recipientFirstName = '';
+            if (session.recipientType === 'individual' && session.recipient?.firstName) {
+                recipientFirstName = session.recipient.firstName;
+            } else if (session.recipientType === 'couple' && session.recipient?.recipient1FirstName) {
+                recipientFirstName = session.recipient.recipient1FirstName;
+            }
+            
+            // Send email if we have a session ID and purchaser email
+            if (sessionId && purchaserEmail) {
+                console.log(`[EmailEffect] Attempting to send resume email to ${purchaserEmail} for session ${sessionId}`);
+                
+                // Call the API to send the resume email
+                fetch('/api/send-resume-email', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: purchaserEmail, sessionId, recipientFirstName }),
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`API responded with status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('[EmailEffect] Resume email sent successfully:', data);
+                    
+                    // Show toast notification
+                    toast({
+                        title: "Magic Link Sent",
+                        description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
+                    });
+                })
+                .catch(err => {
+                    console.error('[EmailEffect] Failed to send resume email:', err);
+                });
+            } else {
+                console.warn('[EmailEffect] Cannot send resume email - missing sessionId or purchaserEmail');
+                if (!sessionId) console.warn('[EmailEffect] Session ID not found');
+                if (!purchaserEmail) console.warn('[EmailEffect] Purchaser email not found');
+            }
+        }
+    }, [stepToRender, session.lastCompletedStep, session.purchaser?.email, session.email, session.sessionId, session.recipientType, session.recipient, toast]);
 
     switch (stepToRender) {
       case STEPS.RECIPIENT_SELECTION:
