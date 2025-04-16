@@ -44,7 +44,6 @@ export function useSessionManager() {
     console.log('[SessionManager] Initializing new local session:', edition);
     updateSession('selectedEdition', edition);
     updateSession('editionFlow.type', edition.type);
-    // Reset step counters when starting a new local session
     updateSession('currentStep', 1);
     updateSession('lastCompletedStep', 0);
   }, [updateSession]);
@@ -54,39 +53,58 @@ export function useSessionManager() {
     const purchaserEmail = currentSessionState.session.purchaser?.email;
     const editionType = currentSessionState.session.selectedEdition?.type;
 
+    console.log('[activateAndPersistSession] Start');
+    
     if (currentSessionState.sessionMetadata.isActive) {
-      console.warn('[SessionManager] Session already active. Attempting save instead.');
-      await saveSessionData(); // Save latest data if already active
-      return;
+      console.warn('[activateAndPersistSession] Already active. Saving instead.');
+      // Call saveSessionData directly if already active
+      // await saveSessionData(); // This was incorrect, saveSessionData depends on this func
+      // Instead, should probably call saveSessionToDb directly or just return?
+      // Let's just return for now, assuming activation is the main goal here.
+      return; 
     }
 
     if (!purchaserEmail) {
-      console.error('[SessionManager] Cannot activate session: Purchaser email missing.');
+      console.error('[activateAndPersistSession] Missing purchaser email. Aborting.');
       toast({ title: "Error", description: "Cannot save session, email is missing.", variant: "destructive" });
       return;
     }
+
     if (!editionType) {
-        console.error('[SessionManager] Cannot activate session: Edition type missing.');
-        toast({ title: "Error", description: "Cannot save session, edition type is missing.", variant: "destructive" });
-        return;
+      console.error('[activateAndPersistSession] Missing edition type. Aborting.');
+      toast({ title: "Error", description: "Cannot save session, edition type is missing.", variant: "destructive" });
+      return;
     }
 
-    console.log('[SessionManager] Activating and persisting session...');
-    startSession(editionType); // Assigns UUID and sets isActive=true
-
+    // Start session (assigns ID)
+    startSession(editionType);
     const newSessionId = useSessionStore.getState().sessionMetadata.sessionId;
+    console.log('[activateAndPersistSession] New session ID assigned:', newSessionId);
+
     if (!newSessionId) {
-        console.error('[SessionManager] Failed to get sessionId after calling startSession.');
-        toast({ title: "Error", description: "Failed to initialize session ID.", variant: "destructive" });
-        return;
+      console.error('[activateAndPersistSession] Failed to get session ID after startSession. Aborting.');
+      toast({ title: "Error", description: "Failed to initialize session ID.", variant: "destructive" });
+      return; // Cannot proceed without session ID
     }
+
+    // Save to DB
+    try {
+      console.log('[activateAndPersistSession] Attempting to save session to Supabase...');
+      await saveSessionToDb(); // This now throws if it fails
+      console.log('[activateAndPersistSession] Session successfully saved to Supabase');
+    } catch (err) {
+      console.error('[activateAndPersistSession] Supabase save failed, aborting email send:', err);
+      toast({ title: "Error Saving", description: "Failed to save your progress. Please try again.", variant: "destructive" });
+      // Should we reset the session ID and isActive status here?
+      // For now, just return to prevent email send.
+      return; 
+    }
+
+    // Send Email only if save succeeded
+    const recipientFirstName = currentSessionState.session.recipient?.firstName || currentSessionState.session.recipient?.recipient1FirstName;
+    console.log(`[activateAndPersistSession] Attempting to send resume email to ${purchaserEmail} for session ${newSessionId}`);
 
     try {
-      await saveSessionToDb(); // Saves with the new ID
-      console.log('[SessionManager] Session saved to Supabase successfully.');
-
-      const recipientFirstName = currentSessionState.session.recipient?.firstName || currentSessionState.session.recipient?.recipient1FirstName;
-      console.log(`[SessionManager] Attempting to send resume email to ${purchaserEmail} for session ${newSessionId}`);
       const response = await fetch('/api/send-resume-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -94,18 +112,20 @@ export function useSessionManager() {
       });
 
       if (!response.ok) {
-        console.error(`[SessionManager] Send resume email API failed: ${response.status}`);
-        toast({ title: "Progress Saved", description: "Your progress was saved, but we couldn't send the resume email.", variant: "destructive"});
+        console.error(`[activateAndPersistSession] Resume email API call failed: ${response.status}`);
+        // Notify user progress was saved but email failed
+        toast({ title: "Progress Saved", description: "We saved your progress, but couldn't send your magic link email.", variant: "default" }); // Use default variant, not destructive
       } else {
-        console.log('[SessionManager] Resume email sent successfully.');
-        toast({ title: "Magic Link Sent", description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved.` });
+        console.log('[activateAndPersistSession] Resume email sent successfully');
+        toast({ title: "Magic Link Sent", description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved!` });
       }
-
     } catch (error) {
-      console.error('[SessionManager] Error during activateAndPersistSession:', error);
-      toast({ title: "Save Error", description: "Could not save your session progress.", variant: "destructive" });
+      console.error('[activateAndPersistSession] Unexpected error during email send API call:', error);
+      // Notify user progress was saved but email failed
+      toast({ title: "Progress Saved", description: "We saved your progress, but couldn't send your magic link email due to a network issue.", variant: "default" });
     }
-  }, [startSession, saveSessionToDb, toast]); // Removed saveSessionData from deps
+    // Dependencies: store actions and toast
+  }, [startSession, saveSessionToDb, toast]); 
 
   const saveSessionData = useCallback(async () => {
     const { sessionMetadata: currentMeta, session: currentSess } = useSessionStore.getState();

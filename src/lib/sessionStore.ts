@@ -995,39 +995,102 @@ export const useSessionStore = create<SessionStore>()(
       // <<< NEW ACTION: Save session state to Supabase >>>
       saveSessionToDb: async () => {
         const { session, sessionMetadata } = get(); // Get metadata too
-        if (!session || !sessionMetadata.sessionId) { // Use metadata sessionId
-            console.error("[saveSessionToDb] Attempted to save without a valid session or sessionId.");
-            return;
+        
+        // Start Debug Group
+        console.groupCollapsed(`[saveSessionToDb] Debug Report for Session: ${sessionMetadata.sessionId || 'N/A'}`);
+
+        // <<< 1. Log validation checks >>>
+        let isValidForSave = true;
+        if (!session) {
+            console.warn('[saveSessionToDb] Validation FAIL: session object is missing.');
+            isValidForSave = false;
+        }
+        if (!sessionMetadata.sessionId) {
+            console.warn('[saveSessionToDb] Validation FAIL: sessionMetadata.sessionId is missing.');
+            isValidForSave = false;
+        }
+        if (!session?.purchaser?.email) {
+             console.warn('[saveSessionToDb] Validation WARN: session.purchaser.email is missing.');
+             // Allow saving without email for now, but log it.
+             // isValidForSave = false; 
+        }
+         if (!session?.selectedEdition) {
+             console.warn('[saveSessionToDb] Validation WARN: session.selectedEdition is missing.');
+             // Allow saving without selectedEdition for now, but log it.
+             // isValidForSave = false; 
+         }
+
+        if (!isValidForSave) {
+            console.error("[saveSessionToDb] Aborting save due to missing required fields.");
+            console.groupEnd(); // End group before returning
+            // Throw an error here as well, consistent with DB errors
+            throw new Error("Missing required session data for save."); 
         }
 
-        // <<< Calculate expires_at (e.g., 30 days from now) >>>
+        // Calculate expires_at
         const expiresAt = new Date();
-        expiresAt.setDate(expiresAt.getDate() + 30);
+        expiresAt.setDate(expiresAt.getDate() + 30); // 30-day expiration
         const expiresAtISO = expiresAt.toISOString();
 
-        console.log(`[saveSessionToDb] Saving session ${sessionMetadata.sessionId} to Supabase (expires: ${expiresAtISO})...`);
+        // <<< 2. Construct and Log Payload (Truncated) >>>
+        const payload = {
+            id: sessionMetadata.sessionId, 
+            session_data: session, // Keep the full object here
+            email: session.purchaser?.email, 
+            updated_at: session.updatedAt || new Date().toISOString(),
+            expires_at: expiresAtISO 
+        };
+        
         try {
+            // Simple truncation for logging
+            const truncatedPayload = JSON.stringify(payload, (key, value) => {
+                 if (typeof value === 'string' && value.length > 500) {
+                    return value.substring(0, 500) + '...[truncated]';
+                 }
+                 if (key === 'customData' || key === 'signatureData') {
+                     const jsonStr = JSON.stringify(value);
+                     if (jsonStr.length > 500) {
+                         return jsonStr.substring(0, 500) + '...[truncated]';
+                     }
+                 }
+                 return value;
+            }, 2); 
+
+            console.log('[saveSessionToDb] Payload for Supabase upsert:', truncatedPayload);
+        } catch (logError) {
+            console.error('[saveSessionToDb] Error stringifying payload for logging:', logError);
+            console.log('[saveSessionToDb] Raw Payload (might be large): ', payload);
+        }
+        
+        // <<< 3. Detailed Try/Catch for Upsert >>>
+        console.log(`[saveSessionToDb] Attempting upsert for session ${payload.id}...`); 
+        try {
+            // Use the full payload object for the actual upsert
             const { error } = await supabase
                 .from('sessions')
-                .upsert({
-                    session_id: sessionMetadata.sessionId,
-                    session_data: session,
-                    email: session.purchaser?.email, // Include email for querying if needed
-                    updated_at: session.updatedAt || new Date().toISOString(),
-                    expires_at: expiresAtISO // <<< Add expires_at >>>
-                });
+                .upsert(payload); // Use the constructed payload
 
             if (error) {
-                console.error("[saveSessionToDb] Error saving session to Supabase:", error);
+                console.error("[saveSessionToDb] Supabase upsert error object:", {
+                    code: error.code,
+                    message: error.message,
+                    details: error.details,
+                    hint: error.hint,
+                });
+                throw new Error(`Supabase upsert failed: ${error.message}`); 
             } else {
-                console.log(`[saveSessionToDb] Session ${sessionMetadata.sessionId} saved successfully.`);
+                console.log(`[saveSessionToDb] Session ${payload.id} upsert successful.`); 
                 set(state => ({
                     sessionMetadata: { ...state.sessionMetadata, lastSaved: new Date() }
                 }));
             }
         } catch (err) {
-            console.error("[saveSessionToDb] Unexpected error during Supabase upsert:", err);
+            console.error("[saveSessionToDb] Error during Supabase upsert call:", err);
+            console.groupEnd(); 
+            throw err; // Re-throw caught error
         }
+        
+        console.groupEnd();
       },
 
       // <<< NEW ACTION: Load session state from Supabase >>>
@@ -1042,9 +1105,8 @@ export const useSessionStore = create<SessionStore>()(
           try {
               const { data, error } = await supabase
                   .from('sessions')
-                  // <<< Select session_data and expires_at >>>
                   .select('session_data, expires_at') 
-                  .eq('session_id', sessionId)
+                  .eq('id', sessionId) 
                   .single();
 
               if (error) {
@@ -1054,20 +1116,22 @@ export const useSessionStore = create<SessionStore>()(
               }
 
               if (data && data.session_data) {
-                  // <<< Check expires_at BEFORE validating/setting state >>>
                   if (data.expires_at && new Date() > new Date(data.expires_at)) {
                       console.warn(`[loadSessionFromDb] Session ${sessionId} has expired (${data.expires_at}). Not loading.`);
-                      // Optionally reset local state if loading an expired session from link?
-                      // get().resetSession(); 
                       set({ isLoading: false });
-                      return false; // Indicate failure due to expiration
+                      return false; 
                   }
 
                   console.log(`[loadSessionFromDb] Session ${sessionId} loaded successfully.`);
                   const loadedSession = data.session_data as SessionData;
                   
-                  // <<< Validate session data >>>
                   if (isValidSession(loadedSession)) {
+                      if (loadedSession.sessionId !== sessionId) {
+                          console.warn(`[loadSessionFromDb] Mismatch: Loaded session ID (${loadedSession.sessionId}) differs from requested ID (${sessionId}). Aborting load.`);
+                           set({ isLoading: false });
+                          return false;
+                      }
+                      
                       set({
                           session: loadedSession,
                           sessionMetadata: {

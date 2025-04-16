@@ -189,7 +189,7 @@ const RecipientInfo: React.FC = () => {
     console.log('[SUBMIT] RecipientInfo: Calling goNext()...');
     goNext(); 
 
-    console.log('[SUBMIT] RecipientInfo: Triggering activateAndPersistSession in background...');
+    console.log('[RecipientInfo] Submitting form... Triggering background activation.');
     void activateAndPersistSession(); 
   };
 
