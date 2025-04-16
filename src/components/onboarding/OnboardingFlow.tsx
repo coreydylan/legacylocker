@@ -99,6 +99,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
+  const [prevStepRendered, setPrevStepRendered] = useState<number | null>(null);
   
   useEffect(() => {
     console.log("OnboardingFlow: Initializing session (in useEffect)...");
@@ -175,6 +176,11 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
 
     console.log(`OnboardingFlow: Final step to render: ${stepToRender}`);
 
+    // <<< Add effect to track the previously rendered step >>>
+    useEffect(() => {
+      setPrevStepRendered(stepToRender);
+    }, [stepToRender]);
+
     // <<< Add effect to manage validation status for the specific step >>>
     useEffect(() => {
         console.log(`[ValidationEffect] Running for stepToRender: ${stepToRender}, editionType: ${session.selectedEdition?.type}`);
@@ -203,11 +209,11 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         }
     }, [stepToRender, session.selectedEdition?.type, updateValidationStatus]);
 
-    // <<< Add effect to send resume email after recipient info step is completed >>>
+    // <<< Modify effect to send resume email ONLY on transition >>>
     useEffect(() => {
-        // Check if we just moved from the recipient info step to the next step
-        if (stepToRender === STEPS.SHIPPING_INFO && session.lastCompletedStep === STEPS.RECIPIENT_INFO) {
-            console.log(`[EmailEffect] User just completed recipient info step, sending resume email...`);
+        // Check if we just transitioned from RECIPIENT_INFO to SHIPPING_INFO
+        if (stepToRender === STEPS.SHIPPING_INFO && prevStepRendered === STEPS.RECIPIENT_INFO) {
+            console.log(`[EmailEffect] Transitioned from RECIPIENT_INFO to SHIPPING_INFO, sending resume email...`);
             
             // Get necessary data from the session store
             const purchaserEmail = session.purchaser?.email || session.email;
@@ -255,7 +261,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 if (!purchaserEmail) console.warn('[EmailEffect] Purchaser email not found');
             }
         }
-    }, [stepToRender, session.lastCompletedStep, session.purchaser?.email, session.email, session.sessionId, session.recipientType, session.recipient, toast]);
+    }, [stepToRender, prevStepRendered, session.purchaser?.email, session.email, session.sessionId, session.recipientType, session.recipient, toast]);
 
     switch (stepToRender) {
       case STEPS.RECIPIENT_SELECTION:
