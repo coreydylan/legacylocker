@@ -100,6 +100,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
   const [prevStepRendered, setPrevStepRendered] = useState<number | null>(null);
+  const [emailSentAfterRecipientInfo, setEmailSentAfterRecipientInfo] = useState(false);
   
   useEffect(() => {
     console.log("OnboardingFlow: Initializing session (in useEffect)...");
@@ -209,11 +210,15 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
         }
     }, [stepToRender, session.selectedEdition?.type, updateValidationStatus]);
 
-    // <<< Modify effect to send resume email ONLY on transition >>>
+    // <<< Modify effect to send resume email ONLY on transition AND ONCE per transition >>>
     useEffect(() => {
-        // Check if we just transitioned from RECIPIENT_INFO to SHIPPING_INFO
-        if (stepToRender === STEPS.SHIPPING_INFO && prevStepRendered === STEPS.RECIPIENT_INFO) {
-            console.log(`[EmailEffect] Transitioned from RECIPIENT_INFO to SHIPPING_INFO, sending resume email...`);
+        // Check if we just transitioned from RECIPIENT_INFO to SHIPPING_INFO AND email hasn't been sent yet
+        if (stepToRender === STEPS.SHIPPING_INFO && 
+            prevStepRendered === STEPS.RECIPIENT_INFO && 
+            !emailSentAfterRecipientInfo) { 
+            
+            console.log(`[EmailEffect] Transitioned from RECIPIENT_INFO to SHIPPING_INFO, sending email (first time)...`);
+            setEmailSentAfterRecipientInfo(true); // <<< Set flag immediately to prevent duplicates
             
             // Get necessary data from the session store
             const purchaserEmail = session.purchaser?.email || session.email;
@@ -239,6 +244,9 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 })
                 .then(response => {
                     if (!response.ok) {
+                        // NOTE: We already set the flag, so even if the API fails,
+                        // we won't try again automatically on the next render.
+                        // Consider if you want different behavior on API failure.
                         throw new Error(`API responded with status: ${response.status}`);
                     }
                     return response.json();
@@ -254,14 +262,36 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
                 })
                 .catch(err => {
                     console.error('[EmailEffect] Failed to send resume email:', err);
+                    // Maybe reset the flag here if you want to allow retries?
+                    // setEmailSentAfterRecipientInfo(false);
                 });
             } else {
                 console.warn('[EmailEffect] Cannot send resume email - missing sessionId or purchaserEmail');
                 if (!sessionId) console.warn('[EmailEffect] Session ID not found');
                 if (!purchaserEmail) console.warn('[EmailEffect] Purchaser email not found');
+                // Reset the flag if we couldn't even attempt the send
+                setEmailSentAfterRecipientInfo(false);
             }
         }
-    }, [stepToRender, prevStepRendered, session.purchaser?.email, session.email, session.sessionId, session.recipientType, session.recipient, toast]);
+    }, [
+        stepToRender, 
+        prevStepRendered, 
+        emailSentAfterRecipientInfo, // <<< Add flag to dependency array
+        session.purchaser?.email, 
+        session.email, 
+        session.sessionId, 
+        session.recipientType, 
+        session.recipient, 
+        toast
+    ]); 
+
+    // <<< Add effect to reset the email sent flag if user navigates away from shipping step >>>
+    useEffect(() => {
+        if (stepToRender !== STEPS.SHIPPING_INFO && emailSentAfterRecipientInfo) {
+            console.log(`[EmailEffect] Navigated away from SHIPPING_INFO. Resetting email sent flag.`);
+            setEmailSentAfterRecipientInfo(false);
+        }
+    }, [stepToRender, emailSentAfterRecipientInfo]);
 
     switch (stepToRender) {
       case STEPS.RECIPIENT_SELECTION:
