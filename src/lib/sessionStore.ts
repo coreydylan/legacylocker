@@ -1126,16 +1126,15 @@ export const useSessionStore = create<SessionStore>()(
                   const loadedSession = data.session_data as SessionData;
                   
                   if (isValidSession(loadedSession)) {
-                      if (loadedSession.sessionId !== sessionId) {
-                          console.warn(`[loadSessionFromDb] Mismatch: Loaded session ID (${loadedSession.sessionId}) differs from requested ID (${sessionId}). Aborting load.`);
-                           set({ isLoading: false });
-                          return false;
-                      }
+                      // Force the internal sessionId to match the DB row ID used for lookup
+                      loadedSession.sessionId = sessionId; 
+                      console.log(`[loadSessionFromDb] Aligning internal session ID to DB ID: ${sessionId}`);
                       
                       set({
-                          session: loadedSession,
+                          session: loadedSession, // Use the modified loadedSession
                           sessionMetadata: {
-                             sessionId: loadedSession.sessionId,
+                             // Use the aligned sessionId for metadata as well
+                             sessionId: sessionId, 
                              isActive: true,
                              editionType: loadedSession.selectedEdition?.type || null,
                              lastSaved: loadedSession.updatedAt ? new Date(loadedSession.updatedAt) : new Date(),
