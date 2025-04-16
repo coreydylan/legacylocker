@@ -1092,29 +1092,31 @@ export const useSessionStore = create<SessionStore>()(
           sessionMetadata: state.sessionMetadata,
           submitTriggerCount: state.submitTriggerCount
         }),
-      // <<< Simplified onRehydrateStorage: Mainly sets hydration flag. Loading is handled by component >>>
+      // <<< Improved onRehydrateStorage: Ensures hydration completes properly >>>
       onRehydrateStorage: () => (state, error) => {
+        console.log("[onRehydrateStorage] Starting hydration process...");
         let hydrationComplete = false;
+        
         if (error) {
-          console.error("Hydration error for persisted metadata:", error);
-           // Reset only the persisted parts if error occurs
-           if (state) {
-               state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
-               state.submitTriggerCount = 0;
-           }
+          console.error("[onRehydrateStorage] Hydration error for persisted metadata:", error);
+          // Reset only the persisted parts if error occurs
+          if (state) {
+              state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
+              state.submitTriggerCount = 0;
+          }
         } else if (state) {
-            console.log("Metadata hydration successful.", state.sessionMetadata);
-            // Optional: Could validate persisted metadata here if needed
-           hydrationComplete = true;
+            console.log("[onRehydrateStorage] Metadata hydration successful.", state.sessionMetadata);
+            // Mark hydration as complete
+            hydrationComplete = true;
         }
 
         return (finalState, finalError) => {
           if (finalState) {
-             // Still set isLoading to true initially, loading from DB will set it to false
-             finalState.isLoading = true;
-             finalState.isHydrated = hydrationComplete; // Mark if metadata rehydration worked
-             // Don't initialize data here, wait for potential DB load
-             console.log("Post-hydration: isHydrated set to", finalState.isHydrated);
+             console.log("[onRehydrateStorage] Setting final hydration state...");
+             // Set loading state based on whether we have a session ID
+             finalState.isLoading = !finalState.sessionMetadata.sessionId;
+             finalState.isHydrated = true; // Always mark as hydrated after this process
+             console.log("[onRehydrateStorage] Post-hydration: isHydrated set to", finalState.isHydrated);
           }
         };
       },
