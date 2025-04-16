@@ -8,14 +8,16 @@ import { MessageCircle, CalendarCheck, Mail, Phone, ChevronLeft } from 'lucide-r
 import { useSessionStore, SessionData } from '@/lib/sessionStore'; // Corrected import path for SessionData
 import { Button } from "@/components/ui/button"; // Import Button
 import { useDebouncedCallback } from 'use-debounce'; // Added
-import { saveSessionToSupabase } from '@/lib/sessionService'; // Added
+import { useSessionManager } from '@/hooks/useSessionManager'; // <<< Import hook
 import useMediaQuery from '@/hooks/useMediaQuery'; // <<< Import the hook
 
 // interface ConciergeEditionFlowProps { ... } // Remove props interface
 
 // Remove props from component signature
 const ConciergeEditionFlow: React.FC = () => {
-  // Get store state/actions
+  // <<< Use Session Manager for saving >>>
+  const { saveSessionData } = useSessionManager();
+  // <<< Keep store access >>>
   const { session, updateSession, prevStep, nextStep, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const typedSession = session as SessionData;
   const conciergeData = typedSession.editionFlow?.conciergeData;
@@ -47,9 +49,20 @@ const ConciergeEditionFlow: React.FC = () => {
   }, [typedSession.editionFlow?.conciergeData, updateSession]);
 
   // --- Debounced Save Logic --- 
-  const debouncedSave = useDebouncedCallback(() => {
-    console.log('[Autosave] ConciergeEditionFlow: Triggering Supabase save...');
-    saveSessionToSupabase();
+  // <<< Updated debouncedSave >>>
+  const debouncedSave = useDebouncedCallback(async () => {
+    // Check if session is active
+    if (!useSessionStore.getState().sessionMetadata.isActive) {
+      console.log('[Autosave] ConciergeEditionFlow: Skipped – session not active');
+      return;
+    }
+    console.log('[Autosave] ConciergeEditionFlow: Triggering save via hook...');
+    try {
+      await saveSessionData(); // Call manager hook save
+      console.log('[Autosave] ConciergeEditionFlow: Success via hook');
+    } catch (err) {
+      console.error('[Autosave] ConciergeEditionFlow: Failed via hook:', err);
+    }
   }, 1000); 
   // --- End Debounced Save Logic ---
 

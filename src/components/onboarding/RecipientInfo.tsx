@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { CalendarIcon, ChevronLeft } from 'lucide-react';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
 import { motion } from 'framer-motion';
 import { JollyDateField } from '@/components/ui/date-field';
@@ -15,7 +16,6 @@ import { recipientInfoSchema, RecipientInfoFormValues } from '@/schemas/recipien
 import { cn } from '@/lib/utils';
 import { CalendarDate, DateValue } from '@internationalized/date';
 import { useDebouncedCallback } from 'use-debounce';
-import { saveSessionToSupabase } from '@/lib/sessionService';
 import { useToast } from '@/components/ui/use-toast';
 import useMediaQuery from '@/hooks/useMediaQuery';
 
@@ -46,18 +46,17 @@ const COUPLE_RELATIONSHIPS = [
 ] as const;
 
 const RecipientInfo: React.FC = () => {
+  const { activateAndPersistSession, saveSessionData } = useSessionManager();
   const { session, updateSession, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   const recipientType = session.recipientType;
   const { toast } = useToast();
   const isMobile = useMediaQuery('(max-width: 768px)');
   
-  // Helper to safely convert CalendarDate to ISO string
   const dateToISOString = (date: DateValue | null | undefined): string | null => {
     if (!date) return null;
     try {
-      // Convert CalendarDate/DateValue to a standard JS Date object first
-      const jsDate = new Date(date.year, date.month - 1, date.day); // Use constructor
+      const jsDate = new Date(date.year, date.month - 1, date.day);
       return jsDate.toISOString();
     } catch (e) {
       console.error("Error converting date to ISO string:", e);
@@ -65,37 +64,29 @@ const RecipientInfo: React.FC = () => {
     }
   };
   
-  // Helper to safely parse ISO string or YYYY-MM-DD to CalendarDate
   const parseDateToCalendarDate = (dateStr: string | null | undefined): CalendarDate | undefined => {
     console.log(`RecipientInfo: parseDateToCalendarDate called with: '${dateStr}'`);
     if (!dateStr) return undefined;
     try {
-      // Try parsing as full ISO string first
       let date = new Date(dateStr);
       if (!isNaN(date.getTime())) {
-        // Extract YYYY-MM-DD from the JS Date (in UTC) to avoid timezone shifts
         const year = date.getUTCFullYear();
-        const month = date.getUTCMonth() + 1; // JS months are 0-indexed
+        const month = date.getUTCMonth() + 1;
         const day = date.getUTCDate();
         const parsed = new CalendarDate(year, month, day);
         console.log(`RecipientInfo: parseDateToCalendarDate (ISO path) result: ${parsed}`);
         return parsed;
       }
-      
-      // Fallback: Try parsing as YYYY-MM-DD string directly
       const directParsed = parseDate(dateStr);
       console.log(`RecipientInfo: parseDateToCalendarDate (YYYY-MM-DD path) result: ${directParsed}`);
       return directParsed;
-
     } catch (e) {
       console.error('Error parsing date string:', dateStr, e);
       return undefined;
     }
   };
 
-  // Create default values based on recipient type
   const getDefaultValues = (): RecipientInfoFormValues => {
-    // Start with fully-formed default structures for both types
     const defaultIndividual = {
       type: 'individual' as const,
       firstName: '',
@@ -118,17 +109,13 @@ const RecipientInfo: React.FC = () => {
       includeWelcomeCard: false,
       welcomeMessage: '',
     };
-
     const existingRecipient = session.recipient;
-
     if (recipientType === 'couple') {
-      // Merge existing couple data with defaults
       return {
         ...defaultCouple,
         ...(existingRecipient && existingRecipient.type === 'couple' ? existingRecipient : {}),
       };
-    } else { // Default to individual if type is null or 'individual'
-      // Merge existing individual data with defaults
+    } else {
       return {
         ...defaultIndividual,
         ...(existingRecipient && existingRecipient.type === 'individual' ? existingRecipient : {}),
@@ -136,44 +123,40 @@ const RecipientInfo: React.FC = () => {
     }
   };
 
-  // Initialize form with react-hook-form and zod validation
   const { 
     register, 
     handleSubmit, 
     control,
     formState: { errors, isValid } 
   } = useForm<RecipientInfoFormValues>({
-    // Use the schema that now expects strings for dates
     resolver: zodResolver(recipientInfoSchema), 
     defaultValues: getDefaultValues(),
     mode: 'onChange'
   });
 
-  // --- Debounced Autosave Logic --- 
-  const watchedFields = useWatch({ control }); // Watch all fields
+  const watchedFields = useWatch({ control });
 
   const debouncedSave = useDebouncedCallback(async () => {
     const currentData = watchedFields;
-    console.log('[Autosave] RecipientInfo: Triggering save with data:', currentData);
-    updateSession('recipient', currentData);
-    try {
-      await saveSessionToSupabase();
-      console.log('[Autosave] RecipientInfo: Session saved to Supabase.');
-    } catch (error) {
-      console.error('[Autosave] RecipientInfo: Failed to save session to Supabase:', error);
+    if (useSessionStore.getState().sessionMetadata.isActive) {
+        console.log('[Autosave] RecipientInfo: Triggering save with data:', currentData);
+        updateSession('recipient', currentData);
+        try {
+          await saveSessionData(); 
+          console.log('[Autosave] RecipientInfo: Session saved via hook.');
+        } catch (error) {
+          console.error('[Autosave] RecipientInfo: Failed to save session via hook:', error);
+        }
+    } else {
+        console.log('[Autosave] RecipientInfo: Skipping save, session not active yet.');
     }
   }, 1000); 
 
   useEffect(() => {
-    // Directly call debouncedSave whenever watchedFields changes.
-    // The initial state will be saved once after the first render + debounce.
     console.log('[Autosave] RecipientInfo: Field changed, debouncing save...');
     debouncedSave();
-  // Depend only on watchedFields (the object reference changes on update) and debouncedSave
   }, [watchedFields, debouncedSave]); 
-  // --- End Autosave Logic --- 
 
-  // Type guard to check if errors are for individual recipient
   const isIndividualErrors = (errors: any): errors is { 
     firstName?: { message: string }, 
     lastName?: { message: string },
@@ -181,11 +164,7 @@ const RecipientInfo: React.FC = () => {
     birthday?: { message: string },
     includeWelcomeCard?: { message: string },
     welcomeMessage?: { message: string }
-  } => {
-    return 'firstName' in errors || 'lastName' in errors;
-  };
-
-  // Type guard to check if errors are for couple recipient
+  } => { return 'firstName' in errors || 'lastName' in errors; };
   const isCoupleErrors = (errors: any): errors is { 
     recipient1FirstName?: { message: string }, 
     recipient1LastName?: { message: string },
@@ -197,94 +176,27 @@ const RecipientInfo: React.FC = () => {
     anniversary?: { message: string },
     includeWelcomeCard?: { message: string },
     welcomeMessage?: { message: string }
-  } => {
-    return 'recipient1FirstName' in errors || 'recipient1LastName' in errors || 
-           'recipient2FirstName' in errors || 'recipient2LastName' in errors;
-  };
+  } => { return 'recipient1FirstName' in errors || 'recipient1LastName' in errors || 'recipient2FirstName' in errors || 'recipient2LastName' in errors; };
 
-  const onSubmit = async (data: RecipientInfoFormValues) => {
-    console.log('RecipientInfo: Form validated, onSubmit triggered.');
+  const onSubmit = (data: RecipientInfoFormValues) => {
+    console.log('[SUBMIT] RecipientInfo: Form validated, onSubmit triggered.');
+    
     debouncedSave.cancel();
+    
     updateSession('recipient', data); 
+    console.log('[SUBMIT] RecipientInfo: Recipient info updated locally.');
 
-    try {
-      console.log('[SUBMIT] RecipientInfo: Calling final saveSessionToSupabase...');
-      await saveSessionToSupabase(); 
-      console.log('[SUBMIT] RecipientInfo: Final session save successful.');
-
-      // --- Send Resume Email AFTER successful save --- 
-      const currentState = useSessionStore.getState(); // Get latest state *after* save
-      const purchaserEmail = currentState.session.purchaser?.email || currentState.session.email;
-      const sessionId = currentState.session.sessionId;
-      const recipientFirstName = data.type === 'individual' ? data.firstName : data.recipient1FirstName;
-
-      console.log(`[SUBMIT EMAIL] RecipientInfo: Checking conditions - sessionId: ${sessionId}, purchaserEmail: ${purchaserEmail}`);
-      
-      if (sessionId && purchaserEmail) {
-          console.log(`[SUBMIT EMAIL] RecipientInfo: Attempting call to /api/send-resume-email...`);
-          try {
-              const response = await fetch('/api/send-resume-email', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: purchaserEmail, sessionId, recipientFirstName }),
-              });
-              
-              if (!response.ok) {
-                  // Log API error but don't throw here to avoid blocking navigation
-                  console.error(`[SUBMIT EMAIL] RecipientInfo: API call failed with status: ${response.status}`);
-                  // Optionally show a different toast for API failure
-                  toast({
-                      title: "Error Sending Email",
-                      description: "We saved your progress, but couldn't send the resume link email. Please try again later or contact support.",
-                      variant: "destructive",
-                  });
-              } else {
-                 const responseData = await response.json(); 
-                 console.log('[SUBMIT EMAIL] RecipientInfo: API call successful.', responseData);
-                 // Show success toast ONLY if API call is successful
-                 toast({
-                    title: "Magic Link Sent",
-                    description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
-                 });
-              }
-          } catch (err) {
-              console.error('[SUBMIT EMAIL] RecipientInfo: Exception during API call:', err);
-              // Show error toast on exception
-               toast({
-                   title: "Error Sending Email",
-                   description: "An unexpected error occurred while sending the resume link email. Please try again later or contact support.",
-                   variant: "destructive",
-               });
-          }
-      } else {
-         console.warn('[SUBMIT EMAIL] RecipientInfo: Conditions NOT met for sending email.');
-         if (!sessionId) console.warn('[SUBMIT EMAIL] - Session ID missing.');
-         if (!purchaserEmail) console.warn('[SUBMIT EMAIL] - Purchaser email missing.');
-         // Optionally inform user progress was saved but email couldn't be sent due to missing info
-         // toast({ ... }); 
-      }
-      // --- End Email Logic ---
-
-    } catch (error) {
-      console.error('[SUBMIT SAVE] RecipientInfo: Final saveSessionToSupabase FAILED:', error);
-      toast({
-        title: "Error Saving Progress",
-        description: "We couldn't save your latest changes. Please check your connection and try again.",
-        variant: "destructive",
-      });
-      return; // Prevent navigation if save fails
-    }
-
-    console.log('RecipientInfo: Save successful, calling goNext()...');
+    console.log('[SUBMIT] RecipientInfo: Calling goNext()...');
     goNext(); 
+
+    console.log('[SUBMIT] RecipientInfo: Triggering activateAndPersistSession in background...');
+    void activateAndPersistSession(); 
   };
 
-  // --- Update store validation status based on form validity ---
   useEffect(() => {
     console.log(`RecipientInfo: formState.isValid changed to: ${isValid}, updating store...`);
     updateValidationStatus(isValid);
   }, [isValid, updateValidationStatus]);
-  // --- End validation status update ---
 
   return (
     <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
@@ -605,7 +517,6 @@ const RecipientInfo: React.FC = () => {
           </div>
         )}
 
-        {/* Conditionally render desktop buttons */}
         {!isMobile && (
         <div className="flex justify-between items-center pt-4">
           <Button

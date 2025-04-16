@@ -994,27 +994,33 @@ export const useSessionStore = create<SessionStore>()(
 
       // <<< NEW ACTION: Save session state to Supabase >>>
       saveSessionToDb: async () => {
-        const { session } = get();
-        if (!session || !session.sessionId) {
+        const { session, sessionMetadata } = get(); // Get metadata too
+        if (!session || !sessionMetadata.sessionId) { // Use metadata sessionId
             console.error("[saveSessionToDb] Attempted to save without a valid session or sessionId.");
             return;
         }
-        console.log(`[saveSessionToDb] Saving session ${session.sessionId} to Supabase...`);
+
+        // <<< Calculate expires_at (e.g., 30 days from now) >>>
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + 30);
+        const expiresAtISO = expiresAt.toISOString();
+
+        console.log(`[saveSessionToDb] Saving session ${sessionMetadata.sessionId} to Supabase (expires: ${expiresAtISO})...`);
         try {
             const { error } = await supabase
-                .from('sessions') // Ensure this table name matches your Supabase setup
+                .from('sessions')
                 .upsert({
-                    session_id: session.sessionId,
-                    session_data: session, // Store the entire session object
+                    session_id: sessionMetadata.sessionId,
+                    session_data: session,
+                    email: session.purchaser?.email, // Include email for querying if needed
                     updated_at: session.updatedAt || new Date().toISOString(),
+                    expires_at: expiresAtISO // <<< Add expires_at >>>
                 });
 
             if (error) {
                 console.error("[saveSessionToDb] Error saving session to Supabase:", error);
-                // Handle error appropriately - maybe notify user?
             } else {
-                console.log(`[saveSessionToDb] Session ${session.sessionId} saved successfully.`);
-                // Update lastSaved in metadata locally after successful DB save
+                console.log(`[saveSessionToDb] Session ${sessionMetadata.sessionId} saved successfully.`);
                 set(state => ({
                     sessionMetadata: { ...state.sessionMetadata, lastSaved: new Date() }
                 }));
@@ -1031,56 +1037,64 @@ export const useSessionStore = create<SessionStore>()(
               return false;
           }
           console.log(`[loadSessionFromDb] Attempting to load session ${sessionId} from Supabase...`);
-          set({ isLoading: true }); // Set loading state
+          set({ isLoading: true });
 
           try {
               const { data, error } = await supabase
-                  .from('sessions') // Ensure this table name matches your Supabase setup
-                  .select('session_data')
+                  .from('sessions')
+                  // <<< Select session_data and expires_at >>>
+                  .select('session_data, expires_at') 
                   .eq('session_id', sessionId)
                   .single();
 
               if (error) {
                   console.error(`[loadSessionFromDb] Error loading session ${sessionId}:`, error);
-                   set({ isLoading: false }); // Reset loading state
+                  set({ isLoading: false });
                   return false;
               }
 
               if (data && data.session_data) {
+                  // <<< Check expires_at BEFORE validating/setting state >>>
+                  if (data.expires_at && new Date() > new Date(data.expires_at)) {
+                      console.warn(`[loadSessionFromDb] Session ${sessionId} has expired (${data.expires_at}). Not loading.`);
+                      // Optionally reset local state if loading an expired session from link?
+                      // get().resetSession(); 
+                      set({ isLoading: false });
+                      return false; // Indicate failure due to expiration
+                  }
+
                   console.log(`[loadSessionFromDb] Session ${sessionId} loaded successfully.`);
-                  // Validate the loaded session data before applying it
                   const loadedSession = data.session_data as SessionData;
+                  
+                  // <<< Validate session data >>>
                   if (isValidSession(loadedSession)) {
                       set({
                           session: loadedSession,
-                          sessionMetadata: { // Update metadata based on loaded session
+                          sessionMetadata: {
                              sessionId: loadedSession.sessionId,
                              isActive: true,
                              editionType: loadedSession.selectedEdition?.type || null,
                              lastSaved: loadedSession.updatedAt ? new Date(loadedSession.updatedAt) : new Date(),
                           },
                           isLoading: false,
-                          isHydrated: true, // Mark as hydrated since we loaded data
-                          isCurrentStepValid: true // Assume valid after loading
+                          isHydrated: true,
+                          isCurrentStepValid: true
                       });
-                      // Optionally, trigger data initializations if needed after loading
-                      // get().initializeSignatureData();
-                      // get().initializeCustomDataDates();
                       return true;
                   } else {
                       console.warn(`[loadSessionFromDb] Loaded session ${sessionId} is invalid. Resetting.`);
-                      get().resetSession(); // Reset if loaded data is invalid
+                      get().resetSession();
                       set({ isLoading: false });
                       return false;
                   }
               } else {
                   console.warn(`[loadSessionFromDb] No session data found for ID ${sessionId}.`);
-                   set({ isLoading: false }); // Reset loading state
+                   set({ isLoading: false });
                    return false;
               }
           } catch (err) {
               console.error("[loadSessionFromDb] Unexpected error during Supabase select:", err);
-               set({ isLoading: false }); // Reset loading state
+               set({ isLoading: false });
               return false;
           }
       },

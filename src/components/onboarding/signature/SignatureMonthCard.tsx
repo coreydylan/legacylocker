@@ -5,13 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
-import { SignatureMonthCustomization } from '@/lib/sessionStore';
+import { SignatureMonthCustomization, useSessionStore } from '@/lib/sessionStore';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import { format, parseISO, isValid } from 'date-fns';
 import { CalendarIcon, Info } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { cn } from "@/lib/utils";
 import { useDebouncedCallback } from 'use-debounce';
-import { saveSessionToSupabase } from '@/lib/sessionService';
 
 interface SignatureMonthCardProps {
   monthData: SignatureMonthCustomization;
@@ -26,6 +26,7 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
   onUpdate,
   purchaserFirstName,
 }) => {
+  const { saveSessionData } = useSessionManager();
   const { month, enabled, occasions = [], recipients = [], shipDate, footerMessage } = monthData;
   const characterLimit = 80;
 
@@ -34,12 +35,19 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  // --- Debounced Save Logic --- 
-  const debouncedSave = useDebouncedCallback(() => {
-    console.log(`[Autosave] SignatureMonthCard (${month}): Triggering Supabase save...`);
-    saveSessionToSupabase();
-  }, 1000); // 1 second debounce
-  // --- End Debounced Save Logic ---
+  const debouncedSave = useDebouncedCallback(async () => {
+    if (!useSessionStore.getState().sessionMetadata.isActive) {
+        console.log(`[Autosave] SignatureMonthCard (${month}): Skipped – session not active`);
+        return;
+    }
+    console.log(`[Autosave] SignatureMonthCard (${month}): Triggering save via hook...`);
+    try {
+        await saveSessionData();
+        console.log(`[Autosave] SignatureMonthCard (${month}): Success via hook`);
+    } catch (err) {
+        console.error(`[Autosave] SignatureMonthCard (${month}): Failed via hook:`, err);
+    }
+  }, 1000);
 
   const handleToggle = (checked: boolean) => {
     const updateData: Partial<SignatureMonthCustomization> = { enabled: checked };
@@ -56,21 +64,14 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
         const defaultDate = new Date(year, monthIndex >= 0 ? monthIndex : 0, 1);
         updateData.shipDate = format(defaultDate, 'yyyy-MM-dd');
     }
-    if (!checked) {
-       // Option: Reset fields if manually disabled?
-       // updateData.footerMessage = '';
-       // updateData.occasions = [];
-       // updateData.recipients = [];
-       // updateData.shipDate = ''; 
-     }
     onUpdate(month, updateData);
-    debouncedSave(); // Save after update
+    debouncedSave();
   };
 
   const handleDateChange = (date: Date | undefined) => {
     if (date) {
       onUpdate(month, { shipDate: format(date, 'yyyy-MM-dd') });
-      debouncedSave(); // Save after update
+      debouncedSave();
     }
   };
 
@@ -78,60 +79,46 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
      const newFooter = event.target.value;
      if (newFooter.length <= characterLimit) {
         onUpdate(month, { footerMessage: newFooter });
-        debouncedSave(); // Save after update
+        debouncedSave();
+     } else {
+         console.warn("Footer message character limit reached.");
      }
   };
 
   const getOccasionLabel = () => {
     const hasBirthday = occasions.includes('birthday');
     const hasAnniversary = occasions.includes('anniversary');
-    // Find the first non-birthday/anniversary/other string as potential holiday
     const holidayName = occasions.find(occ => occ !== 'birthday' && occ !== 'anniversary' && occ !== 'other');
-
     const birthdayRecipient = recipients[occasions.indexOf('birthday')];
     const anniversaryRecipient = recipients[occasions.indexOf('anniversary')];
-
-    // Prioritize Birthday & Anniversary combo
     if (hasBirthday && hasAnniversary && birthdayRecipient) {
       return `Celebrate ${anniversaryRecipient || 'their'} anniversary and ${birthdayRecipient}'s birthday?`;
     }
-    // Then Birthday alone
     if (hasBirthday && birthdayRecipient) {
       return `Celebrate ${birthdayRecipient}'s Birthday?`;
     }
-    // Then Anniversary alone
     if (hasAnniversary) {
       return `Celebrate ${anniversaryRecipient || 'Your'} Anniversary?`;
     }
-    // Then specific Holiday if found
     if (holidayName) {
         return `Celebrate ${holidayName}?`;
     }
-    // Fallback for manually enabled or 'other'
     if (occasions.includes('other') || enabled) {
       return 'Customize this month?';
     } 
-    // Default fallback
     return 'Customize this month?';
   };
 
   const getTooltipContent = () => {
       if (occasions.length === 0) return null;
-       // Generate content based on all occasions present
        const contentParts = occasions.map((occ, index) => {
-           const recip = recipients[index] || 'recipient'; // This might not align perfectly if mixing holidays/birthdays
-           if (occ === 'birthday') {
-               return `${recip}'s Birthday`;
-           } else if (occ === 'anniversary') {
-               return `${recip}'s Anniversary`;
-           } else if (occ !== 'other') { // Assume other strings are holidays
-               return occ; // Just display the holiday name (e.g., "Mother's Day")
-           }
-           return null; // Ignore 'other'
-       }).filter(part => part !== null); // Remove null entries
-      
+           const recip = recipients[index] || 'recipient';
+           if (occ === 'birthday') return `${recip}'s Birthday`;
+           else if (occ === 'anniversary') return `${recip}'s Anniversary`;
+           else if (occ !== 'other') return occ;
+           return null;
+       }).filter(part => part !== null);
       if (contentParts.length === 0) return null;
-
       return <p>This month is pre-enabled for {contentParts.join(' and ')}.</p>;
   };
 

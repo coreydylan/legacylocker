@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useSessionStore } from '@/lib/sessionStore';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import OnboardingModal from './OnboardingModal';
 import EditionTypeCard from './story-selector/EditionTypeCard';
 import SearchableCommandMenu from './story-selector/SearchableCommandMenu';
@@ -27,7 +28,16 @@ import { StorySeriesRow, StoryOption } from '@/types/supabase';
 import { SeriesType } from '@/types/onboarding';
 
 const StorySeriesSelector = () => {
-  const { session, resetSession } = useSessionStore();
+  const { 
+    isStartOverConfirmationRequired, 
+    resetSessionAndState, 
+    initializeNewLocalSession 
+  } = useSessionManager();
+  const { session, sessionMetadata } = useSessionStore(state => ({
+    session: state.session, 
+    sessionMetadata: state.sessionMetadata 
+  }));
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSeriesForModal, setSelectedSeriesForModal] = useState<SeriesType | StoryOption | null>(null);
@@ -53,10 +63,7 @@ const StorySeriesSelector = () => {
           throw fetchError;
         }
         
-        // Debug: Log the raw data from Supabase
         console.log("Raw data from Supabase:", data);
-        
-        // Debug: Check for hidden_team values
         const teamsWithHiddenTeam = data?.filter(row => row.hidden_team) || [];
         console.log("Rows with hidden_team:", teamsWithHiddenTeam);
         
@@ -70,7 +77,7 @@ const StorySeriesSelector = () => {
     };
 
     fetchStorySeries();
-  }, [supabase]);
+  }, []);
 
   const allStoryOptions = useMemo((): StoryOption[] => {
     return allSeriesData.map((row) => {
@@ -78,64 +85,42 @@ const StorySeriesSelector = () => {
       if (row.series_type === 'Custom Edition') type = 'custom';
       else if (row.series_type === 'Concierge Edition') type = 'concierge';
 
-      // Process hidden_team data more thoroughly
       let searchKeywords: string[] = [];
       if (row.hidden_team) {
-        console.log(`Processing hidden_team for "${row.display_title}": "${row.hidden_team}"`);
-        
-        // Split by multiple possible delimiters
-        const rawKeywords = row.hidden_team.split(/[/,;]/);
-        
-        // Process each keyword
+        const rawKeywords = row.hidden_team.split(/[/,;\s\-_]+/);
         searchKeywords = rawKeywords
-          .map(s => s.trim())
-          .filter(s => s) // Remove empty strings
-          .map(s => s.toLowerCase()); // Normalize to lowercase
+          .map(s => s.trim().toLowerCase())
+          .filter(s => s && s.length > 1);
           
-        // Add variations for each keyword
         const variations: string[] = [];
         searchKeywords.forEach(keyword => {
-          // Add the original keyword
           variations.push(keyword);
-          
-          // Add singular/plural variations
           if (keyword.endsWith('s')) {
-            variations.push(keyword.slice(0, -1)); // Remove 's' for singular
+            variations.push(keyword.slice(0, -1));
           } else {
-            variations.push(keyword + 's'); // Add 's' for plural
+            variations.push(keyword + 's');
           }
-          
-          // Handle common city + team name combinations
-          // E.g., "new york yankees" -> ["new york", "yankees"]
           const words = keyword.split(' ');
           if (words.length > 1) {
-            // Add city name
             variations.push(words.slice(0, -1).join(' '));
-            // Add team name without city
             variations.push(words[words.length - 1]);
           }
-          
-          // Add common city abbreviations
-          if (keyword.includes('new york')) {
-            variations.push('ny');
-            variations.push(keyword.replace('new york', 'ny'));
-          }
-          if (keyword.includes('san francisco')) {
-            variations.push('sf');
-            variations.push(keyword.replace('san francisco', 'sf'));
-          }
-          if (keyword.includes('los angeles')) {
-            variations.push('la');
-            variations.push(keyword.replace('los angeles', 'la'));
-          }
-          if (keyword.includes('san diego')) {
-            variations.push('sd');
-            variations.push(keyword.replace('san diego', 'sd'));
+          const cityMappings: { [key: string]: string[] } = {
+            'new york': ['ny'],
+            'san francisco': ['sf'],
+            'los angeles': ['la'],
+            'san diego': ['sd']
+          };
+          for (const city in cityMappings) {
+            if (keyword.includes(city)) {
+              cityMappings[city].forEach(abbr => {
+                variations.push(abbr);
+                variations.push(keyword.replace(city, abbr));
+              });
+            }
           }
         });
-        
         searchKeywords = [...new Set([...searchKeywords, ...variations])];
-        console.log(`Generated keywords for "${row.display_title}":`, searchKeywords);
       }
 
       return {
@@ -152,71 +137,27 @@ const StorySeriesSelector = () => {
 
   const filteredOptions = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
-    if (!query) return [];
+    if (!query) {
+      return filterType
+        ? allStoryOptions.filter(option => option.type === filterType)
+        : allStoryOptions;
+    }
 
-    // Helper function to normalize strings for comparison
-    const normalizeString = (str: string) => {
-      return str.toLowerCase()
-        .replace(/\s+/g, ' ') // Normalize spaces
-        .replace(/[^a-z0-9 ]/g, '') // Remove special chars
-        .replace(/s$/, '') // Remove trailing 's' for plural forms
-        .trim();
-    };
-
-    const normalizedQuery = normalizeString(query);
-
-    // Debug: Log the search query and normalized query
-    console.log(`Searching for: "${query}" (normalized: "${normalizedQuery}")`);
-
-    const results = allStoryOptions.filter(option => {
-      // Basic text matching
-      const themeMatch = option.categoryDisplay?.toLowerCase().includes(query) ?? false;
-      const subjectMatch = option.subcategoryDisplay?.toLowerCase().includes(query) ?? false;
-      const contextMatch = option.locationDisplay?.toLowerCase().includes(query) ?? false;
-      const titleMatch = option.label?.toLowerCase().includes(query) ?? false;
-      
-      // Team name matching - check if any search keyword matches the query
-      const teamMatch = option.searchKeywords?.some(keyword => {
-        // Direct match
-        if (keyword === query) return true;
-        
-        // Normalized match
-        const normalizedKeyword = normalizeString(keyword);
-        if (normalizedKeyword === normalizedQuery) return true;
-        
-        // Substring match
-        if (keyword.includes(query) || query.includes(keyword)) return true;
-        
-        // Normalized substring match
-        if (normalizedKeyword.includes(normalizedQuery) || normalizedQuery.includes(normalizedKeyword)) return true;
-        
-        return false;
-      }) ?? false;
-
-      // Debug: Log match details for this option
-      if (teamMatch) {
-        console.log(`Team name match found for "${option.label}":`, {
-          searchKeywords: option.searchKeywords
-        });
-      } else if (themeMatch || subjectMatch || contextMatch || titleMatch) {
-        console.log(`Standard match found for "${option.label}":`, {
-          themeMatch,
-          subjectMatch,
-          contextMatch,
-          titleMatch
-        });
-      }
-
+    return allStoryOptions.filter(option => {
+      if (filterType && option.type !== filterType) return false;
+      const lowerLabel = option.label.toLowerCase();
+      const lowerCategory = option.categoryDisplay.toLowerCase();
+      const lowerSubcategory = option.subcategoryDisplay?.toLowerCase() || '';
+      const lowerLocation = option.locationDisplay?.toLowerCase() || '';
+      const titleMatch = lowerLabel.includes(query);
+      const themeMatch = lowerCategory.includes(query);
+      const subjectMatch = lowerSubcategory.includes(query);
+      const contextMatch = lowerLocation.includes(query);
+      const teamMatch = option.searchKeywords.some(keyword => keyword.includes(query));
       return themeMatch || subjectMatch || contextMatch || titleMatch || teamMatch;
     });
+  }, [searchQuery, allStoryOptions, filterType]);
 
-    // Debug: Log the final results
-    console.log(`Found ${results.length} results for "${query}"`);
-    
-    return results;
-  }, [searchQuery, allStoryOptions]);
-
-  // Ensure filteredOptions is always an array, even when empty
   const safeFilteredOptions = useMemo(() => {
     return Array.isArray(filteredOptions) ? filteredOptions : [];
   }, [filteredOptions]);
@@ -236,32 +177,38 @@ const StorySeriesSelector = () => {
   };
 
   const handleStorySeriesSelection = (series: SeriesType | StoryOption) => {
-    const isActiveSession = !!(session && (session.selectedEdition || session.customData?.length > 0 || session.signatureData?.some(d => d.enabled)));
+    const requiresConfirmation = isStartOverConfirmationRequired();
 
-    console.log(`[handleStorySeriesSelection] Selected: ${series.label}, Type: ${series.type}, Is Active Session: ${isActiveSession}`);
+    console.log(`[handleStorySeriesSelection] Selected: ${series.label}, Type: ${series.type}, Requires Confirmation: ${requiresConfirmation}`);
 
-    if (isActiveSession) {
+    if (requiresConfirmation) {
       console.log("[handleStorySeriesSelection] Active session detected, opening confirmation dialog.");
       setSeriesToConfirm(series);
       setConfirmDialogOpen(true);
       setDialogOpen(false);
     } else {
-      console.log("[handleStorySeriesSelection] No active session detected, proceeding directly.");
+      console.log("[handleStorySeriesSelection] No active session detected or overwrite confirmed, proceeding directly.");
       proceedWithSelection(series);
     }
   };
 
   const proceedWithSelection = (series: SeriesType | StoryOption) => {
-    console.log(`[proceedWithSelection] Proceeding with series: ${series.label}, ID: ${series.id}`);
+    console.log(`[proceedWithSelection] Proceeding with series: ${series.label}, ID: ${series.id}, Type: ${series.type}`);
+    initializeNewLocalSession({
+      id: series.id,
+      label: series.label,
+      type: series.type,
+    });
     setSelectedSeriesForModal(series);
     setDialogOpen(false);
     setSearchQuery('');
+    setFilterType(null);
     setOnboardingModalOpen(true);
   };
 
   const handleStartFresh = () => {
     console.log("[handleStartFresh] Resetting session and starting fresh.");
-    resetSession();
+    resetSessionAndState();
     if (seriesToConfirm) {
       proceedWithSelection(seriesToConfirm);
     }
@@ -271,8 +218,9 @@ const StorySeriesSelector = () => {
 
   const handleContinueCurrentSession = () => {
     console.log("[handleContinueCurrentSession] Continuing with existing session.");
-    if (session?.selectedEdition) {
-      setSelectedSeriesForModal(session.selectedEdition as SeriesType | StoryOption);
+    const existingEdition = session?.selectedEdition;
+    if (existingEdition) {
+      setSelectedSeriesForModal(existingEdition as SeriesType | StoryOption);
     } else {
       console.warn("Continuing session, but no selectedEdition found in session data.");
       setSelectedSeriesForModal(null);
@@ -283,13 +231,13 @@ const StorySeriesSelector = () => {
   };
 
   const renderSeriesDisplay = () => {
-    if (selectedSeriesForModal) return selectedSeriesForModal.label;
+    if (selectedSeriesForModal && onboardingModalOpen) return selectedSeriesForModal.label;
+    if (sessionMetadata?.isActive && session?.selectedEdition) return session.selectedEdition.label;
     return "Select a Story Series";
   };
 
   const handleDialogOpenChange = (open: boolean) => {
     setDialogOpen(open);
-    
     if (!open) {
       setSearchQuery('');
       setFilterType(null);
@@ -297,13 +245,11 @@ const StorySeriesSelector = () => {
   };
 
   const renderTriggerButton = () => {
-    let buttonText = "Select a Story Series";
+    let buttonText = renderSeriesDisplay();
     if (loading) {
       buttonText = "Loading Options...";
     } else if (error) {
       buttonText = "Error Loading Options";
-    } else if (selectedSeriesForModal) {
-      buttonText = selectedSeriesForModal.label;
     }
 
     return (
@@ -313,6 +259,7 @@ const StorySeriesSelector = () => {
          aria-expanded={dialogOpen}
          className="w-full justify-between py-6 text-lg bg-white border-legacy-green/20 hover:border-legacy-green focus:border-legacy-green focus:ring-legacy-green"
          disabled={loading || !!error}
+         onClick={() => setDialogOpen(true)}
        >
          {buttonText}
          <span className={`ml-2 h-5 w-5 shrink-0 opacity-50 ${loading || error ? 'hidden' : ''}`}>▼</span>
@@ -387,7 +334,7 @@ const StorySeriesSelector = () => {
                       handleEditionSelection('concierge', conciergeOption);
                    } else {
                       console.warn("Concierge option not found in fetched data, handling generically.");
-                      handleEditionSelection('concierge');
+                      handleStorySeriesSelection({ id: 'concierge-generic', label: 'Concierge Edition', type: 'concierge' });
                    }
                 }}
               />
@@ -400,9 +347,8 @@ const StorySeriesSelector = () => {
         isOpen={onboardingModalOpen} 
         onClose={() => {
           setOnboardingModalOpen(false);
-          setSelectedSeriesForModal(null);
         }} 
-        selectedSeries={selectedSeriesForModal as SeriesType | null}
+        selectedSeries={selectedSeriesForModal as SeriesType | null} 
       />
 
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>

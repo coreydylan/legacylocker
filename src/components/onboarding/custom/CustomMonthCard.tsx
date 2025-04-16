@@ -11,13 +11,13 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { ChevronDown, Lock, Unlock } from 'lucide-react';
-import { CustomMonthData } from '@/lib/sessionStore';
+import { CustomMonthData, useSessionStore } from '@/lib/sessionStore';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import StoryTab from './StoryTab';
 import ArtworkTab from './ArtworkTab';
 import FooterTab from './FooterTab';
 import { cn } from '@/lib/utils';
 import { useDebouncedCallback } from 'use-debounce';
-import { saveSessionToSupabase } from '@/lib/sessionService';
 
 // Define completion status types
 type CompletionStatus = 'complete' | 'in-progress' | 'not-started';
@@ -70,6 +70,7 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
   accordionValue,
   initialTab = 'story',
 }) => {
+  const { saveSessionData } = useSessionManager();
   const { month, year } = monthData;
   const sectionLockStatus = useMemo(() => getSectionLockStatus(monthData), [monthData]);
   const [isOpen, setIsOpen] = useState(false);
@@ -83,10 +84,21 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
   }, [sectionLockStatus]);
 
   // --- Debounced Save Logic --- 
-  const debouncedSave = useDebouncedCallback(() => {
-    console.log(`[Autosave] CustomMonthCard (${month}-${year}): Triggering Supabase save...`);
-    saveSessionToSupabase();
-  }, 1000); // 1 second debounce
+  const debouncedSave = useDebouncedCallback(async () => {
+    // Check if session is active before saving
+    if (!useSessionStore.getState().sessionMetadata.isActive) {
+      console.log(`[Autosave] CustomMonthCard (${month}-${year}): Skipped – session not active`);
+      return;
+    }
+    console.log(`[Autosave] CustomMonthCard (${month}-${year}): Triggering save via hook...`);
+    try {
+      // Call manager hook save
+      await saveSessionData();
+      console.log(`[Autosave] CustomMonthCard (${month}-${year}): Success via hook`);
+    } catch (err) {
+      console.error(`[Autosave] CustomMonthCard (${month}-${year}): Failed via hook:`, err);
+    }
+  }, 1000);
 
   // Use initialTab prop to set the default value for the Tabs component
   const [activeTab, setActiveTab] = useState<CustomMonthTab>(initialTab);

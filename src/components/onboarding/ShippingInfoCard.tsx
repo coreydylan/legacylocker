@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSessionStore, SessionData } from '@/lib/sessionStore';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
 import { ShippingAddress } from '@/lib/sessionStore';
 import AddressAutocomplete, { StructuredAddress } from './inputs/AddressAutocomplete';
@@ -14,7 +15,6 @@ import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { shippingInfoSchema, ShippingInfoFormValues } from '@/schemas/shippingInfoSchema';
 import { useDebouncedCallback } from 'use-debounce';
-import { saveSessionToSupabase } from '@/lib/sessionService';
 import useMediaQuery from '@/hooks/useMediaQuery';
 
 // Define a type for the recipient part of the session data more explicitly if needed
@@ -23,6 +23,7 @@ type RecipientData = SessionData['recipient'];
 
 const ShippingInfoCard: React.FC = () => {
   console.log("--- Rendering ShippingInfoCard ---");
+  const { saveSessionData } = useSessionManager();
   const { session, updateSession, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   const recipient: RecipientData | undefined = session.recipient;
@@ -87,26 +88,32 @@ const ShippingInfoCard: React.FC = () => {
   const watchedFields = useWatch({ control }); // Watch all form fields
 
   const debouncedSave = useDebouncedCallback(async () => {
-    const currentData = watchedFields as ShippingInfoFormValues; // Type assertion for clarity
-    console.log('[Autosave] ShippingInfoCard: Triggering save with data:', currentData);
-    // Update the session store silently before saving
-    // Need to update specific nested fields based on form structure
-    updateSession('recipient.shippingName', currentData.shippingName);
-    updateSession('recipient.shippingNameOverridden', currentData.shippingNameOverridden);
-    updateSession('recipient.shippingAddress', currentData.shippingAddress); 
-    
-    try {
-      await saveSessionToSupabase();
-      console.log('[Autosave] ShippingInfoCard: Session saved to Supabase.');
-    } catch (error) {
-      console.error('[Autosave] ShippingInfoCard: Failed to save session to Supabase:', error);
+    const shippingData = watchedFields as ShippingInfoFormValues;
+    // Check if session is active before attempting to save
+    if (useSessionStore.getState().sessionMetadata.isActive) {
+      console.log('[Autosave] ShippingInfoCard: Triggering save with data:', shippingData);
+      // Update store state first
+      updateSession('recipient.shippingName', shippingData.shippingName);
+      updateSession('recipient.shippingNameOverridden', shippingData.shippingNameOverridden);
+      updateSession('recipient.shippingAddress', shippingData.shippingAddress);
+      try {
+        // Call the hook's save function
+        await saveSessionData();
+        console.log('[ShippingInfoCard] Autosave successful via hook');
+      } catch (err) {
+        console.error('[ShippingInfoCard] Autosave failed via hook:', err);
+      }
+    } else {
+      console.log('[ShippingInfoCard] Skipped autosave (session not active)');
     }
-  }, 1000); // Debounce for 1 second
+  }, 1000); 
 
   useEffect(() => {
-    // Call debouncedSave whenever watchedFields changes.
-    console.log('[Autosave] ShippingInfoCard: Field changed, debouncing save...');
-    debouncedSave();
+    // Trigger autosave if primary address fields or shipping name change
+    if (watchedFields?.shippingAddress?.street || watchedFields?.shippingName) {
+      console.log('[Autosave] ShippingInfoCard: Field changed, debouncing save...');
+      debouncedSave();
+    }
   }, [watchedFields, debouncedSave]); 
   // --- End Autosave Logic --- 
 
@@ -179,19 +186,18 @@ const ShippingInfoCard: React.FC = () => {
   // Form submission handler
   const onSubmit = async (data: ShippingInfoFormValues) => {
     console.log('ShippingInfoCard: Form validated, onSubmit triggered.');
-    // Cancel pending autosave
     debouncedSave.cancel();
-    // Update session store with the latest validated data before final save
+    // Update store with final validated data
     updateSession('recipient.shippingName', data.shippingName);
     updateSession('recipient.shippingNameOverridden', data.shippingNameOverridden);
     updateSession('recipient.shippingAddress', data.shippingAddress);
     
     // Final save on submit
     try {
-      await saveSessionToSupabase(); 
-      console.log('ShippingInfoCard: Final session save on submit successful.');
+      await saveSessionData(); 
+      console.log('ShippingInfoCard: Final session save on submit successful via hook.');
     } catch (error) {
-      console.error('ShippingInfoCard: Failed to save session to Supabase on submit:', error);
+      console.error('ShippingInfoCard: Failed to save session on submit via hook:', error);
     }
     
     goNext();

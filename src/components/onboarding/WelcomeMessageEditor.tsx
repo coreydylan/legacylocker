@@ -1,32 +1,39 @@
 import React from 'react';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import truncate from 'lodash/truncate';
 import { useDebouncedCallback } from 'use-debounce';
-import { saveSessionToSupabase } from '@/lib/sessionService';
 
 const WelcomeMessageEditor: React.FC = () => {
+  const { saveSessionData } = useSessionManager();
   const { welcomeMessage, updateSession } = useSessionStore(state => ({
-      // Safely access nested property
       welcomeMessage: state.session.recipient?.welcomeMessage || '',
       updateSession: state.updateSession,
   }));
 
-  // --- Debounced Save Logic --- 
-  const debouncedSave = useDebouncedCallback(() => {
-    console.log('[Autosave] WelcomeMessageEditor: Triggering Supabase save...');
-    saveSessionToSupabase();
-  }, 1000); // 1 second debounce
-  // --- End Debounced Save Logic ---
+  const debouncedSave = useDebouncedCallback(async () => {
+    if (!useSessionStore.getState().sessionMetadata.isActive) {
+      console.log('[Autosave] WelcomeMessageEditor: Skipped – session not active');
+      return;
+    }
+    
+    console.log('[Autosave] WelcomeMessageEditor: Triggering save via hook...');
+    try {
+      await saveSessionData();
+      console.log('[Autosave] WelcomeMessageEditor: Success via hook');
+    } catch (err) {
+      console.error('[Autosave] WelcomeMessageEditor: Failed via hook:', err);
+    }
+  }, 1000);
 
-  const characterLimit = 1700; // Updated character limit
+  const characterLimit = 1700;
   const messageLength = welcomeMessage?.length || 0;
 
   const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
      let newValue = event.target.value;
-     // Apply limit locally before updating store 
      if (newValue.length > characterLimit) {
          newValue = truncate(newValue, { length: characterLimit, omission: '' });
      }

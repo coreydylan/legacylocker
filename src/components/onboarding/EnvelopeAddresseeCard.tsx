@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { ChevronLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useSessionManager } from '@/hooks/useSessionManager';
 import { useOnboardingNavigation } from '@/hooks/useOnboardingNavigation';
 import { Recipient } from '@/lib/sessionManager';
 import { formatCardAddresseeName } from '@/lib/utils/formatCardAddresseeName';
@@ -13,31 +14,27 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { envelopePersonalizationSchema, EnvelopePersonalizationFormValues } from '@/schemas/envelopePersonalizationSchema';
 import { useDebouncedCallback } from 'use-debounce';
-import { saveSessionToSupabase } from '@/lib/sessionService';
 import useMediaQuery from '@/hooks/useMediaQuery';
 
 const EnvelopeAddresseeCard: React.FC = () => {
+  const { saveSessionData } = useSessionManager();
   const { session, updateSession, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   const recipient: Recipient | undefined = session.recipient;
   const isMobile = useMediaQuery('(max-width: 768px)');
   
-  // Get default addressee name from recipient info
   const defaultAddresseeName = formatCardAddresseeName(session);
   
-  // Get initial values for the form
   const getDefaultValues = (): EnvelopePersonalizationFormValues => {
     const initialAddresseeName = recipient?.cardAddresseeNameOverridden 
       ? (recipient?.cardAddresseeName || '') 
       : defaultAddresseeName;
-      
     return {
       cardAddresseeName: initialAddresseeName,
       cardAddresseeNameOverridden: recipient?.cardAddresseeNameOverridden || false,
     };
   };
   
-  // Initialize form with react-hook-form and zod validation
   const { 
     handleSubmit, 
     setValue,
@@ -50,63 +47,55 @@ const EnvelopeAddresseeCard: React.FC = () => {
     mode: 'onChange'
   });
   
-  // --- Debounced Autosave Logic --- 
-  const watchedFields = useWatch({ control }); // Watch all fields
+  const watchedFields = useWatch({ control });
 
   const debouncedSave = useDebouncedCallback(async () => {
+    if (!useSessionStore.getState().sessionMetadata.isActive) {
+      console.log('[Autosave] EnvelopeAddresseeCard: Skipped – session not active');
+      return;
+    }
     const currentData = watchedFields as EnvelopePersonalizationFormValues;
     console.log('[Autosave] EnvelopeAddresseeCard: Triggering save with data:', currentData);
-    // Update relevant recipient fields in the session store
     updateSession('recipient.cardAddresseeName', currentData.cardAddresseeName);
     updateSession('recipient.cardAddresseeNameOverridden', currentData.cardAddresseeNameOverridden);
-    
     try {
-      await saveSessionToSupabase();
-      console.log('[Autosave] EnvelopeAddresseeCard: Session saved to Supabase.');
+      await saveSessionData();
+      console.log('[Autosave] EnvelopeAddresseeCard: Success via hook');
     } catch (error) {
-      console.error('[Autosave] EnvelopeAddresseeCard: Failed to save session to Supabase:', error);
+      console.error('[Autosave] EnvelopeAddresseeCard: Failed via hook:', error);
     }
-  }, 1000); // Debounce for 1 second
+  }, 1000);
 
   useEffect(() => {
-    // Call debouncedSave whenever watchedFields changes.
     console.log('[Autosave] EnvelopeAddresseeCard: Field changed, debouncing save...');
     debouncedSave();
   }, [watchedFields, debouncedSave]); 
-  // --- End Autosave Logic --- 
 
-  // Update addressee name when recipient info changes
   useEffect(() => {
     const currentRecipient: Recipient | undefined = session.recipient;
-    
-    // Only update if not overridden by user
     if (!currentRecipient?.cardAddresseeNameOverridden) {
       const newDefaultName = formatCardAddresseeName(session);
       setValue('cardAddresseeName', newDefaultName, { shouldValidate: true });
     }
   }, [session, setValue]);
 
-  // Handle addressee name change
   const handleAddresseeNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setValue('cardAddresseeName', e.target.value, { shouldValidate: true });
     setValue('cardAddresseeNameOverridden', true);
   };
 
-  // Form submission handler
   const onSubmit = async (data: EnvelopePersonalizationFormValues) => {
     console.log('EnvelopeAddresseeCard: Form validated, onSubmit triggered.');
-    // Cancel pending autosave
     debouncedSave.cancel();
-    // Update store with latest validated data
+    
     updateSession('recipient.cardAddresseeName', data.cardAddresseeName);
     updateSession('recipient.cardAddresseeNameOverridden', data.cardAddresseeNameOverridden);
     
-    // Final save on submit
     try {
-      await saveSessionToSupabase(); 
-      console.log('EnvelopeAddresseeCard: Final session save on submit successful.');
+      await saveSessionData(); 
+      console.log('EnvelopeAddresseeCard: Final session save on submit successful via hook.');
     } catch (error) {
-      console.error('EnvelopeAddresseeCard: Failed to save session to Supabase on submit:', error);
+      console.error('EnvelopeAddresseeCard: Failed to save session on submit via hook:', error);
     }
     
     goNext();
@@ -114,12 +103,10 @@ const EnvelopeAddresseeCard: React.FC = () => {
 
   const previewName = watch('cardAddresseeName') || defaultAddresseeName || "Recipient Name";
 
-  // --- Update store validation status based on form validity ---
   useEffect(() => {
     console.log(`EnvelopeAddresseeCard: formState.isValid changed to: ${isValid}, updating store...`);
     updateValidationStatus(isValid);
   }, [isValid, updateValidationStatus]);
-  // --- End validation status update ---
 
   return (
     <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
@@ -171,7 +158,6 @@ const EnvelopeAddresseeCard: React.FC = () => {
           </div>
         </div>
 
-        {/* Conditionally render desktop buttons */}
         {!isMobile && (
         <div className="flex justify-between items-center pt-4">
           <Button
