@@ -11,30 +11,13 @@ import OnboardingModal from "@/components/OnboardingModal";
 import { useModalStore } from "@/lib/modalStore";
 import { useSessionStore } from "@/lib/sessionStore";
 import { useEffect } from "react";
-import { loadSessionFromSupabase } from "@/lib/sessionService";
+import SessionLoader from "@/components/SessionLoader";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const { isOnboardingOpen, openOnboarding, closeOnboarding } = useModalStore();
   const { session } = useSessionStore();
-  const [searchParams] = useSearchParams();
-
-  useEffect(() => {
-    const sessionId = searchParams.get('session_id');
-
-    if (sessionId) {
-      console.log(`Found session_id in URL: ${sessionId}, attempting to load...`);
-      loadSessionFromSupabase(sessionId).then((sessionData) => {
-        if (sessionData) {
-          console.log('Session loaded successfully, opening onboarding modal.');
-          openOnboarding();
-        } else {
-          console.log('Failed to load session from session_id in URL.');
-        }
-      });
-    }
-  }, [searchParams, openOnboarding]);
 
   return (
     <>
@@ -60,7 +43,9 @@ const App = () => {
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <AppContent />
+          <SessionLoader>
+            <AppContent />
+          </SessionLoader>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

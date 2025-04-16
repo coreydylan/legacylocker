@@ -5,6 +5,7 @@ import setWith from 'lodash/setWith';
 import cloneDeep from 'lodash/cloneDeep';
 import { format, parseISO, getMonth, isValid, getYear, addMonths, subDays } from 'date-fns';
 import truncate from 'lodash/truncate';
+import { supabase } from './supabaseClient'; // <<< Import Supabase client
 
 // Interface for month-specific signature customizations
 export interface SignatureMonthCustomization {
@@ -208,7 +209,7 @@ interface SessionStore {
   nextStep: () => void;
   prevStep: () => void;
   setLastCompletedStep: (step: number) => void;
-  saveSessionProgress: (email?: string) => void;
+  saveSessionProgress: (email?: string) => Promise<void>; // <<< Modified to be async
   resetSession: () => void;
   submitSession: () => Promise<boolean>;
   initializeSignatureData: () => void;
@@ -221,6 +222,9 @@ interface SessionStore {
   endSession: () => void;
   saveSession: () => void;
   initializeCustomDataDates: () => void; // <<< Add action interface
+  // Supabase actions
+  saveSessionToDb: () => Promise<void>; // <<< New action
+  loadSessionFromDb: (sessionId: string) => Promise<boolean>; // <<< New action (returns true on success)
 }
 
 const ALL_MONTHS = [
@@ -712,6 +716,8 @@ export const useSessionStore = create<SessionStore>()(
             updatedAt: new Date().toISOString(),
     };
           const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          // Automatically save to DB on step change? Maybe too frequent.
+          // Consider calling saveSessionToDb explicitly where needed.
           return { session: updatedSession, sessionMetadata: updatedMetadata, isCurrentStepValid: false };
         });
   },
@@ -725,6 +731,8 @@ export const useSessionStore = create<SessionStore>()(
             updatedAt: new Date().toISOString(),
     };
           const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
+          // Automatically save to DB on step change? Maybe too frequent.
+          // Consider calling saveSessionToDb explicitly where needed.
           return { session: updatedSession, sessionMetadata: updatedMetadata, isCurrentStepValid: false };
         });
   },
@@ -737,7 +745,7 @@ export const useSessionStore = create<SessionStore>()(
             updatedAt: new Date().toISOString(),
     };
           const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
-          return { session: updatedSession, sessionMetadata: updatedMetadata, isCurrentStepValid: true };
+          return { session: updatedSession, sessionMetadata: updatedMetadata, isCurrentStepValid: true }; // Assume valid when going back
         });
   },
   setLastCompletedStep: (step: number) => {
@@ -751,25 +759,30 @@ export const useSessionStore = create<SessionStore>()(
           return { session: updatedSession, sessionMetadata: updatedMetadata };
         });
   },
-  saveSessionProgress: (email?: string) => {
-        set(state => {
-    const updatedSession = {
-            ...state.session,
-            email: email ?? state.session.email,
+  // <<< Modified saveSessionProgress >>>
+  saveSessionProgress: async (email?: string) => {
+        const updatedEmail = email ?? get().session.email;
+        const updatedSessionData = {
+            ...get().session,
+            email: updatedEmail,
             updatedAt: new Date().toISOString(),
-    };
-          const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
-          return { session: updatedSession, sessionMetadata: updatedMetadata };
-        });
+        };
+
+        set(state => ({
+            session: updatedSessionData,
+            sessionMetadata: { ...state.sessionMetadata, lastSaved: new Date() }
+        }));
+
+        // Now, save the updated session to Supabase
+        await get().saveSessionToDb();
   },
   resetSession: () => {
-        console.log("Resetting session state (persist middleware will handle storage)...");
+        console.log("Resetting session state...");
         const newSession = createNewSession(); // Use helper
-        // Reset metadata as well
         const initialMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
         set({ session: newSession, sessionMetadata: initialMetadata, isLoading: false, isHydrated: true, isCurrentStepValid: false });
-        // Let persist handle clearing/overwriting storage based on new state
-        // localStorage.removeItem('legacyLockerSession'); // Usually not needed with persist
+        // Clear the persisted state in localStorage as well
+        localStorage.removeItem('legacyLockerSession');
       },
   submitSession: async (): Promise<boolean> => {
     const { session } = get();
@@ -977,59 +990,131 @@ export const useSessionStore = create<SessionStore>()(
           }));
       },
 
+      // <<< NEW ACTION: Save session state to Supabase >>>
+      saveSessionToDb: async () => {
+        const { session } = get();
+        if (!session || !session.sessionId) {
+            console.error("[saveSessionToDb] Attempted to save without a valid session or sessionId.");
+            return;
+        }
+        console.log(`[saveSessionToDb] Saving session ${session.sessionId} to Supabase...`);
+        try {
+            const { error } = await supabase
+                .from('sessions') // Ensure this table name matches your Supabase setup
+                .upsert({
+                    session_id: session.sessionId,
+                    session_data: session, // Store the entire session object
+                    updated_at: session.updatedAt || new Date().toISOString(),
+                });
+
+            if (error) {
+                console.error("[saveSessionToDb] Error saving session to Supabase:", error);
+                // Handle error appropriately - maybe notify user?
+            } else {
+                console.log(`[saveSessionToDb] Session ${session.sessionId} saved successfully.`);
+                // Update lastSaved in metadata locally after successful DB save
+                set(state => ({
+                    sessionMetadata: { ...state.sessionMetadata, lastSaved: new Date() }
+                }));
+            }
+        } catch (err) {
+            console.error("[saveSessionToDb] Unexpected error during Supabase upsert:", err);
+        }
+      },
+
+      // <<< NEW ACTION: Load session state from Supabase >>>
+      loadSessionFromDb: async (sessionId: string): Promise<boolean> => {
+          if (!sessionId) {
+              console.warn("[loadSessionFromDb] No sessionId provided.");
+              return false;
+          }
+          console.log(`[loadSessionFromDb] Attempting to load session ${sessionId} from Supabase...`);
+          set({ isLoading: true }); // Set loading state
+
+          try {
+              const { data, error } = await supabase
+                  .from('sessions') // Ensure this table name matches your Supabase setup
+                  .select('session_data')
+                  .eq('session_id', sessionId)
+                  .single();
+
+              if (error) {
+                  console.error(`[loadSessionFromDb] Error loading session ${sessionId}:`, error);
+                   set({ isLoading: false }); // Reset loading state
+                  return false;
+              }
+
+              if (data && data.session_data) {
+                  console.log(`[loadSessionFromDb] Session ${sessionId} loaded successfully.`);
+                  // Validate the loaded session data before applying it
+                  const loadedSession = data.session_data as SessionData;
+                  if (isValidSession(loadedSession)) {
+                      set({
+                          session: loadedSession,
+                          sessionMetadata: { // Update metadata based on loaded session
+                             sessionId: loadedSession.sessionId,
+                             isActive: true,
+                             editionType: loadedSession.selectedEdition?.type || null,
+                             lastSaved: loadedSession.updatedAt ? new Date(loadedSession.updatedAt) : new Date(),
+                          },
+                          isLoading: false,
+                          isHydrated: true, // Mark as hydrated since we loaded data
+                          isCurrentStepValid: true // Assume valid after loading
+                      });
+                      // Optionally, trigger data initializations if needed after loading
+                      // get().initializeSignatureData();
+                      // get().initializeCustomDataDates();
+                      return true;
+                  } else {
+                      console.warn(`[loadSessionFromDb] Loaded session ${sessionId} is invalid. Resetting.`);
+                      get().resetSession(); // Reset if loaded data is invalid
+                      set({ isLoading: false });
+                      return false;
+                  }
+              } else {
+                  console.warn(`[loadSessionFromDb] No session data found for ID ${sessionId}.`);
+                   set({ isLoading: false }); // Reset loading state
+                   return false;
+              }
+          } catch (err) {
+              console.error("[loadSessionFromDb] Unexpected error during Supabase select:", err);
+               set({ isLoading: false }); // Reset loading state
+              return false;
+          }
+      },
+
     }),
     {
       name: 'legacyLockerSession',
       storage: createJSONStorage(() => localStorage),
-      partialize: (state) => ({ 
-          session: state.session, 
+      // <<< Modified partialize: Only persist metadata and submit trigger count >>>
+      partialize: (state) => ({
           sessionMetadata: state.sessionMetadata,
           submitTriggerCount: state.submitTriggerCount
         }),
+      // <<< Simplified onRehydrateStorage: Mainly sets hydration flag. Loading is handled by component >>>
       onRehydrateStorage: () => (state, error) => {
         let hydrationComplete = false;
-        let initialValidationStatus = false; // <<< Default validation status post-hydration
         if (error) {
-          console.error("Hydration error:", error);
-          if (state) {
-             state.session = createNewSession();
-             state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
-          } else {
-             console.error("State is undefined during hydration error handling.");
-          }
-        } else if (state) {
-            console.log("Hydration successful.");
-           if (isValidSession(state.session)) {
-               console.log("Rehydrated session is valid.");
-               state.sessionMetadata = {
-                   ...state.sessionMetadata,
-                   sessionId: state.session.sessionId,
-                   isActive: true,
-                   editionType: state.session.selectedEdition?.type || null,
-                };
-           } else {
-               console.warn("Rehydrated session is invalid or expired. Resetting.");
-               state.session = createNewSession();
+          console.error("Hydration error for persisted metadata:", error);
+           // Reset only the persisted parts if error occurs
+           if (state) {
                state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
+               state.submitTriggerCount = 0;
            }
+        } else if (state) {
+            console.log("Metadata hydration successful.", state.sessionMetadata);
+            // Optional: Could validate persisted metadata here if needed
            hydrationComplete = true;
         }
 
         return (finalState, finalError) => {
           if (finalState) {
-             finalState.isLoading = false;
-             finalState.isHydrated = hydrationComplete;
-             finalState.isCurrentStepValid = initialValidationStatus; 
-             // Do not reset submitTriggerCount on rehydrate, let it persist
-             if (hydrationComplete && !finalError) {
-                console.log("Post-hydration: Initializing signature data...");
-                Promise.resolve().then(() => {
-                   finalState.initializeSignatureData();
-                   finalState.initializeCustomDataDates(); // <<< Call new action after hydration
-                });
-             } else {
-                console.log("Post-hydration: Skipping signature data initialization due to error or incomplete hydration.");
-             }
+             // Still set isLoading to true initially, loading from DB will set it to false
+             finalState.isLoading = true;
+             finalState.isHydrated = hydrationComplete; // Mark if metadata rehydration worked
+             // Don't initialize data here, wait for potential DB load
+             console.log("Post-hydration: isHydrated set to", finalState.isHydrated);
           }
         };
       },
