@@ -13,7 +13,8 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
         isLoading,
         sessionMetadata,
         initializeSignatureData,
-        initializeCustomDataDates
+        initializeCustomDataDates,
+        setHydrated
     } = useSessionStore();
 
     const [loadAttempted, setLoadAttempted] = useState(false);
@@ -26,13 +27,13 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
             const timer = setTimeout(() => {
                 if (!isHydrated) {
                     console.log('[SessionLoader] Hydration timeout - forcing completion');
-                    // This will trigger the main effect to run
-                    setLoadAttempted(false);
+                    // Force hydration to complete
+                    setHydrated(true);
                 }
             }, 1000);
             return () => clearTimeout(timer);
         }
-    }, [isHydrated]);
+    }, [isHydrated, setHydrated]);
 
     useEffect(() => {
         const loadSession = async () => {
@@ -67,13 +68,17 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
                 // Only set loadAttempted if we're not trying to load a session
                 setLoadAttempted(true);
                 console.log('[SessionLoader] No valid session_id param found, or it matches current session. Initializing normally.');
+                // Force hydration to complete before initializing
+                if (!isHydrated) {
+                    setHydrated(true);
+                }
                 initialize();
             }
         };
 
         // Run the load session function
         loadSession();
-    }, [location.search, loadSessionFromDb, initialize, sessionMetadata.sessionId, initializeSignatureData, initializeCustomDataDates, loadAttempted]);
+    }, [location.search, loadSessionFromDb, initialize, sessionMetadata.sessionId, initializeSignatureData, initializeCustomDataDates, loadAttempted, isHydrated, setHydrated]);
 
     // Show loading indicator while the store is loading/hydrating
     if (isLoading) {

@@ -225,6 +225,8 @@ interface SessionStore {
   // Supabase actions
   saveSessionToDb: () => Promise<void>; // <<< New action
   loadSessionFromDb: (sessionId: string) => Promise<boolean>; // <<< New action (returns true on success)
+  // Add setHydrated action
+  setHydrated: (value: boolean) => void;
 }
 
 const ALL_MONTHS = [
@@ -1083,6 +1085,16 @@ export const useSessionStore = create<SessionStore>()(
           }
       },
 
+      // Add the setHydrated function
+      setHydrated: (value: boolean) => {
+        console.log(`[StoreAction setHydrated]: Setting isHydrated to ${value}`);
+        set({ isHydrated: value });
+        // If we're setting hydrated to true, also set isLoading to false
+        if (value) {
+          set({ isLoading: false });
+        }
+      },
+
     }),
     {
       name: 'legacyLockerSession',
@@ -1095,7 +1107,6 @@ export const useSessionStore = create<SessionStore>()(
       // <<< Improved onRehydrateStorage: Ensures hydration completes properly >>>
       onRehydrateStorage: () => (state, error) => {
         console.log("[onRehydrateStorage] Starting hydration process...");
-        let hydrationComplete = false;
         
         if (error) {
           console.error("[onRehydrateStorage] Hydration error for persisted metadata:", error);
@@ -1106,16 +1117,15 @@ export const useSessionStore = create<SessionStore>()(
           }
         } else if (state) {
             console.log("[onRehydrateStorage] Metadata hydration successful.", state.sessionMetadata);
-            // Mark hydration as complete
-            hydrationComplete = true;
         }
 
         return (finalState, finalError) => {
           if (finalState) {
              console.log("[onRehydrateStorage] Setting final hydration state...");
+             // Always mark as hydrated after this process
+             finalState.isHydrated = true;
              // Set loading state based on whether we have a session ID
              finalState.isLoading = !finalState.sessionMetadata.sessionId;
-             finalState.isHydrated = true; // Always mark as hydrated after this process
              console.log("[onRehydrateStorage] Post-hydration: isHydrated set to", finalState.isHydrated);
           }
         };
