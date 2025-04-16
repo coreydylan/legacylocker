@@ -102,6 +102,31 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   const [prevStepRendered, setPrevStepRendered] = useState<number | null>(null);
   const [emailSentAfterRecipientInfo, setEmailSentAfterRecipientInfo] = useState(false);
   
+  // --- Calculate Step to Render --- 
+  // Moved this logic outside of renderCurrentStep to the top level
+  let stepToRender = session?.currentStep ?? STEPS.RECIPIENT_SELECTION; // Default if session is null initially
+  if (session) {
+    const isSessionValidFlag = isValidSession(session);
+    console.log(`OnboardingFlow: isValidSession result: ${isSessionValidFlag}`);
+    if (!isSessionValidFlag) {
+      console.warn("Current session is invalid according to isValidSession, finding first incomplete step");
+      stepToRender = findFirstIncompleteStep(session);
+      console.log(`Redirecting to first incomplete step: ${stepToRender}`);
+    }
+    
+    const isDataValidForStepFlag = isStepDataValid(session, stepToRender);
+    console.log(`OnboardingFlow: isStepDataValid for step ${stepToRender}: ${isDataValidForStepFlag}`);
+    if (!isDataValidForStepFlag){
+      console.warn(`Data for step ${stepToRender} is invalid. Finding first incomplete step.`);
+      stepToRender = findFirstIncompleteStep(session);
+      console.log(`Redirecting to first incomplete step instead: ${stepToRender}`);
+    }
+  }
+  console.log(`OnboardingFlow: Final step to render: ${stepToRender}`);
+
+  // --- Effects --- 
+
+  // Initialize session
   useEffect(() => {
     console.log("OnboardingFlow: Initializing session (in useEffect)...");
     initialize();
@@ -125,6 +150,116 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
   }, [session?.updatedAt]);
 
+  // Track previously rendered step
+  useEffect(() => {
+    // Only update if the step actually changed
+    if (stepToRender !== prevStepRendered) { 
+      console.log(`[PrevStepEffect] Updating prevStepRendered from ${prevStepRendered} to ${stepToRender}`);
+      setPrevStepRendered(stepToRender);
+    }
+  }, [stepToRender, prevStepRendered]); // Depend on both
+
+  // Manage validation status for specific steps (Welcome Card, Monthly Customization)
+  useEffect(() => {
+    console.log(`[ValidationEffect] Running for stepToRender: ${stepToRender}, editionType: ${session?.selectedEdition?.type}`);
+    const editionType = session?.selectedEdition?.type;
+
+    if (stepToRender === STEPS.WELCOME_CARD) { 
+        console.log(`[ValidationEffect] Step ${stepToRender} (WELCOME_CARD) is active, CALLING updateValidationStatus(true).`);
+        updateValidationStatus(true);
+    }
+    else if (stepToRender === STEPS.MONTHLY_CUSTOMIZATION) { 
+        if (editionType === 'signature' || editionType === 'concierge') {
+            console.log(`[ValidationEffect] Step ${stepToRender} (${editionType}) is active, CALLING updateValidationStatus(true).`);
+            updateValidationStatus(true);
+        } else if (editionType === 'custom'){
+             console.log(`[ValidationEffect] Step ${stepToRender} (custom) is active, but validation handled by component.`);
+        }
+    } 
+    else {
+        console.log(`[ValidationEffect] Step ${stepToRender} is not WELCOME_CARD or MONTHLY_CUSTOMIZATION, validation handled by component.`);
+    }
+  }, [stepToRender, session?.selectedEdition?.type, updateValidationStatus]);
+
+  // Send resume email ONLY on transition AND ONCE per transition
+  useEffect(() => {
+    if (stepToRender === STEPS.SHIPPING_INFO && 
+        prevStepRendered === STEPS.RECIPIENT_INFO && 
+        !emailSentAfterRecipientInfo) {
+        
+        console.log(`[EmailEffect] Conditions met: Transitioned from RECIPIENT_INFO(${prevStepRendered}) to SHIPPING_INFO(${stepToRender}), emailSent flag is ${emailSentAfterRecipientInfo}. Sending email...`);
+        setEmailSentAfterRecipientInfo(true); 
+        
+        const purchaserEmail = session?.purchaser?.email || session?.email;
+        const sessionId = session?.sessionId;
+        let recipientFirstName = '';
+        if (session?.recipientType === 'individual' && session?.recipient?.firstName) {
+            recipientFirstName = session.recipient.firstName;
+        } else if (session?.recipientType === 'couple' && session?.recipient?.recipient1FirstName) {
+            recipientFirstName = session.recipient.recipient1FirstName;
+        }
+        
+        if (sessionId && purchaserEmail) {
+            console.log(`[EmailEffect] Attempting API call to /api/send-resume-email for ${purchaserEmail} / ${sessionId}.`);
+            fetch('/api/send-resume-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: purchaserEmail, sessionId, recipientFirstName }),
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`API responded with status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('[EmailEffect] API call successful:', data);
+                toast({
+                    title: "Magic Link Sent",
+                    description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
+                });
+            })
+            .catch(err => {
+                console.error('[EmailEffect] API call FAILED:', err);
+                // Reset flag on failure to allow retry if user navigates back and forth?
+                // setEmailSentAfterRecipientInfo(false); 
+            });
+        } else {
+            console.warn('[EmailEffect] Cannot send email - missing sessionId or purchaserEmail');
+            if (!sessionId) console.warn('[EmailEffect] - Session ID missing');
+            if (!purchaserEmail) console.warn('[EmailEffect] - Purchaser email missing');
+            // Reset the flag if data was missing, allowing a send attempt if data appears later
+            setEmailSentAfterRecipientInfo(false);
+        }
+    } else {
+      // Log why the effect didn't run
+      if (stepToRender === STEPS.SHIPPING_INFO) {
+         console.log(`[EmailEffect] Conditions NOT met: Current step is SHIPPING_INFO(${stepToRender}), Previous step was ${prevStepRendered} (needed ${STEPS.RECIPIENT_INFO}), emailSent flag is ${emailSentAfterRecipientInfo}.`);
+      }
+    }
+  }, [
+    stepToRender, 
+    prevStepRendered, 
+    emailSentAfterRecipientInfo,
+    session?.purchaser?.email, 
+    session?.email, 
+    session?.sessionId, 
+    session?.recipientType, 
+    session?.recipient?.firstName, // Be specific about dependencies
+    session?.recipient?.recipient1FirstName,
+    toast,
+    // Do NOT include the whole session object here to avoid unnecessary runs
+  ]); 
+
+  // Reset email sent flag if user navigates away from shipping step
+  useEffect(() => {
+    if (stepToRender !== STEPS.SHIPPING_INFO && emailSentAfterRecipientInfo) {
+        console.log(`[EmailEffectReset] Navigated away from SHIPPING_INFO (${stepToRender}). Resetting email sent flag.`);
+        setEmailSentAfterRecipientInfo(false);
+    }
+  }, [stepToRender, emailSentAfterRecipientInfo]);
+
+  // --- Event Handlers ---
   const handleSaveProgress = () => {
     console.log("OnboardingFlow: Save progress clicked - handled by store action");
     setShowSaveModal(true);
@@ -135,15 +270,17 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     if (externalOnBack) {
       externalOnBack();
     } else {
-      prevStep();
+      // Use the store's action which should update currentStep
+      prevStep(); 
     }
   };
   
   const handleClose = () => {
     console.log('OnboardingFlow: Close button clicked (logic handled by OnboardingModal)');
+    // Likely handled by parent context/modal logic
   };
-  
-  console.log(`OnboardingFlow: isLoading=${isLoading}, session defined=${!!session}`);
+
+  // --- Render Logic --- 
   if (isLoading || !session) {
     console.log("OnboardingFlow: Rendering Loading State");
     return (
@@ -152,196 +289,41 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
       </div>
     );
   }
-  
-  // Render current step based on session.currentStep, validated
-  const renderCurrentStep = () => {
-    console.log(`OnboardingFlow: Attempting to render step ${session.currentStep}`);
-    console.log(`OnboardingFlow: Current Session data:`, JSON.stringify(session));
 
-    let stepToRender = session.currentStep;
-    const isSessionValid = isValidSession(session);
-    console.log(`OnboardingFlow: isValidSession result: ${isSessionValid}`);
-    if (!isSessionValid) {
-        console.warn("Current session is invalid according to isValidSession, finding first incomplete step");
-        stepToRender = findFirstIncompleteStep(session);
-        console.log(`Redirecting to first incomplete step: ${stepToRender}`);
-    }
-    
-    const isDataValidForStep = isStepDataValid(session, stepToRender);
-    console.log(`OnboardingFlow: isStepDataValid for step ${stepToRender}: ${isDataValidForStep}`);
-    if (!isDataValidForStep){
-        console.warn(`Data for step ${stepToRender} is invalid. Finding first incomplete step.`);
-        stepToRender = findFirstIncompleteStep(session);
-        console.log(`Redirecting to first incomplete step instead: ${stepToRender}`);
-    }
-
-    console.log(`OnboardingFlow: Final step to render: ${stepToRender}`);
-
-    // <<< Add effect to track the previously rendered step >>>
-    useEffect(() => {
-      setPrevStepRendered(stepToRender);
-    }, [stepToRender]);
-
-    // <<< Add effect to manage validation status for the specific step >>>
-    useEffect(() => {
-        console.log(`[ValidationEffect] Running for stepToRender: ${stepToRender}, editionType: ${session.selectedEdition?.type}`);
-        const editionType = session.selectedEdition?.type;
-
-        // Steps 6 (Welcome) is always valid initially for all types (optional message)
-        if (stepToRender === STEPS.WELCOME_CARD) { 
-            console.log(`[ValidationEffect] Step ${stepToRender} (WELCOME_CARD) is active, CALLING updateValidationStatus(true).`);
-            updateValidationStatus(true);
-        }
-        // Step 7 (Monthly Customization) is valid initially for Signature/Concierge
-        else if (stepToRender === STEPS.MONTHLY_CUSTOMIZATION) { 
-            if (editionType === 'signature' || editionType === 'concierge') {
-                console.log(`[ValidationEffect] Step ${stepToRender} (${editionType}) is active, CALLING updateValidationStatus(true).`);
-                updateValidationStatus(true);
-            } else if (editionType === 'custom'){
-                 // For custom edition on step 7, validation is handled within CustomEditionFlow
-                 console.log(`[ValidationEffect] Step ${stepToRender} (custom) is active, but validation handled by component.`);
-                 // We might need to reset it here? Let's leave it for now.
-                 // updateValidationStatus(false); 
-            }
-        } 
-        else {
-            // For other steps, rely on the component's internal logic to set validation
-            console.log(`[ValidationEffect] Step ${stepToRender} is not WELCOME_CARD or MONTHLY_CUSTOMIZATION, validation handled by component.`);
-        }
-    }, [stepToRender, session.selectedEdition?.type, updateValidationStatus]);
-
-    // <<< Modify effect to send resume email ONLY on transition AND ONCE per transition >>>
-    useEffect(() => {
-        // Check if we just transitioned from RECIPIENT_INFO to SHIPPING_INFO AND email hasn't been sent yet
-        if (stepToRender === STEPS.SHIPPING_INFO && 
-            prevStepRendered === STEPS.RECIPIENT_INFO && 
-            !emailSentAfterRecipientInfo) { 
-            
-            console.log(`[EmailEffect] Transitioned from RECIPIENT_INFO to SHIPPING_INFO, sending email (first time)...`);
-            setEmailSentAfterRecipientInfo(true); // <<< Set flag immediately to prevent duplicates
-            
-            // Get necessary data from the session store
-            const purchaserEmail = session.purchaser?.email || session.email;
-            const sessionId = session.sessionId;
-            
-            // Determine recipient's first name based on the recipient type
-            let recipientFirstName = '';
-            if (session.recipientType === 'individual' && session.recipient?.firstName) {
-                recipientFirstName = session.recipient.firstName;
-            } else if (session.recipientType === 'couple' && session.recipient?.recipient1FirstName) {
-                recipientFirstName = session.recipient.recipient1FirstName;
-            }
-            
-            // Send email if we have a session ID and purchaser email
-            if (sessionId && purchaserEmail) {
-                console.log(`[EmailEffect] Attempting to send resume email to ${purchaserEmail} for session ${sessionId}`);
-                
-                // Call the API to send the resume email
-                fetch('/api/send-resume-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ email: purchaserEmail, sessionId, recipientFirstName }),
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        // NOTE: We already set the flag, so even if the API fails,
-                        // we won't try again automatically on the next render.
-                        // Consider if you want different behavior on API failure.
-                        throw new Error(`API responded with status: ${response.status}`);
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log('[EmailEffect] Resume email sent successfully:', data);
-                    
-                    // Show toast notification
-                    toast({
-                        title: "Magic Link Sent",
-                        description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
-                    });
-                })
-                .catch(err => {
-                    console.error('[EmailEffect] Failed to send resume email:', err);
-                    // Maybe reset the flag here if you want to allow retries?
-                    // setEmailSentAfterRecipientInfo(false);
-                });
-            } else {
-                console.warn('[EmailEffect] Cannot send resume email - missing sessionId or purchaserEmail');
-                if (!sessionId) console.warn('[EmailEffect] Session ID not found');
-                if (!purchaserEmail) console.warn('[EmailEffect] Purchaser email not found');
-                // Reset the flag if we couldn't even attempt the send
-                setEmailSentAfterRecipientInfo(false);
-            }
-        }
-    }, [
-        stepToRender, 
-        prevStepRendered, 
-        emailSentAfterRecipientInfo, // <<< Add flag to dependency array
-        session.purchaser?.email, 
-        session.email, 
-        session.sessionId, 
-        session.recipientType, 
-        session.recipient, 
-        toast
-    ]); 
-
-    // <<< Add effect to reset the email sent flag if user navigates away from shipping step >>>
-    useEffect(() => {
-        if (stepToRender !== STEPS.SHIPPING_INFO && emailSentAfterRecipientInfo) {
-            console.log(`[EmailEffect] Navigated away from SHIPPING_INFO. Resetting email sent flag.`);
-            setEmailSentAfterRecipientInfo(false);
-        }
-    }, [stepToRender, emailSentAfterRecipientInfo]);
-
-    switch (stepToRender) {
-      case STEPS.RECIPIENT_SELECTION:
-        return <RecipientSelector />;
-
-      case STEPS.PURCHASER_INFO:
-        return <PurchaserInfo />;
-
-      case STEPS.RECIPIENT_INFO:
-        return <RecipientInfo />;
-
-      case STEPS.SHIPPING_INFO:
-        return <ShippingInfoCard />;
-
-      case STEPS.ENVELOPE_ADDRESSEE:
-        return <EnvelopeAddresseeCard />;
-
+  // Simple function to render the component based on the calculated step
+  const renderStepComponent = (step: number) => {
+    switch (step) {
+      case STEPS.RECIPIENT_SELECTION: return <RecipientSelector />;
+      case STEPS.PURCHASER_INFO: return <PurchaserInfo />;
+      case STEPS.RECIPIENT_INFO: return <RecipientInfo />;
+      case STEPS.SHIPPING_INFO: return <ShippingInfoCard />;
+      case STEPS.ENVELOPE_ADDRESSEE: return <EnvelopeAddresseeCard />;
       case STEPS.WELCOME_CARD:
         const editionTypeStep6 = session.selectedEdition?.type;
         console.log(`Rendering WELCOME_CARD for edition type: ${editionTypeStep6}`);
         switch (editionTypeStep6) {
           case 'signature':
-          case 'custom': // Custom also has welcome card step
-          case 'concierge': // Concierge also has welcome card step
+          case 'custom':
+          case 'concierge': 
              return <WelcomeCardStep />;
           default:
             console.error(`Invalid or missing editionType for WELCOME_CARD: ${editionTypeStep6}`);
-            return <div>Error loading welcome card step.</div>; // Fallback
+            return <div>Error loading welcome card step.</div>;
         }
-
       case STEPS.MONTHLY_CUSTOMIZATION:
         const editionTypeStep7 = session.selectedEdition?.type;
         console.log(`Rendering MONTHLY_CUSTOMIZATION for edition type: ${editionTypeStep7}`);
         switch (editionTypeStep7) {
-          case 'signature':
-             return <MonthlyCustomizationStep />; // Contains notes header + grid
-          case 'custom':
-            return <CustomEditionFlow />; // Custom handles its own full flow here
-          case 'concierge':
-            return <ConciergeEditionFlow />; // Concierge handles its own flow here
+          case 'signature': return <MonthlyCustomizationStep />;
+          case 'custom': return <CustomEditionFlow />;
+          case 'concierge': return <ConciergeEditionFlow />;
           default:
             console.error(`Invalid or missing editionType for MONTHLY_CUSTOMIZATION: ${editionTypeStep7}`);
-             return <div>Error loading customization step.</div>; // Fallback
+            return <div>Error loading customization step.</div>;
         }
-
-      case STEPS.REVIEW_CHECKOUT:
-        return <ReviewCheckout />;
-
+      case STEPS.REVIEW_CHECKOUT: return <ReviewCheckout />;
       default:
-        console.log(`OnboardingFlow: No matching component for step ${stepToRender}, rendering null`);
+        console.log(`OnboardingFlow: No matching component for step ${step}, rendering null`);
         return null;
     }
   };
@@ -349,24 +331,15 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
   console.log("OnboardingFlow: Rendering step content area");
   return (
     <div className="flex-grow container mx-auto px-4 pt-4 pb-8 md:pt-8">
-      {/* <<< Remove OnboardingHeader rendering >>> */}
-      {/* 
-      <OnboardingHeader
-        handleBack={handleBack}
-        onClose={handleClose} 
-        lastSavedTime={lastSavedTime}
-        onSaveClick={handleSaveProgress}
-      /> 
-      */}
+      {/* Header removed, handle save/back/close via context or props if needed */}
 
-      {/* Render only the current step content */}
-      {!isLoading && session ? renderCurrentStep() : null}
+      {/* Render the calculated step content */}
+      {renderStepComponent(stepToRender)}
 
-      {/* Pass the setLastSavedTime function to SaveProgressModal */}
       <SaveProgressModal
         open={showSaveModal}
         onClose={() => setShowSaveModal(false)}
-        setLastSavedTime={setLastSavedTime}
+        setLastSavedTime={setLastSavedTime} // Pass if needed by modal
       /> 
     </div>
   );
