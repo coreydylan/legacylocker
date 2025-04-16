@@ -3,16 +3,16 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import setWith from 'lodash/setWith';
 import cloneDeep from 'lodash/cloneDeep';
-import { format, parseISO, getMonth, isValid, getYear, addMonths } from 'date-fns';
+import { format, parseISO, getMonth, isValid, getYear, addMonths, subDays } from 'date-fns';
 import truncate from 'lodash/truncate';
 
 // Interface for month-specific signature customizations
 export interface SignatureMonthCustomization {
   month: string; // e.g., 'January'
-  shipDate: string; // ISO string, defaults to 1st of the month
+  shipDate: string; // ISO string (YYYY-MM-DD)
   footerMessage: string;
   enabled: boolean;
-  occasions?: ('birthday' | 'anniversary' | 'other')[];
+  occasions?: (string | 'birthday' | 'anniversary' | 'other')[]; // Allow general strings for holidays
   recipients?: string[]; // Name(s) of the recipient(s)
 }
 
@@ -186,6 +186,8 @@ interface SessionStore {
   sessionMetadata: SessionMetadata; // Added sessionMetadata state
   isLoading: boolean;
   isHydrated: boolean;
+  isCurrentStepValid: boolean; // <<< Add validation state
+  submitTriggerCount: number; // <<< Add submit trigger state
   initialize: () => void;
   updateSession: (path: string, value: any) => void;
   setCurrentStep: (step: number) => void;
@@ -198,6 +200,8 @@ interface SessionStore {
   initializeSignatureData: () => void;
   updateSignatureMonth: (month: string, data: Partial<SignatureMonthCustomization>) => void;
   updateCustomMonth: (month: string, year: number, data: Partial<CustomMonthData>) => void;
+  updateValidationStatus: (isValid: boolean) => void; // <<< Add validation action
+  triggerSubmit: () => void; // <<< Add submit trigger action
   // Added sessionMetadata actions
   startSession: (editionType: EditionType) => void;
   endSession: () => void;
@@ -363,6 +367,8 @@ export const useSessionStore = create<SessionStore>()(
   },
   isLoading: true,
       isHydrated: false,
+      isCurrentStepValid: false, // <<< Initialize validation state
+      submitTriggerCount: 0, // <<< Initialize trigger state
   
   initialize: () => {
         // This function is called by the consuming component (e.g., _app.tsx or layout)
@@ -397,7 +403,7 @@ export const useSessionStore = create<SessionStore>()(
             updatedAt: new Date().toISOString(),
     };
           const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
-          return { session: updatedSession, sessionMetadata: updatedMetadata };
+          return { session: updatedSession, sessionMetadata: updatedMetadata, isCurrentStepValid: false };
         });
   },
   nextStep: () => {
@@ -410,7 +416,7 @@ export const useSessionStore = create<SessionStore>()(
             updatedAt: new Date().toISOString(),
     };
           const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
-          return { session: updatedSession, sessionMetadata: updatedMetadata };
+          return { session: updatedSession, sessionMetadata: updatedMetadata, isCurrentStepValid: false };
         });
   },
   prevStep: () => {
@@ -422,7 +428,7 @@ export const useSessionStore = create<SessionStore>()(
             updatedAt: new Date().toISOString(),
     };
           const updatedMetadata = { ...state.sessionMetadata, lastSaved: new Date() };
-          return { session: updatedSession, sessionMetadata: updatedMetadata };
+          return { session: updatedSession, sessionMetadata: updatedMetadata, isCurrentStepValid: true };
         });
   },
   setLastCompletedStep: (step: number) => {
@@ -452,7 +458,7 @@ export const useSessionStore = create<SessionStore>()(
         const newSession = createNewSession(); // Use helper
         // Reset metadata as well
         const initialMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
-        set({ session: newSession, sessionMetadata: initialMetadata, isLoading: false, isHydrated: true });
+        set({ session: newSession, sessionMetadata: initialMetadata, isLoading: false, isHydrated: true, isCurrentStepValid: false });
         // Let persist handle clearing/overwriting storage based on new state
         // localStorage.removeItem('legacyLockerSession'); // Usually not needed with persist
       },
@@ -468,213 +474,263 @@ export const useSessionStore = create<SessionStore>()(
     return success;
   },
 
-      initializeSignatureData: () => {
-        console.log("['initializeSignatureData']: Running...");
+      initializeSignatureData: async () => {
+        console.log("[\'initializeSignatureData\']: Running...");
+        const CALENDARIFIC_API_KEY = '97c7s5VRboUw0XCPNq4mKkdKwOdJ0klU';
+        const CALENDARIFIC_COUNTRY = 'US';
+        const currentYear = getYear(new Date());
+        let holidaysFromApi: any[] = [];
+
+        // Update Event type definition for occasion
+        type Event = {
+            occasion: string | 'birthday' | 'anniversary'; // Allow general strings
+            recipient: string;
+            date: string; // ISO Format YYYY-MM-DD
+            holidayName?: string; // Still useful internally
+        };
+
+        try {
+          console.log(`[\'initializeSignatureData\']: Fetching holidays for ${CALENDARIFIC_COUNTRY}, year ${currentYear}...`);
+          const response = await fetch(`https://calendarific.com/api/v2/holidays?api_key=${CALENDARIFIC_API_KEY}&country=${CALENDARIFIC_COUNTRY}&year=${currentYear}`);
+          if (!response.ok) throw new Error(`Calendarific API error: ${response.status}`);
+          const data = await response.json();
+          holidaysFromApi = data.response?.holidays || [];
+          console.log(`[\'initializeSignatureData\']: Fetched ${holidaysFromApi.length} holidays.`);
+        } catch (error) {
+          console.error("[\'initializeSignatureData\']: Failed to fetch holidays:", error);
+        }
+
         set(state => {
-          if (!state.isHydrated || state.isLoading) {
-             console.log("['initializeSignatureData']: Skipping (not hydrated or loading).");
-             return {};
-          }
+          if (!state.isHydrated || state.isLoading) return {};
 
           const { recipient, purchaser, recipientType } = state.session;
-          console.log("['initializeSignatureData']: Recipient Data:", recipient);
-          console.log("['initializeSignatureData']: Purchaser Data:", purchaser);
-          console.log("['initializeSignatureData']: Recipient Type:", recipientType);
-          
+          const purchaserFirstName = purchaser.fullName?.split(' ')[0] || 'Me';
           let currentSignatureData = cloneDeep(state.session.signatureData);
 
-          // Ensure structure
           if (!currentSignatureData || currentSignatureData.length !== 12) {
-             console.log("['initializeSignatureData']: Resetting signatureData structure (length was not 12).");
              currentSignatureData = ALL_MONTHS.map(month => ({
-              month,
-              shipDate: '',
-              footerMessage: '',
-              enabled: false,
-              occasions: [],
-              recipients: [],
+              month, shipDate: '', footerMessage: '', enabled: false, occasions: [], recipients: [],
             }));
           }
 
-          const hasRecipientData = recipientType && (recipient.firstName || recipient.recipient1FirstName || recipient.birthday || recipient.anniversary || recipient.recipient1Birthday || recipient.recipient2Birthday);
-          console.log("['initializeSignatureData']: Has Recipient Data?", hasRecipientData);
+          // --- Get the chronological month/year sequence --- 
+          const chronologicalMonths = getChronologicalMonths();
+          console.log("[\'initializeSignatureData\']: Chronological Months Sequence:", chronologicalMonths);
 
-          if (hasRecipientData) {
-            // Define a structure for events
-            type Event = { occasion: 'birthday' | 'anniversary'; recipient: string; date: string };
-            const eventsByMonth = new Map<string, Event[]>();
+          const relationshipHolidayMap: { [key: string]: { recipientLabel: string; holidayNames: string[] }[] } = {
+             'Mom': [{ recipientLabel: 'Mom', holidayNames: ["Mother's Day"] }],
+             'Dad': [{ recipientLabel: 'Dad', holidayNames: ["Father's Day"] }],
+             'Grandma': [{ recipientLabel: 'Grandma', holidayNames: ["Mother's Day", "Grandparents Day"] }],
+             'Grandpa': [{ recipientLabel: 'Grandpa', holidayNames: ["Father's Day", "Grandparents Day"] }],
+             'Parent': [{ recipientLabel: 'Parent', holidayNames: ["Mother's Day", "Father's Day"] }],
+             'Grandparent': [{ recipientLabel: 'Grandparent', holidayNames: ["Mother's Day", "Father's Day", "Grandparents Day"] }],
+             'Spouse': [{ recipientLabel: 'My Love', holidayNames: ["Valentine's Day"] }],
+             'Partner': [{ recipientLabel: 'My Love', holidayNames: ["Valentine's Day"] }],
+             'Sibling': [{ recipientLabel: 'Sibling', holidayNames: ["National Siblings Day"] }],
+          };
+          const relevantHolidays: Event[] = [];
+          const relationship = recipient?.relationship;
+          if (relationship && relationshipHolidayMap[relationship] && holidaysFromApi.length > 0) {
+              relationshipHolidayMap[relationship].forEach(mapping => {
+                  mapping.holidayNames.forEach(holidayName => {
+                      const apiHoliday = holidaysFromApi.find(h => h.name === holidayName);
+                      if (apiHoliday?.date?.iso) {
+                          relevantHolidays.push({ occasion: holidayName, recipient: mapping.recipientLabel, date: apiHoliday.date.iso, holidayName: holidayName });
+                      }
+                  });
+              });
+          }
 
-            // --- Determine recipient names --- 
-            let coupleRecipientName = ''; // For anniversary
-            let individualRecipientName = ''; // For single recipient birthday
-            const recipientNames: { [key: string]: string } = {}; // Map birthday date to specific recipient name
+          const hasPersonalDates = recipient.birthday || recipient.anniversary || recipient.recipient1Birthday || recipient.recipient2Birthday;
+          if (!recipientType || (!hasPersonalDates && relevantHolidays.length === 0)) {
+            console.log("[\'initializeSignatureData\']: Skipping prefill.");
+            return {};
+          }
 
-            if (recipientType === 'myself') {
+          const eventsByMonth = new Map<string, Event[]>();
+          let coupleRecipientName = '';
+          let individualRecipientName = '';
+          const recipientNames: { [key: string]: string } = {};
+           if (recipientType === 'myself') {
               const name = purchaser.fullName?.split(' ')[0] || 'You';
               individualRecipientName = name;
               if(recipient.birthday) recipientNames[recipient.birthday] = name;
-            } else if (recipientType === 'individual' && recipient.firstName) {
-              individualRecipientName = recipient.firstName;
-               if(recipient.birthday) recipientNames[recipient.birthday] = recipient.firstName;
-            } else if (recipientType === 'couple') {
-              const r1 = recipient.recipient1FirstName;
-              const r2 = recipient.recipient2FirstName;
-              if (r1 && r2) coupleRecipientName = `${r1} and ${r2}`;
-              else if (r1) coupleRecipientName = r1;
-              else if (r2) coupleRecipientName = r2;
-              
-              if(r1 && recipient.recipient1Birthday) recipientNames[recipient.recipient1Birthday] = r1;
-              if(r2 && recipient.recipient2Birthday) recipientNames[recipient.recipient2Birthday] = r2;
-            }
-            const purchaserFirstName = purchaser.fullName?.split(' ')[0] || 'Me';
+           } else if (recipientType === 'individual' && recipient.firstName) {
+             individualRecipientName = recipient.firstName;
+              if(recipient.birthday) recipientNames[recipient.birthday] = recipient.firstName;
+           } else if (recipientType === 'couple') {
+             const r1 = recipient.recipient1FirstName; const r2 = recipient.recipient2FirstName;
+             if (r1 && r2) coupleRecipientName = `${r1} & ${r2}`;
+             else if (r1) coupleRecipientName = r1; else if (r2) coupleRecipientName = r2;
+             if(r1 && recipient.recipient1Birthday) recipientNames[recipient.recipient1Birthday] = r1;
+             if(r2 && recipient.recipient2Birthday) recipientNames[recipient.recipient2Birthday] = r2;
+           }
 
-            // --- Gather all potential events --- 
-            const potentialEvents: { date?: string; occasion: 'birthday' | 'anniversary'; }[] = [];
-            if (recipientType === 'individual') {
-                potentialEvents.push({ date: recipient.birthday, occasion: 'birthday' });
-            } else if (recipientType === 'couple') {
-                potentialEvents.push({ date: recipient.recipient1Birthday, occasion: 'birthday' });
-                potentialEvents.push({ date: recipient.recipient2Birthday, occasion: 'birthday' });
-                potentialEvents.push({ date: recipient.anniversary, occasion: 'anniversary' });
-            } else if (recipientType === 'myself') {
-                potentialEvents.push({ date: recipient.birthday, occasion: 'birthday' });
-            }
-
-            // --- Group valid events by month --- 
-            potentialEvents.forEach(({ date, occasion }) => {
-              if (date) {
-                const monthName = getMonthNameFromDate(date);
-                const recipientName = occasion === 'anniversary' 
-                    ? (coupleRecipientName || 'You') 
-                    : (recipientNames[date] || individualRecipientName || 'Recipient');
-                
-                if (monthName) {
-                  const monthEvents = eventsByMonth.get(monthName) || [];
-                  monthEvents.push({ occasion, recipient: recipientName, date });
-                  eventsByMonth.set(monthName, monthEvents);
-                }
-              }
-            });
-            console.log("['initializeSignatureData']: Grouped Events:", eventsByMonth);
-
-            // --- Apply events to signatureData --- 
-            currentSignatureData = currentSignatureData.map(monthData => {
-              const monthName = monthData.month;
-              const events = eventsByMonth.get(monthName);
-              let newFooter = '';
-              let newOccasions: ('birthday' | 'anniversary')[] = [];
-              let newRecipients: string[] = [];
-              let newEnabled = false;
-              let newShipDate = monthData.shipDate; // Keep existing if manually set
-
-              if (events && events.length > 0) {
-                newEnabled = true;
-                const hasBirthday = events.some(e => e.occasion === 'birthday');
-                const hasAnniversary = events.some(e => e.occasion === 'anniversary');
-                const birthdayEvent = events.find(e => e.occasion === 'birthday');
-
-                if (hasBirthday && hasAnniversary && birthdayEvent) {
-                  // Specific Anniversary + Birthday case
-                  newOccasions = ['anniversary', 'birthday'];
-                  newRecipients = [coupleRecipientName || 'You', birthdayEvent.recipient]; // Order might matter for display
-                  newFooter = `Happy anniversary to you both — and a very happy birthday to ${birthdayEvent.recipient}! Love, ${purchaserFirstName}`;
-                  if (!newShipDate) newShipDate = format(parseISO(events[0].date), 'yyyy-MM-dd'); // Default to first event date
-                
-                } else if (events.length > 1) { // Generic multiple events (e.g., two birthdays)
-                   newOccasions = events.map(e => e.occasion);
-                   newRecipients = events.map(e => e.recipient);
-                   // Simple combined footer for other multi-event cases
-                   const occasionText = newOccasions.join(' & ');
-                   newFooter = `Happy ${occasionText}! Love, ${purchaserFirstName}`;
-                   if (!newShipDate) newShipDate = format(parseISO(events[0].date), 'yyyy-MM-dd');
-                   
-                } else { // Single event
-                  const event = events[0];
-                  newOccasions = [event.occasion];
-                  newRecipients = [event.recipient];
-                  if (event.occasion === 'birthday') {
-                    newFooter = `Happy birthday ${event.recipient}! Love, ${purchaserFirstName}`;
-                  } else if (event.occasion === 'anniversary') {
-                    newFooter = `Happy Anniversary! Love, ${purchaserFirstName}`;
-                  }
-                   if (!newShipDate) newShipDate = format(parseISO(event.date), 'yyyy-MM-dd');
-                }
-
-                // Apply 80 char limit to generated footers
-                newFooter = truncate(newFooter, { length: 80, omission: '...' });
-
-              } else {
-                 // No events this month, ensure it's reset (unless manually enabled later)
-                 newEnabled = monthData.enabled; // Keep manual toggle state?
-                 newFooter = monthData.footerMessage; // Keep manual footer?
-                 // If we reset, keep shipDate only if manually enabled?
-                 newShipDate = monthData.enabled ? monthData.shipDate : ''; 
-              }
-              
-              // Set default ship date (1st of month) only if enabled (by event or manually) and still not set
-               if (newEnabled && !newShipDate) {
-                    console.log(`['initializeSignatureData']: Setting default ship date (1st) for ${monthName}`);
-                    const currentYear = getYear(new Date()); // Use current year as base
-                    const monthNumber = ALL_MONTHS.indexOf(monthName);
-                    // Figure out the actual year for this month in the sequence
-                    // TODO: This logic needs refinement if sequence spans multiple years significantly
-                    const occurrenceYear = (getMonth(new Date()) + 1 + ALL_MONTHS.indexOf(monthName)) >= 12 ? currentYear + 1 : currentYear;
-                    const defaultDate = new Date(occurrenceYear, monthNumber, 1);
-                    newShipDate = format(defaultDate, 'yyyy-MM-dd');
-                }
-
-              return {
-                ...monthData,
-                enabled: newEnabled,
-                occasions: newOccasions,
-                recipients: newRecipients,
-                footerMessage: newFooter,
-                shipDate: newShipDate,
-              };
-            });
-            
-            console.log("['initializeSignatureData']: Final signatureData (before update):", currentSignatureData);
-            return { session: { ...state.session, signatureData: currentSignatureData, updatedAt: new Date().toISOString() } };
-          } else {
-             console.log("['initializeSignatureData']: Skipping prefill logic (no recipient data).");
-             return {};
+          const potentialPersonalEvents: { date?: string; occasion: 'birthday' | 'anniversary'; }[] = [];
+          if (recipientType === 'individual' || recipientType === 'myself') {
+              if (recipient.birthday) potentialPersonalEvents.push({ date: recipient.birthday, occasion: 'birthday' });
+          } else if (recipientType === 'couple') {
+              if (recipient.recipient1Birthday) potentialPersonalEvents.push({ date: recipient.recipient1Birthday, occasion: 'birthday' });
+              if (recipient.recipient2Birthday) potentialPersonalEvents.push({ date: recipient.recipient2Birthday, occasion: 'birthday' });
+              if (recipient.anniversary) potentialPersonalEvents.push({ date: recipient.anniversary, occasion: 'anniversary' });
           }
+
+          potentialPersonalEvents.forEach(({ date, occasion }) => {
+            if (date) {
+              const monthName = getMonthNameFromDate(date);
+              const recipientName = occasion === 'anniversary' ? (coupleRecipientName || 'You') : (recipientNames[date] || individualRecipientName || 'Recipient');
+              if (monthName) {
+                const monthEvents = eventsByMonth.get(monthName) || [];
+                 try {
+                    monthEvents.push({ occasion, recipient: recipientName, date: date, holidayName: undefined });
+                    eventsByMonth.set(monthName, monthEvents);
+                 } catch (e) { console.error(`Error processing personal event date: ${date}`, e); }
+              }
+            }
+          });
+          relevantHolidays.forEach(holiday => {
+              const monthName = getMonthNameFromDate(holiday.date);
+              if (monthName) {
+                  const monthEvents = eventsByMonth.get(monthName) || [];
+                  monthEvents.push(holiday);
+                  eventsByMonth.set(monthName, monthEvents);
+              }
+          });
+
+          currentSignatureData = currentSignatureData.map(monthData => {
+            const monthName = monthData.month;
+            const events: Event[] = eventsByMonth.get(monthName) || [];
+            if (events.length === 0) return monthData;
+
+            let newFooter = '';
+            let newOccasions: (string | 'birthday' | 'anniversary' | 'other')[] = [];
+            let newRecipients: string[] = [];
+            let newEnabled = true;
+            let newShipDate = monthData.shipDate;
+
+            const personalEvents = events.filter((e: Event) => e.occasion === 'birthday' || e.occasion === 'anniversary');
+            const holidayEvents = events.filter((e: Event) => e.occasion !== 'birthday' && e.occasion !== 'anniversary');
+
+            if (personalEvents.length > 0 && personalEvents[0]) {
+                 const firstPersonalEvent = personalEvents[0];
+                 newOccasions.push(...personalEvents.map((e: Event) => e.occasion));
+                 newRecipients.push(...personalEvents.map((e: Event) => e.recipient));
+                 const hasBirthday = personalEvents.some((e: Event) => e.occasion === 'birthday');
+                 const hasAnniversary = personalEvents.some((e: Event) => e.occasion === 'anniversary');
+                 const birthdayEvent = personalEvents.find((e: Event) => e.occasion === 'birthday');
+                 if (hasBirthday && hasAnniversary && birthdayEvent) {
+                     newFooter = `Happy anniversary ${coupleRecipientName || 'you two'} & happy birthday ${birthdayEvent.recipient}! Love, ${purchaserFirstName}`;
+                 } else if (personalEvents.length > 1) {
+                      const names = personalEvents.map((e: Event) => e.recipient).join(' & ');
+                      newFooter = `Happy birthday ${names}! Love, ${purchaserFirstName}`;
+                  } else if (hasBirthday) {
+                      newFooter = `Happy birthday ${firstPersonalEvent.recipient}! Love, ${purchaserFirstName}`;
+                  } else if (hasAnniversary) {
+                      newFooter = `Happy Anniversary ${coupleRecipientName || ''}! Love, ${purchaserFirstName}`;
+                  }
+
+                 if (!newShipDate && firstPersonalEvent.date) {
+                      try {
+                          const originalDate = parseISO(firstPersonalEvent.date);
+                          const eventMonth = getMonth(originalDate); // 0-indexed
+                          const eventDay = originalDate.getDate(); // Original day
+                          const eventMonthName = ALL_MONTHS[eventMonth];
+
+                          // Find the target year from the chronological sequence
+                          const targetMonthInfo = chronologicalMonths.find(m => m.month === eventMonthName);
+                          const targetYear = targetMonthInfo ? targetMonthInfo.year : getYear(new Date()); // Fallback to current year
+
+                          // Construct the date with the correct year
+                          const targetDate = new Date(targetYear, eventMonth, eventDay);
+                          newShipDate = format(targetDate, 'yyyy-MM-dd');
+                           console.log(`[\'initializeSignatureData\']: Calculated target ship date for ${firstPersonalEvent.occasion} (${eventMonthName} ${eventDay}): ${newShipDate}`);
+                      } catch(e) { console.error("Error calculating target personal ship date:", e); }
+                 }
+
+            } else if (holidayEvents.length > 0 && holidayEvents[0]) {
+                 const firstHoliday = holidayEvents[0];
+                 newOccasions.push(firstHoliday.occasion);
+                 newRecipients.push(...holidayEvents.map((e: Event) => e.recipient).filter((v, i, a) => a.indexOf(v) === i));
+                 newFooter = `Happy ${firstHoliday.occasion}! Love, ${purchaserFirstName}`;
+
+                 if (!newShipDate && firstHoliday.date) {
+                     try {
+                         // Date from API is already YYYY-MM-DD
+                         newShipDate = firstHoliday.date;
+                     } catch(e) { console.error("Error setting holiday ship date:", e); }
+                 }
+            }
+
+            if (personalEvents.length > 0 && holidayEvents.length > 0) {
+                 holidayEvents.forEach((hEvent: Event) => {
+                     if (!newOccasions.includes(hEvent.occasion)) newOccasions.push(hEvent.occasion);
+                     if (!newRecipients.includes(hEvent.recipient)) newRecipients.push(hEvent.recipient);
+                 });
+            }
+
+            newFooter = truncate(newFooter.trim(), { length: 80, omission: '...' });
+
+            if (newEnabled && !newShipDate) {
+                  // Find target year for this specific month in the sequence
+                  const targetMonthInfo = chronologicalMonths.find(m => m.month === monthName);
+                  const targetYear = targetMonthInfo ? targetMonthInfo.year : getYear(new Date());
+                  const monthNumber = ALL_MONTHS.indexOf(monthName);
+                  try {
+                      newShipDate = format(new Date(targetYear, monthNumber, 1), 'yyyy-MM-dd');
+                      console.log(`[\'initializeSignatureData\']: Setting fallback ship date for ${monthName}: ${newShipDate}`);
+                  } catch (e) { console.error("Error calculating default ship date:", e); newShipDate = '';}
+              }
+
+            return {
+              ...monthData,
+              enabled: newEnabled,
+              occasions: newOccasions.length > 0 ? newOccasions : monthData.occasions,
+              recipients: newRecipients.length > 0 ? newRecipients : monthData.recipients,
+              footerMessage: newFooter || monthData.footerMessage,
+              shipDate: newShipDate || '',
+            };
+          });
+
+           console.log("[\'initializeSignatureData\']: Final signatureData:", currentSignatureData);
+           return { session: { ...state.session, signatureData: currentSignatureData, updatedAt: new Date().toISOString() } };
+
         });
       },
 
       updateSignatureMonth: (month: string, data: Partial<SignatureMonthCustomization>) => {
-         // Apply 80 char limit if footer message is being updated
          if (data.footerMessage && typeof data.footerMessage === 'string') {
-             data.footerMessage = truncate(data.footerMessage, { length: 80, omission: '' }); // Truncate without ellipsis for user input
+             const omission = data.footerMessage.length > 80 ? '...' : '';
+             data.footerMessage = truncate(data.footerMessage, { length: 80, omission });
          }
         set(state => {
           const updatedSignatureData = state.session.signatureData.map(monthData => {
             if (monthData.month === month) {
-              // Note: Simple spread merge might not be ideal if merging arrays like occasions/recipients
-              // but okay for updating footer/shipDate/enabled
-              return { ...monthData, ...data }; 
+              const mergedData = {
+                ...monthData,
+                ...data,
+                occasions: data.occasions ?? monthData.occasions,
+                recipients: data.recipients ?? monthData.recipients,
+              };
+              return mergedData;
             }
             return monthData;
           });
-          return { session: { ...state.session, signatureData: updatedSignatureData, updatedAt: new Date().toISOString() } };
+          const updatedSession = { ...state.session, signatureData: updatedSignatureData, updatedAt: new Date().toISOString() };
+          return { session: updatedSession, isCurrentStepValid: false };
         });
       },
 
-      // Action to update a specific month's custom data
       updateCustomMonth: (month: string, year: number, data: Partial<CustomMonthData>) => {
-          // Apply 80 char limit if footer message is being updated
           if (data.footerMessage && typeof data.footerMessage === 'string') {
               data.footerMessage = truncate(data.footerMessage, { length: 80, omission: '' });
           }
           set(state => {
               const updatedCustomData = state.session.customData.map(monthData => {
-                  // Match based on both month and year for custom data
                   if (monthData.month === month && monthData.year === year) {
                       return { ...monthData, ...data };
                   }
                   return monthData;
               });
-              // Ensure customData always has 12 entries if somehow corrupted
               const finalCustomData = updatedCustomData.length === 12 ? updatedCustomData : getChronologicalMonths().map(m => ({ ...state.session.customData.find(cd => cd.month === m.month && cd.year === m.year)!, ...({month: m.month, year: m.year}) }));
 
               return {
@@ -682,14 +738,24 @@ export const useSessionStore = create<SessionStore>()(
                       ...state.session,
                       customData: finalCustomData,
                       updatedAt: new Date().toISOString(),
-                  }
+                  },
+                  isCurrentStepValid: false // <<< Reset validation status on data change
               };
           });
       },
 
-      // --- Actions for sessionMetadata --- 
+      updateValidationStatus: (isValid: boolean) => {
+        console.log(`Setting validation status to: ${isValid}`);
+        set({ isCurrentStepValid: isValid });
+      },
+
+      triggerSubmit: () => {
+        console.log('[StoreAction] triggerSubmit called');
+        set(state => ({ submitTriggerCount: state.submitTriggerCount + 1 }));
+      },
+
       startSession: (editionType: EditionType) => {
-          const newId = uuidv4(); // Use uuidv4 instead of crypto.randomUUID
+          const newId = uuidv4();
           set((state) => ({
               sessionMetadata: {
                   ...state.sessionMetadata,
@@ -698,14 +764,14 @@ export const useSessionStore = create<SessionStore>()(
                   editionType,
                   lastSaved: new Date(),
               },
-              // Also update the session's selectedEdition type to match
               session: {
                   ...state.session,
                   selectedEdition: state.session.selectedEdition ? {
                       ...state.session.selectedEdition,
                       type: editionType,
                   } : null,
-              }
+              },
+              isCurrentStepValid: false // <<< Reset validation on start
           }));
       },
       endSession: () => {
@@ -716,6 +782,7 @@ export const useSessionStore = create<SessionStore>()(
                   editionType: null,
                   lastSaved: null,
               },
+              isCurrentStepValid: false // <<< Reset validation on end
           }));
       },
       saveSession: () => {
@@ -737,43 +804,56 @@ export const useSessionStore = create<SessionStore>()(
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({ 
           session: state.session, 
-          sessionMetadata: state.sessionMetadata // Ensure metadata is persisted
+          sessionMetadata: state.sessionMetadata,
+          submitTriggerCount: state.submitTriggerCount
         }),
       onRehydrateStorage: () => (state, error) => {
         let hydrationComplete = false;
+        let initialValidationStatus = false; // <<< Default validation status post-hydration
         if (error) {
           console.error("Hydration error:", error);
           if (state) {
-             // Reset both session and metadata on error
              state.session = createNewSession();
              state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
           } else {
-             console.error("State unavailable during hydration error handling.");
+             console.error("State is undefined during hydration error handling.");
           }
-          hydrationComplete = true;
-        } else {
-           // Validate main session
-           if (state?.session && !isValidSession(state.session)) {
-              console.warn("Hydrated session is invalid. Resetting state...");
-              state.session = createNewSession();
-              // Reset metadata as well if main session is invalid
-              state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
-           }
-           // Ensure metadata is initialized if somehow missing after hydration
-           if (state && !state.sessionMetadata) {
-              console.warn("Hydrated state missing sessionMetadata. Initializing...");
-              state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
+        } else if (state) {
+            console.log("Hydration successful.");
+           if (isValidSession(state.session)) {
+               console.log("Rehydrated session is valid.");
+               state.sessionMetadata = {
+                   ...state.sessionMetadata,
+                   sessionId: state.session.sessionId,
+                   isActive: true,
+                   editionType: state.session.selectedEdition?.type || null,
+                };
+           } else {
+               console.warn("Rehydrated session is invalid or expired. Resetting.");
+               state.session = createNewSession();
+               state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
            }
            hydrationComplete = true;
         }
-        if (hydrationComplete) {
-          setTimeout(() => {
-            // Use the state from the rehydration callback if available
-            const finalState = { isLoading: false, isHydrated: true };
-            useSessionStore.setState(finalState);
-          }, 0);
-        }
+
+        return (finalState, finalError) => {
+          if (finalState) {
+             finalState.isLoading = false;
+             finalState.isHydrated = hydrationComplete;
+             finalState.isCurrentStepValid = initialValidationStatus; 
+             // Do not reset submitTriggerCount on rehydrate, let it persist
+             if (hydrationComplete && !finalError) {
+                console.log("Post-hydration: Initializing signature data...");
+                Promise.resolve().then(() => finalState.initializeSignatureData());
+             } else {
+                console.log("Post-hydration: Skipping signature data initialization due to error or incomplete hydration.");
+             }
+          }
+        };
       },
     }
   )
-); 
+);
+
+// Export the function (if needed elsewhere, but it's internal to the store action)
+// export { initializeSignatureData }; 

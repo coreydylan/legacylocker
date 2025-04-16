@@ -4,6 +4,7 @@ import SignatureMonthCard from './SignatureMonthCard';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from "@/components/ui/button";
 import { getMonth, addMonths, getYear } from 'date-fns';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 // Define outside component for stability if needed elsewhere
 const ALL_MONTHS = [
@@ -39,7 +40,8 @@ const SignatureMonthGrid: React.FC = () => {
       isHydrated, 
       initializeSignatureData, 
       nextStep,
-      prevStep
+      prevStep,
+      isCurrentStepValid
     } = useSessionStore(state => ({
     session: state.session,
     updateSignatureMonth: state.updateSignatureMonth,
@@ -48,10 +50,12 @@ const SignatureMonthGrid: React.FC = () => {
     initializeSignatureData: state.initializeSignatureData,
     nextStep: state.nextStep,
     prevStep: state.prevStep,
+    isCurrentStepValid: state.isCurrentStepValid
   }));
 
   const signatureData = session.signatureData || [];
   const purchaserFirstName = session.purchaser?.fullName?.split(' ')[0] || 'Me';
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   // orderedMonths will now be ChronologicalMonth[]
   const orderedMonths = useMemo(() => getChronologicalMonths(), []);
@@ -127,14 +131,21 @@ const SignatureMonthGrid: React.FC = () => {
         })}
       </div>
 
-      <div className="flex justify-between pt-4">
-          <Button variant="outline" onClick={handlePrevious} className="w-32">
-              Previous
-          </Button>
-          <Button onClick={handleContinue} className="w-32 bg-legacy-green hover:bg-legacy-green/90">
-              Continue
-          </Button>
-      </div>
+      {/* Conditionally render desktop buttons */}
+      {!isMobile && (
+        <div className="flex justify-between pt-4">
+            <Button variant="outline" onClick={handlePrevious} className="w-32">
+                Previous
+            </Button>
+            <Button 
+              onClick={handleContinue} 
+              className="w-32 bg-legacy-green hover:bg-legacy-green/90"
+              disabled={!isCurrentStepValid}
+            >
+                Continue
+            </Button>
+        </div>
+      )}
     </div>
   );
 };

@@ -16,15 +16,21 @@ import { cn } from '@/lib/utils';
 import { CalendarDate, DateValue } from '@internationalized/date';
 import { useDebouncedCallback } from 'use-debounce';
 import { saveSessionToSupabase } from '@/lib/sessionService';
+import { useToast } from '@/components/ui/use-toast';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 const INDIVIDUAL_RELATIONSHIPS = [
   'Parent',
+  'Mom',
+  'Dad',
   'Child',
   'Sibling',
   'Friend',
   'Partner',
   'Spouse',
   'Grandparent',
+  'Grandma',
+  'Grandpa',
   'Grandchild',
   'Colleague',
   'Mentor',
@@ -40,9 +46,11 @@ const COUPLE_RELATIONSHIPS = [
 ] as const;
 
 const RecipientInfo: React.FC = () => {
-  const { session, updateSession } = useSessionStore();
+  const { session, updateSession, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   const recipientType = session.recipientType;
+  const { toast } = useToast();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Helper to safely convert CalendarDate to ISO string
   const dateToISOString = (date: DateValue | null | undefined): string | null => {
@@ -200,6 +208,7 @@ const RecipientInfo: React.FC = () => {
     updateSession('recipient', data); 
 
     // --- Final Save and Email Logic ---
+    let purchaserEmail: string | undefined;
     try {
       console.log('[SUBMIT] RecipientInfo: Calling final saveSessionToSupabase...');
       await saveSessionToSupabase(); 
@@ -208,7 +217,7 @@ const RecipientInfo: React.FC = () => {
       // --- Call Backend API to Send Resume Email ---
       // Get necessary data from the session store
       const { session } = useSessionStore.getState();
-      const purchaserEmail = session.purchaser?.email || session.email; // Use purchaser email or the saved email
+      purchaserEmail = session.purchaser?.email || session.email; // Use purchaser email or the saved email
       const sessionId = session.sessionId;
       
       // Determine recipient's first name based on the form data type
@@ -240,6 +249,13 @@ const RecipientInfo: React.FC = () => {
               console.error('[SUBMIT] RecipientInfo: API call to /api/send-resume-email FAILED:', err);
               // Log the error but don't block navigation
           }
+          
+          // Show toast after attempting to send email
+          toast({
+            title: "Magic Link Sent",
+            description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
+          });
+
       } else {
          console.log('[SUBMIT] RecipientInfo: Conditions NOT met for calling email API.');
          if (!sessionId) {
@@ -253,7 +269,12 @@ const RecipientInfo: React.FC = () => {
 
     } catch (error) {
       console.error('[SUBMIT] RecipientInfo: Final saveSessionToSupabase FAILED:', error);
-      // Consider adding user feedback here (e.g., toast notification)
+      // Show a generic save toast even if email failed or wasn't sent
+      toast({
+        title: "Progress Saved",
+        description: "Your progress has been saved automatically.",
+        variant: "default" // Or use a different variant if preferred
+      });
     }
     // --- End Final Save and Email Logic ---
 
@@ -261,15 +282,22 @@ const RecipientInfo: React.FC = () => {
     goNext(); 
   };
 
+  // --- Update store validation status based on form validity ---
+  useEffect(() => {
+    console.log(`RecipientInfo: formState.isValid changed to: ${isValid}, updating store...`);
+    updateValidationStatus(isValid);
+  }, [isValid, updateValidationStatus]);
+  // --- End validation status update ---
+
   return (
-    <div className="max-w-xl mx-auto py-8">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-semibold text-legacy-green mb-4">
+    <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
+      <div className="mb-6 md:mb-10 text-left md:text-center">
+        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
           {recipientType === 'individual' 
             ? "Recipient Information" 
             : "Couple Information"}
         </h1>
-        <p className="text-lg text-gray-600 px-4 sm:px-0">
+        <p className="text-sm md:text-lg text-gray-600 px-4 sm:px-0">
           {recipientType === 'individual'
             ? "Tell us about the person you're gifting to"
             : "Tell us about the couple you're gifting to"}
@@ -281,7 +309,7 @@ const RecipientInfo: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="space-y-8"
+        className="space-y-6 md:space-y-8"
       >
         {recipientType === 'individual' ? (
           <div className="space-y-6">
@@ -580,28 +608,31 @@ const RecipientInfo: React.FC = () => {
           </div>
         )}
 
-        <div className="flex justify-between items-center pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goBack}
-            className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-          <Button
-            type="submit"
-            className={cn(
-              "px-8 py-2 text-base font-medium",
-              "bg-legacy-green hover:bg-legacy-green/90 text-white",
-              "disabled:bg-gray-300 disabled:cursor-not-allowed"
-            )}
-            disabled={!isValid}
-          >
-            Continue
-          </Button>
-        </div>
+        {/* Conditionally render desktop buttons */}
+        {!isMobile && (
+          <div className="flex justify-between items-center pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goBack}
+              className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            <Button
+              type="submit"
+              className={cn(
+                "px-8 py-2 text-base font-medium",
+                "bg-legacy-green hover:bg-legacy-green/90 text-white",
+                "disabled:bg-gray-300 disabled:cursor-not-allowed"
+              )}
+              disabled={!isCurrentStepValid}
+            >
+              Continue
+            </Button>
+          </div>
+        )}
       </motion.form>
     </div>
   );

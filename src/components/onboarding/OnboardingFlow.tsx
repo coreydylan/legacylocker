@@ -81,7 +81,8 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     initialize,
     setCurrentStep,
     nextStep,
-    prevStep
+    prevStep,
+    updateValidationStatus
   } = useSessionStore();
   
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -161,6 +162,31 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
     }
 
     console.log(`OnboardingFlow: Final step to render: ${stepToRender}`);
+
+    // <<< Add effect to manage validation status for the specific step >>>
+    useEffect(() => {
+        console.log(`[ValidationEffect] Running for stepToRender: ${stepToRender}, editionType: ${session.selectedEdition?.type}`);
+        // Step 6 (EDITION_DETAILS) is generally considered valid immediately,
+        // especially for Signature/Concierge where user input isn't strictly required to proceed.
+        // Custom requires all months complete, which is handled internally by CustomEditionFlow.
+        if (stepToRender === STEPS.EDITION_DETAILS) {
+            const editionType = session.selectedEdition?.type;
+            if (editionType === 'signature' || editionType === 'concierge') {
+                console.log(`[ValidationEffect] Step ${stepToRender} (${editionType}) is active, CALLING updateValidationStatus(true).`);
+                updateValidationStatus(true);
+            } else {
+                console.log(`[ValidationEffect] Step ${stepToRender} (${editionType}) is active, but validation handled by component.`);
+            }
+        } 
+        // You might add else if clauses here for other steps that should be
+        // considered valid immediately upon rendering, if any.
+        else {
+            // For other steps, rely on the component's internal logic to set validation
+            console.log(`[ValidationEffect] Step ${stepToRender} is not EDITION_DETAILS, validation handled by component.`);
+            // updateValidationStatus(false); // Optionally reset if needed, but might cause flashes
+        }
+    }, [stepToRender, session.selectedEdition?.type, updateValidationStatus]);
+
     switch (stepToRender) {
       case STEPS.RECIPIENT_SELECTION:
         return <RecipientSelector />;

@@ -38,11 +38,11 @@ const SignatureEditionFlow: React.FC<SignatureEditionFlowProps> = ({ hideCustomi
 
   return (
     // Add space-y-8 for spacing between Welcome Card and Grid
-    <div className="space-y-8">
+    <div className="space-y-6 md:space-y-8 py-4 md:py-0">
       {/* Header */}
-      <div className="space-y-3 text-center px-4">
-        <h1 className="text-3xl sm:text-4xl font-bold text-legacy-green font-playfair">Personalize Your Signature Cards</h1>
-        <p className="text-lg sm:text-xl text-legacy-dark/80">
+      <div className="space-y-2 md:space-y-3 px-4 text-left md:text-center">
+        <h1 className="text-xl md:text-3xl lg:text-4xl font-bold text-legacy-green font-playfair">Personalize Your Signature Cards</h1>
+        <p className="text-sm md:text-lg lg:text-xl text-legacy-dark/80">
           Optionally add a welcome message and customize ship dates or special footers.
         </p>
       </div>

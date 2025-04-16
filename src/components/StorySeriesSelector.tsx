@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,52 +18,227 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { SeriesType } from '@/types/onboarding';
-import { getAllStoryOptions } from "@/data/storySeriesData";
 import { useSessionStore } from '@/lib/sessionStore';
 import OnboardingModal from './OnboardingModal';
 import EditionTypeCard from './story-selector/EditionTypeCard';
 import SearchableCommandMenu from './story-selector/SearchableCommandMenu';
+import { supabase } from '@/lib/supabaseClient';
+import { StorySeriesRow, StoryOption } from '@/types/supabase';
+import { SeriesType } from '@/types/onboarding';
 
 const StorySeriesSelector = () => {
   const { session, resetSession } = useSessionStore();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string | null>(null);
-  const [selectedSeriesForModal, setSelectedSeriesForModal] = useState<SeriesType | null>(null);
+  const [selectedSeriesForModal, setSelectedSeriesForModal] = useState<SeriesType | StoryOption | null>(null);
   const [onboardingModalOpen, setOnboardingModalOpen] = useState(false);
   const [filterType, setFilterType] = useState<'signature' | 'custom' | 'concierge' | null>(null);
   const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
-  const [seriesToConfirm, setSeriesToConfirm] = useState<SeriesType | null>(null);
+  const [seriesToConfirm, setSeriesToConfirm] = useState<SeriesType | StoryOption | null>(null);
   
-  const allStoryOptions = useMemo(() => getAllStoryOptions(), []);
-  
+  const [allSeriesData, setAllSeriesData] = useState<StorySeriesRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStorySeries = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error: fetchError } = await supabase
+          .from('story_series')
+          .select('*');
+
+        if (fetchError) {
+          throw fetchError;
+        }
+        
+        // Debug: Log the raw data from Supabase
+        console.log("Raw data from Supabase:", data);
+        
+        // Debug: Check for hidden_team values
+        const teamsWithHiddenTeam = data?.filter(row => row.hidden_team) || [];
+        console.log("Rows with hidden_team:", teamsWithHiddenTeam);
+        
+        setAllSeriesData(data || []);
+      } catch (err: any) {
+        console.error("Error fetching story series:", err);
+        setError("Failed to load story series options.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStorySeries();
+  }, [supabase]);
+
+  const allStoryOptions = useMemo((): StoryOption[] => {
+    return allSeriesData.map((row) => {
+      let type: 'signature' | 'custom' | 'concierge' = 'signature';
+      if (row.series_type === 'Custom Edition') type = 'custom';
+      else if (row.series_type === 'Concierge Edition') type = 'concierge';
+
+      // Process hidden_team data more thoroughly
+      let searchKeywords: string[] = [];
+      if (row.hidden_team) {
+        console.log(`Processing hidden_team for "${row.display_title}": "${row.hidden_team}"`);
+        
+        // Split by multiple possible delimiters
+        const rawKeywords = row.hidden_team.split(/[/,;]/);
+        
+        // Process each keyword
+        searchKeywords = rawKeywords
+          .map(s => s.trim())
+          .filter(s => s) // Remove empty strings
+          .map(s => s.toLowerCase()); // Normalize to lowercase
+          
+        // Add variations for each keyword
+        const variations: string[] = [];
+        searchKeywords.forEach(keyword => {
+          // Add the original keyword
+          variations.push(keyword);
+          
+          // Add singular/plural variations
+          if (keyword.endsWith('s')) {
+            variations.push(keyword.slice(0, -1)); // Remove 's' for singular
+          } else {
+            variations.push(keyword + 's'); // Add 's' for plural
+          }
+          
+          // Handle common city + team name combinations
+          // E.g., "new york yankees" -> ["new york", "yankees"]
+          const words = keyword.split(' ');
+          if (words.length > 1) {
+            // Add city name
+            variations.push(words.slice(0, -1).join(' '));
+            // Add team name without city
+            variations.push(words[words.length - 1]);
+          }
+          
+          // Add common city abbreviations
+          if (keyword.includes('new york')) {
+            variations.push('ny');
+            variations.push(keyword.replace('new york', 'ny'));
+          }
+          if (keyword.includes('san francisco')) {
+            variations.push('sf');
+            variations.push(keyword.replace('san francisco', 'sf'));
+          }
+          if (keyword.includes('los angeles')) {
+            variations.push('la');
+            variations.push(keyword.replace('los angeles', 'la'));
+          }
+          if (keyword.includes('san diego')) {
+            variations.push('sd');
+            variations.push(keyword.replace('san diego', 'sd'));
+          }
+        });
+        
+        searchKeywords = [...new Set([...searchKeywords, ...variations])];
+        console.log(`Generated keywords for "${row.display_title}":`, searchKeywords);
+      }
+
+      return {
+        id: row.id,
+        label: row.display_title,
+        type: type,
+        categoryDisplay: row.theme ?? 'Other',
+        subcategoryDisplay: row.subject ?? undefined,
+        locationDisplay: row.context ?? undefined,
+        searchKeywords: searchKeywords,
+      };
+    });
+  }, [allSeriesData]);
+
   const filteredOptions = useMemo(() => {
-    if (!searchQuery) return allStoryOptions;
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return [];
+
+    // Helper function to normalize strings for comparison
+    const normalizeString = (str: string) => {
+      return str.toLowerCase()
+        .replace(/\s+/g, ' ') // Normalize spaces
+        .replace(/[^a-z0-9 ]/g, '') // Remove special chars
+        .replace(/s$/, '') // Remove trailing 's' for plural forms
+        .trim();
+    };
+
+    const normalizedQuery = normalizeString(query);
+
+    // Debug: Log the search query and normalized query
+    console.log(`Searching for: "${query}" (normalized: "${normalizedQuery}")`);
+
+    const results = allStoryOptions.filter(option => {
+      // Basic text matching
+      const themeMatch = option.categoryDisplay?.toLowerCase().includes(query) ?? false;
+      const subjectMatch = option.subcategoryDisplay?.toLowerCase().includes(query) ?? false;
+      const contextMatch = option.locationDisplay?.toLowerCase().includes(query) ?? false;
+      const titleMatch = option.label?.toLowerCase().includes(query) ?? false;
+      
+      // Team name matching - check if any search keyword matches the query
+      const teamMatch = option.searchKeywords?.some(keyword => {
+        // Direct match
+        if (keyword === query) return true;
+        
+        // Normalized match
+        const normalizedKeyword = normalizeString(keyword);
+        if (normalizedKeyword === normalizedQuery) return true;
+        
+        // Substring match
+        if (keyword.includes(query) || query.includes(keyword)) return true;
+        
+        // Normalized substring match
+        if (normalizedKeyword.includes(normalizedQuery) || normalizedQuery.includes(normalizedKeyword)) return true;
+        
+        return false;
+      }) ?? false;
+
+      // Debug: Log match details for this option
+      if (teamMatch) {
+        console.log(`Team name match found for "${option.label}":`, {
+          searchKeywords: option.searchKeywords
+        });
+      } else if (themeMatch || subjectMatch || contextMatch || titleMatch) {
+        console.log(`Standard match found for "${option.label}":`, {
+          themeMatch,
+          subjectMatch,
+          contextMatch,
+          titleMatch
+        });
+      }
+
+      return themeMatch || subjectMatch || contextMatch || titleMatch || teamMatch;
+    });
+
+    // Debug: Log the final results
+    console.log(`Found ${results.length} results for "${query}"`);
     
-    const query = searchQuery.toLowerCase();
-    return allStoryOptions.filter(option => 
-      option.categoryDisplay.toLowerCase().includes(query) || 
-      option.subcategoryDisplay.toLowerCase().includes(query) || 
-      option.locationDisplay.toLowerCase().includes(query) ||
-      option.fullDisplay.toLowerCase().includes(query)
-    );
+    return results;
   }, [searchQuery, allStoryOptions]);
-  
-  const handleEditionSelection = (editionType: 'signature' | 'custom' | 'concierge', series?: SeriesType) => {
+
+  // Ensure filteredOptions is always an array, even when empty
+  const safeFilteredOptions = useMemo(() => {
+    return Array.isArray(filteredOptions) ? filteredOptions : [];
+  }, [filteredOptions]);
+
+  const handleEditionSelection = (editionType: 'signature' | 'custom' | 'concierge', series?: SeriesType | StoryOption) => {
     if (series) {
-      handleStorySeriesSelection(series);
+      const seriesToSelect = {
+        id: series.id,
+        label: series.label,
+        type: series.type,
+      };
+      handleStorySeriesSelection(seriesToSelect);
     } else {
       setFilterType(editionType);
       setDialogOpen(true);
     }
   };
-  
-  const handleStorySeriesSelection = (series: SeriesType) => {
+
+  const handleStorySeriesSelection = (series: SeriesType | StoryOption) => {
     const isActiveSession = !!(session && (session.selectedEdition || session.customData?.length > 0 || session.signatureData?.some(d => d.enabled)));
 
-    console.log(`[handleStorySeriesSelection] Selected: ${series.label}, Is Active Session: ${isActiveSession}`);
+    console.log(`[handleStorySeriesSelection] Selected: ${series.label}, Type: ${series.type}, Is Active Session: ${isActiveSession}`);
 
     if (isActiveSession) {
       console.log("[handleStorySeriesSelection] Active session detected, opening confirmation dialog.");
@@ -76,13 +251,11 @@ const StorySeriesSelector = () => {
     }
   };
 
-  const proceedWithSelection = (series: SeriesType) => {
-    console.log(`[proceedWithSelection] Proceeding with series: ${series.label}`);
+  const proceedWithSelection = (series: SeriesType | StoryOption) => {
+    console.log(`[proceedWithSelection] Proceeding with series: ${series.label}, ID: ${series.id}`);
     setSelectedSeriesForModal(series);
     setDialogOpen(false);
     setSearchQuery('');
-    setSelectedCategory(null);
-    setSelectedSubcategory(null);
     setOnboardingModalOpen(true);
   };
 
@@ -99,14 +272,14 @@ const StorySeriesSelector = () => {
   const handleContinueCurrentSession = () => {
     console.log("[handleContinueCurrentSession] Continuing with existing session.");
     if (session?.selectedEdition) {
-      setSelectedSeriesForModal(session.selectedEdition);
+      setSelectedSeriesForModal(session.selectedEdition as SeriesType | StoryOption);
     } else {
       console.warn("Continuing session, but no selectedEdition found in session data.");
       setSelectedSeriesForModal(null);
     }
+    setConfirmDialogOpen(false);
     setOnboardingModalOpen(true);
     setSeriesToConfirm(null);
-    setConfirmDialogOpen(false);
   };
 
   const renderSeriesDisplay = () => {
@@ -119,11 +292,33 @@ const StorySeriesSelector = () => {
     
     if (!open) {
       setSearchQuery('');
-      setSelectedCategory(null);
-      setSelectedSubcategory(null);
       setFilterType(null);
     }
   };
+
+  const renderTriggerButton = () => {
+    let buttonText = "Select a Story Series";
+    if (loading) {
+      buttonText = "Loading Options...";
+    } else if (error) {
+      buttonText = "Error Loading Options";
+    } else if (selectedSeriesForModal) {
+      buttonText = selectedSeriesForModal.label;
+    }
+
+    return (
+       <Button
+         variant="outline"
+         role="combobox"
+         aria-expanded={dialogOpen}
+         className="w-full justify-between py-6 text-lg bg-white border-legacy-green/20 hover:border-legacy-green focus:border-legacy-green focus:ring-legacy-green"
+         disabled={loading || !!error}
+       >
+         {buttonText}
+         <span className={`ml-2 h-5 w-5 shrink-0 opacity-50 ${loading || error ? 'hidden' : ''}`}>▼</span>
+       </Button>
+    );
+  }
 
   return (
     <>
@@ -138,35 +333,27 @@ const StorySeriesSelector = () => {
             <div className="w-full max-w-md mx-auto mb-8">
               <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
                 <DialogTrigger asChild>
-                  <Button 
-                    variant="outline" 
-                    role="combobox"
-                    aria-expanded={dialogOpen}
-                    className="w-full justify-between py-6 text-lg bg-white border-legacy-green/20 hover:border-legacy-green focus:border-legacy-green focus:ring-legacy-green"
-                  >
-                    {renderSeriesDisplay()}
-                    <span className="ml-2 h-5 w-5 shrink-0 opacity-50">▼</span>
-                  </Button>
+                  {renderTriggerButton()}
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-white">
-                  <DialogHeader>
+                <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-white p-0">
+                  <DialogHeader className="p-6 pb-4 border-b">
                     <DialogTitle className="text-xl font-playfair text-center">Select Your Story Series</DialogTitle>
                     <DialogDescription className="text-center text-muted-foreground">
-                      Browse our curated collection of story series or search for specific themes and locations.
+                      Browse our curated collection or search for specific themes and locations.
                     </DialogDescription>
                   </DialogHeader>
-                  
-                  <SearchableCommandMenu
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    selectedCategory={selectedCategory}
-                    selectedSubcategory={selectedSubcategory}
-                    setSelectedCategory={setSelectedCategory}
-                    setSelectedSubcategory={setSelectedSubcategory}
-                    handleStorySeriesSelection={handleStorySeriesSelection}
-                    filterType={filterType}
-                    filteredOptions={filteredOptions}
-                  />
+                  {loading && <div className="p-6 text-center">Loading...</div>}
+                  {error && <div className="p-6 text-center text-red-600">{error}</div>}
+                  {!loading && !error && (
+                    <SearchableCommandMenu
+                      searchQuery={searchQuery}
+                      setSearchQuery={setSearchQuery}
+                      allOptions={allStoryOptions}
+                      filteredSearchResults={safeFilteredOptions}
+                      handleStorySeriesSelection={handleStorySeriesSelection}
+                      filterType={filterType}
+                    />
+                  )}
                 </DialogContent>
               </Dialog>
             </div>
@@ -194,12 +381,15 @@ const StorySeriesSelector = () => {
                 title="Concierge Edition"
                 description="Work with our professional writers to create a completely bespoke story series."
                 isPremium={true}
-                onClick={() => handleEditionSelection('concierge', { 
-                  id: 'concierge',
-                  label: 'Concierge Edition', 
-                  type: 'concierge',
-                  description: 'Work with our professional writers...'
-                })}
+                onClick={() => {
+                   const conciergeOption = allStoryOptions.find(o => o.type === 'concierge');
+                   if (conciergeOption) {
+                      handleEditionSelection('concierge', conciergeOption);
+                   } else {
+                      console.warn("Concierge option not found in fetched data, handling generically.");
+                      handleEditionSelection('concierge');
+                   }
+                }}
               />
             </div>
           </div>
@@ -212,7 +402,7 @@ const StorySeriesSelector = () => {
           setOnboardingModalOpen(false);
           setSelectedSeriesForModal(null);
         }} 
-        selectedSeries={selectedSeriesForModal}
+        selectedSeries={selectedSeriesForModal as SeriesType | null}
       />
 
       <AlertDialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>

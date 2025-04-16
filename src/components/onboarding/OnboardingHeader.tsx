@@ -2,7 +2,8 @@ import React from 'react';
 import OnboardingStepper from './OnboardingStepper';
 import { useSessionStore } from '@/lib/sessionStore';
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
+import { X } from "lucide-react";
+import { cn } from '@/lib/utils';
 
 interface OnboardingHeaderProps {
   handleBack: () => void;
@@ -20,12 +21,59 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
   // TODO: Define total steps dynamically later if needed
   const totalSteps = 7; // Assuming 7 steps for now
 
-  // Common badge styling
-  const badgeClasses = "px-2 py-0.5 bg-stone-200 text-stone-700 rounded-md text-xs font-medium whitespace-nowrap";
+  // Common badge styling - <<< Update colors to lighter green >>>
+  const badgeClasses = "px-2 py-0.5 bg-legacy-green/10 text-legacy-green rounded-md text-xs font-medium whitespace-nowrap";
+
+  // Helper function to format the specific edition label (Music/Sports/History focus)
+  const formatEditionLabel = (edition: typeof selectedEdition): string => {
+    if (!edition) return 'N/A';
+
+    const { type, label } = edition;
+
+    // No specific label formatting needed for concierge here
+    if (type === 'concierge') return ''; // Return empty or N/A if needed elsewhere
+
+    // Fallback if label is missing
+    if (!label) return 'N/A'; // Or return type like before?
+
+    const parts = label.split(' – ');
+    const category = parts[0]?.trim();
+    const subcategory = parts[1]?.trim(); 
+    const location = parts.length === 3 ? parts[2]?.trim() : undefined; 
+
+    // Apply formatting rules based on parsed parts
+    if (category === 'Sports' && location && subcategory) {
+      return `${location} ${subcategory}`;
+    }
+    if (category === 'Music' && location && subcategory) {
+      return `${location} ${subcategory}`;
+    }
+    if (category === 'Local History' && location) { 
+      return `${location} Local History`; 
+    }
+    
+    // Fallback: Return original label if no specific rule matched
+    return label; 
+  };
 
   return (
-    <div className="sticky top-0 z-10 bg-white pb-3">
-      <div className="flex items-center justify-between w-full px-4 py-4 bg-legacy-cream shadow-sm gap-2">
+    <div className="sticky top-0 z-10 bg-legacy-cream">
+      {selectedEdition && (
+        <div className="max-w-xl mx-auto flex gap-2 mb-2 pt-3 px-4">
+          {/* <<< First tag: General Edition Type >>> */}
+          <div className={cn(badgeClasses, "flex-1 text-center truncate")}>
+            {selectedEdition.type === 'concierge' ? 'Concierge Edition' : `${selectedEdition.type.charAt(0).toUpperCase() + selectedEdition.type.slice(1)} Edition`}
+          </div>
+          {/* <<< Second tag: Specific Formatted Label (if not concierge) >>> */}
+          {selectedEdition.type !== 'concierge' && (
+             <div className={cn(badgeClasses, "flex-1 text-center truncate")} title={selectedEdition.label || ''}>
+              {formatEditionLabel(selectedEdition)}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="relative flex items-center w-full px-4 py-2 md:py-6 shadow-sm gap-2">
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -36,59 +84,12 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
           >
             <X className="h-6 w-6" />
           </Button>
-          {currentStep > 1 ? (
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleBack}
-              className="text-legacy-green hover:bg-legacy-green/10 flex-shrink-0"
-              aria-label="Go back"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </Button>
-          ) : (
-            <div className="w-10 h-10 flex-shrink-0"></div>
-          )}
         </div>
 
-        <div className="flex-1 flex justify-center items-center min-w-0">
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center min-w-0">
           <OnboardingStepper />
         </div>
-
-        {currentStep < totalSteps ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={nextStep}
-            className="text-legacy-green hover:bg-legacy-green/10 flex-shrink-0"
-            aria-label="Go next"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </Button>
-        ) : (
-          <div className="w-10 h-10 flex-shrink-0"></div>
-        )}
       </div>
-
-      {selectedEdition && (
-        <div className="flex justify-center items-center pt-3 space-x-2">
-          {selectedEdition.type === 'signature' && (
-            <>
-              <div className={badgeClasses}>Signature Edition</div>
-              <div className={badgeClasses}>{selectedEdition.label || 'N/A'}</div>
-            </>
-          )}
-          {selectedEdition.type === 'custom' && (
-            <>
-              <div className={badgeClasses}>Custom Edition</div>
-              <div className={badgeClasses}>{selectedEdition.label || 'N/A'}</div>
-            </>
-          )}
-          {selectedEdition.type === 'concierge' && (
-            <div className={badgeClasses}>Concierge Edition</div>
-          )}
-        </div>
-      )}
     </div>
   );
 };

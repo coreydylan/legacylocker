@@ -15,6 +15,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { shippingInfoSchema, ShippingInfoFormValues } from '@/schemas/shippingInfoSchema';
 import { useDebouncedCallback } from 'use-debounce';
 import { saveSessionToSupabase } from '@/lib/sessionService';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 // Define a type for the recipient part of the session data more explicitly if needed
 // Or rely on SessionData['recipient']
@@ -22,9 +23,10 @@ type RecipientData = SessionData['recipient'];
 
 const ShippingInfoCard: React.FC = () => {
   console.log("--- Rendering ShippingInfoCard ---");
-  const { session, updateSession } = useSessionStore();
+  const { session, updateSession, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   const recipient: RecipientData | undefined = session.recipient;
+  const isMobile = useMediaQuery('(max-width: 768px)');
   console.log("ShippingInfoCard: Recipient data:", recipient);
   
   // Get default shipping name from recipient info
@@ -129,6 +131,13 @@ const ShippingInfoCard: React.FC = () => {
     }
   }, [session, setValue]);
 
+  // --- Update store validation status based on form validity ---
+  useEffect(() => {
+    console.log(`ShippingInfoCard: formState.isValid changed to: ${isValid}, updating store...`);
+    updateValidationStatus(isValid);
+  }, [isValid, updateValidationStatus]);
+  // --- End validation status update ---
+
   // Handle address selection from autocomplete
   const handleAddressSelect = (selected: StructuredAddress) => {
     console.log('ShippingInfoCard: Address selected via autocomplete', selected);
@@ -190,12 +199,12 @@ const ShippingInfoCard: React.FC = () => {
 
   console.log("ShippingInfoCard: Reached return statement");
   return (
-    <div className="max-w-xl mx-auto py-8">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-semibold text-legacy-green mb-4">
+    <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
+      <div className="mb-6 md:mb-10 text-left md:text-center">
+        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
           Where should we send their cards?
         </h1>
-        <p className="text-lg text-gray-600 px-4 sm:px-0">
+        <p className="text-sm md:text-lg text-gray-600 px-4 sm:px-0">
           Each card is mailed in a custom archival envelope, then shipped inside a protective mailer to ensure it arrives safely and in great condition.
         </p>
       </div>
@@ -205,7 +214,7 @@ const ShippingInfoCard: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="space-y-8"
+        className="space-y-6 md:space-y-8"
       >
         <div>
           <h2 className="text-xl font-medium text-legacy-dark mb-4 border-b pb-2">Shipping Info</h2>
@@ -278,27 +287,31 @@ const ShippingInfoCard: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex justify-between items-center pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goBack}
-            className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Previous
-          </Button>
-          <Button
-            type="submit"
-            className={cn(
-              "px-8 py-2 text-base font-medium",
-              "bg-legacy-green hover:bg-legacy-green/90 text-white",
-              "disabled:bg-gray-300 disabled:cursor-not-allowed"
-            )}
-          >
-            Continue
-          </Button>
-        </div>
+        {/* Conditionally render desktop buttons */}
+        {!isMobile && (
+          <div className="flex justify-between items-center pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goBack}
+              className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
+            >
+              <ChevronLeft className="h-4 w-4 mr-2" />
+              Previous
+            </Button>
+            <Button
+              type="submit"
+              className={cn(
+                "px-8 py-2 text-base font-medium",
+                "bg-legacy-green hover:bg-legacy-green/90 text-white",
+                "disabled:bg-gray-300 disabled:cursor-not-allowed"
+              )}
+              disabled={!isCurrentStepValid}
+            >
+              Continue
+            </Button>
+          </div>
+        )}
       </motion.form>
     </div>
   );

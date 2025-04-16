@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,6 +12,7 @@ import { calculateSessionPrice } from '@/lib/pricing';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
 import CheckoutForm from '@/components/payment/CheckoutForm';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 // Load Stripe outside of component render
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '');
@@ -45,8 +46,9 @@ const defaultRecipient: Recipient = { type: 'individual' };
 const defaultPurchaser: Purchaser = {};
 
 const ReviewCheckout: React.FC = () => {
-  const { session, setCurrentStep, prevStep } = useSessionStore();
+  const { session, setCurrentStep, prevStep, submitTriggerCount } = useSessionStore();
   const navigate = useNavigate();
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -124,6 +126,15 @@ const ReviewCheckout: React.FC = () => {
     }
   };
 
+  const prevSubmitTriggerCountRef = useRef<number>(submitTriggerCount);
+  useEffect(() => {
+    if (submitTriggerCount > prevSubmitTriggerCountRef.current) {
+      console.log(`[ReviewCheckout] submitTriggerCount changed (${prevSubmitTriggerCountRef.current} -> ${submitTriggerCount}), calling handlePlaceOrder.`);
+      handlePlaceOrder();
+    }
+    prevSubmitTriggerCountRef.current = submitTriggerCount;
+  }, [submitTriggerCount]);
+
   const handleBack = () => {
     prevStep();
   }
@@ -150,17 +161,17 @@ const ReviewCheckout: React.FC = () => {
   } : undefined;
   
   return (
-    <div className="max-w-4xl mx-auto py-8">
-      <div className="mb-8 text-center">
-        <h1 className="text-3xl font-semibold text-legacy-green mb-4">
+    <div className="max-w-4xl mx-auto py-4 md:py-8 px-4 md:px-0">
+      <div className="mb-6 md:mb-8 text-left md:text-center">
+        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
           Review & Complete Your Order
         </h1>
-        <p className="text-lg text-gray-600">
+        <p className="text-sm md:text-lg text-gray-600">
           Please review your details and enter payment information below.
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-12">
          <Card>
            <CardHeader className="bg-legacy-cream/30">
              <div className="flex justify-between items-center">
@@ -284,6 +295,7 @@ const ReviewCheckout: React.FC = () => {
          </div>
        </div>
       
+      {!isMobile && (
       <div className="flex justify-between items-center pt-6 border-t">
          <Button
             type="button"
@@ -323,6 +335,7 @@ const ReviewCheckout: React.FC = () => {
             </div>
           )}
        </div>
+      )}
         
        <p className="text-sm text-gray-500 mt-4 text-center">
           {isPayable 

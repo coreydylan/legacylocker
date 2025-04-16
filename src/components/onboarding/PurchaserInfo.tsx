@@ -13,11 +13,13 @@ import { saveSessionToSupabase } from '@/lib/sessionService';
 import { useDebouncedCallback } from 'use-debounce';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 const PurchaserInfo: React.FC = () => {
   console.log('PURCHASER INFO COMPONENT RENDERED - Check if SUBMIT logs appear on continue');
-  const { session, updateSession, startSession, sessionMetadata } = useSessionStore();
+  const { session, updateSession, startSession, sessionMetadata, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
+  const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Initialize form with react-hook-form and zod validation
   const { 
@@ -33,6 +35,13 @@ const PurchaserInfo: React.FC = () => {
     },
     mode: 'onChange'
   });
+
+  // --- Update store validation status based on form validity ---
+  useEffect(() => {
+    console.log(`PurchaserInfo: formState.isValid changed to: ${isValid}, updating store...`);
+    updateValidationStatus(isValid);
+  }, [isValid, updateValidationStatus]);
+  // --- End validation status update ---
 
   // --- Debounced Autosave Logic --- 
   const watchedFields = useWatch({ control });
@@ -139,16 +148,16 @@ const PurchaserInfo: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -20 }}
       transition={{ duration: 0.3 }}
-      className="max-w-md mx-auto"
+      className="max-w-md mx-auto px-4 md:px-0 py-4 md:py-8"
     >
-      <div className="mb-6">
-        <h2 className="text-2xl font-semibold text-legacy-dark mb-2">Your Information</h2>
-        <p className="text-muted-foreground">
+      <div className="mb-6 md:mb-8 md:text-left">
+        <h2 className="text-xl md:text-3xl font-semibold text-legacy-dark mb-2">Your Information</h2>
+        <p className="text-sm md:text-lg text-muted-foreground">
           Please provide your contact information so we can keep you updated on your order.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
         <div className="space-y-2">
           <Label htmlFor="fullName">Full Name</Label>
           <div className={cn(
@@ -211,29 +220,32 @@ const PurchaserInfo: React.FC = () => {
               htmlFor="mailingListOptIn" 
               className="text-sm font-normal text-gray-600 leading-snug cursor-pointer"
             >
-              Yes, send me occasional updates (about once a month, we promise!).
+              Yes, occasional updates (max once a month) ✨
             </Label>
           </div>
         </div>
 
-        <div className="flex justify-between pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={goBack}
-            className="flex items-center"
-          >
-            <ChevronLeft className="mr-2 h-4 w-4" />
-            Back
-          </Button>
-          <Button
-            type="submit"
-            disabled={!isValid}
-            className="bg-legacy-green hover:bg-legacy-green/90"
-          >
-            Continue
-          </Button>
-        </div>
+        {/* Conditionally render desktop buttons */}
+        {!isMobile && (
+          <div className="flex justify-between pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={goBack}
+              className="flex items-center"
+            >
+              <ChevronLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <Button
+              type="submit"
+              disabled={!isCurrentStepValid}
+              className="bg-legacy-green hover:bg-legacy-green/90"
+            >
+              Continue
+            </Button>
+          </div>
+        )}
       </form>
     </motion.div>
   );

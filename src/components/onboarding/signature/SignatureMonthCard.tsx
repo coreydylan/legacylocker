@@ -85,28 +85,54 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
   const getOccasionLabel = () => {
     const hasBirthday = occasions.includes('birthday');
     const hasAnniversary = occasions.includes('anniversary');
+    // Find the first non-birthday/anniversary/other string as potential holiday
+    const holidayName = occasions.find(occ => occ !== 'birthday' && occ !== 'anniversary' && occ !== 'other');
+
     const birthdayRecipient = recipients[occasions.indexOf('birthday')];
     const anniversaryRecipient = recipients[occasions.indexOf('anniversary')];
 
+    // Prioritize Birthday & Anniversary combo
     if (hasBirthday && hasAnniversary && birthdayRecipient) {
       return `Celebrate ${anniversaryRecipient || 'their'} anniversary and ${birthdayRecipient}'s birthday?`;
-    } else if (hasBirthday && birthdayRecipient) {
+    }
+    // Then Birthday alone
+    if (hasBirthday && birthdayRecipient) {
       return `Celebrate ${birthdayRecipient}'s Birthday?`;
-    } else if (hasAnniversary) {
+    }
+    // Then Anniversary alone
+    if (hasAnniversary) {
       return `Celebrate ${anniversaryRecipient || 'Your'} Anniversary?`;
-    } else if (occasions.includes('other') || enabled) {
+    }
+    // Then specific Holiday if found
+    if (holidayName) {
+        return `Celebrate ${holidayName}?`;
+    }
+    // Fallback for manually enabled or 'other'
+    if (occasions.includes('other') || enabled) {
       return 'Customize this month?';
     } 
+    // Default fallback
     return 'Customize this month?';
   };
 
   const getTooltipContent = () => {
       if (occasions.length === 0) return null;
-      const content = occasions.map((occ, index) => {
-          const recip = recipients[index] || 'recipient';
-          return `${recip}'s ${occ}`;
-      }).join (' and ');
-      return <p>This month is pre-enabled for {content}.</p>;
+       // Generate content based on all occasions present
+       const contentParts = occasions.map((occ, index) => {
+           const recip = recipients[index] || 'recipient'; // This might not align perfectly if mixing holidays/birthdays
+           if (occ === 'birthday') {
+               return `${recip}'s Birthday`;
+           } else if (occ === 'anniversary') {
+               return `${recip}'s Anniversary`;
+           } else if (occ !== 'other') { // Assume other strings are holidays
+               return occ; // Just display the holiday name (e.g., "Mother's Day")
+           }
+           return null; // Ignore 'other'
+       }).filter(part => part !== null); // Remove null entries
+      
+      if (contentParts.length === 0) return null;
+
+      return <p>This month is pre-enabled for {contentParts.join(' and ')}.</p>;
   };
 
   const parsedDate = shipDate ? parseISO(shipDate) : undefined;

@@ -9,15 +9,17 @@ import { useSessionStore, SessionData } from '@/lib/sessionStore'; // Corrected 
 import { Button } from "@/components/ui/button"; // Import Button
 import { useDebouncedCallback } from 'use-debounce'; // Added
 import { saveSessionToSupabase } from '@/lib/sessionService'; // Added
+import useMediaQuery from '@/hooks/useMediaQuery'; // <<< Import the hook
 
 // interface ConciergeEditionFlowProps { ... } // Remove props interface
 
 // Remove props from component signature
 const ConciergeEditionFlow: React.FC = () => {
   // Get store state/actions
-  const { session, updateSession, prevStep, nextStep } = useSessionStore();
+  const { session, updateSession, prevStep, nextStep, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const typedSession = session as SessionData;
   const conciergeData = typedSession.editionFlow?.conciergeData;
+  const isMobile = useMediaQuery('(max-width: 768px)'); // <<< Use the hook
 
   // Explicitly type the state to handle string from RadioGroup
   const [contactMethod, setContactMethod] = useState<string>(
@@ -77,16 +79,23 @@ const ConciergeEditionFlow: React.FC = () => {
   // Basic validation - check if story is entered
   const canProceed = Boolean(conciergeData?.openEndedStory?.trim());
 
+  // --- Update store validation status based on form validity ---
+  useEffect(() => {
+    console.log(`ConciergeEditionFlow: canProceed changed to: ${canProceed}, updating store...`);
+    updateValidationStatus(canProceed);
+  }, [canProceed, updateValidationStatus]);
+  // --- End validation status update ---
+
   return (
-    <div className="space-y-8">
-      <div className="space-y-4">
-        <h1 className="text-4xl font-bold text-legacy-gold font-playfair">Concierge Edition</h1>
-        <p className="text-xl text-legacy-dark/80">
+    <div className="space-y-6 md:space-y-8 py-4 md:py-0">
+      <div className="space-y-2 md:space-y-4 px-4 md:px-0 text-left">
+        <h1 className="text-xl md:text-4xl font-bold text-legacy-gold font-playfair">Concierge Edition</h1>
+        <p className="text-sm md:text-xl text-legacy-dark/80">
           Work with our professional writers to create a completely bespoke story series.
         </p>
       </div>
 
-      <div className="bg-white border rounded-lg p-8 shadow-sm space-y-8">
+      <div className="bg-white border rounded-lg p-6 md:p-8 shadow-sm space-y-6 md:space-y-8">
         <div className="flex items-start gap-4">
           <div className="p-3 rounded-full bg-legacy-gold/10">
             <MessageCircle className="h-6 w-6 text-legacy-gold" />
@@ -182,7 +191,8 @@ const ConciergeEditionFlow: React.FC = () => {
         </ul>
       </div>
 
-      {/* Add Navigation Buttons */}
+      {/* Conditionally render desktop buttons */}
+      {!isMobile && (
       <div className="flex justify-between items-center pt-6 border-t">
         <Button
           type="button"
@@ -197,11 +207,12 @@ const ConciergeEditionFlow: React.FC = () => {
           type="button" 
           onClick={nextStep} // Use store action
           className="bg-legacy-gold text-white hover:bg-legacy-gold/90"
-          disabled={!canProceed} // Basic validation
+            disabled={!isCurrentStepValid} // Use store validation state
         >
           Continue to Review
         </Button>
       </div>
+      )}
     </div>
   );
 };

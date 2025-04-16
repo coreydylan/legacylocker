@@ -12,6 +12,9 @@ import ClearSessionButton from './onboarding/ClearSessionButton';
 import ClearSessionDialog from './onboarding/ClearSessionDialog';
 import { useToast } from '@/hooks/use-toast';
 import { SafeAreaWrapper } from '@/components/utils/SafeAreaWrapper';
+import MobileNavFooter from './onboarding/MobileNavFooter';
+import { cn } from '@/lib/utils';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 export type { FormData } from '@/types/onboarding';
 
@@ -49,6 +52,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
 
   const { toast } = useToast();
+
+  const isMobile = useMediaQuery('(max-width: 768px)');
 
   useEffect(() => {
     if (isOpen) {
@@ -149,11 +154,14 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   />
                 </div>
                 
-                <div className="flex-1 overflow-y-auto min-h-0">
+                <div className={cn(
+                  "flex-1 overflow-y-auto min-h-0",
+                  "pb-24 md:pb-0"
+                )}>
                   <OnboardingFlow />
                 </div>
-
-                {sessionMetadata.isActive && (
+                
+                {!isMobile && sessionMetadata.isActive && session.currentStep > 3 && (
                   <div className="flex-shrink-0">
                     <div className="flex justify-end items-center gap-2 px-6 py-4">
                       <ClearSessionButton onClick={() => setIsClearDialogOpen(true)} />
@@ -164,6 +172,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
               </>
             )}
           </SafeAreaWrapper>
+          <MobileNavFooter />
         </DialogContent>
       </Dialog>
 

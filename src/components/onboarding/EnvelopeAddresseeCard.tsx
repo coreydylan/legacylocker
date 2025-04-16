@@ -14,11 +14,13 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { envelopePersonalizationSchema, EnvelopePersonalizationFormValues } from '@/schemas/envelopePersonalizationSchema';
 import { useDebouncedCallback } from 'use-debounce';
 import { saveSessionToSupabase } from '@/lib/sessionService';
+import useMediaQuery from '@/hooks/useMediaQuery';
 
 const EnvelopeAddresseeCard: React.FC = () => {
-  const { session, updateSession } = useSessionStore();
+  const { session, updateSession, updateValidationStatus, isCurrentStepValid } = useSessionStore();
   const { goNext, goBack } = useOnboardingNavigation();
   const recipient: Recipient | undefined = session.recipient;
+  const isMobile = useMediaQuery('(max-width: 768px)');
   
   // Get default addressee name from recipient info
   const defaultAddresseeName = formatCardAddresseeName(session);
@@ -112,13 +114,20 @@ const EnvelopeAddresseeCard: React.FC = () => {
 
   const previewName = watch('cardAddresseeName') || defaultAddresseeName || "Recipient Name";
 
+  // --- Update store validation status based on form validity ---
+  useEffect(() => {
+    console.log(`EnvelopeAddresseeCard: formState.isValid changed to: ${isValid}, updating store...`);
+    updateValidationStatus(isValid);
+  }, [isValid, updateValidationStatus]);
+  // --- End validation status update ---
+
   return (
-    <div className="max-w-xl mx-auto py-8">
-      <div className="text-center mb-10">
-        <h1 className="text-3xl font-semibold text-legacy-green mb-4">
+    <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
+      <div className="mb-6 md:mb-10 text-left md:text-center">
+        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
           How should we address the envelope?
         </h1>
-        <p className="text-lg text-gray-600 px-4 sm:px-0">
+        <p className="text-sm md:text-lg text-gray-600 px-4 sm:px-0">
           Each card is delivered inside a custom-printed archival envelope. Let us know how you'd like it to appear.
         </p>
       </div>
@@ -128,7 +137,7 @@ const EnvelopeAddresseeCard: React.FC = () => {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
-        className="space-y-8"
+        className="space-y-6 md:space-y-8"
       >
         <div className="space-y-2">
           <Label htmlFor="cardAddresseeName" className="text-legacy-green font-medium">
@@ -162,6 +171,8 @@ const EnvelopeAddresseeCard: React.FC = () => {
           </div>
         </div>
 
+        {/* Conditionally render desktop buttons */}
+        {!isMobile && (
         <div className="flex justify-between items-center pt-4">
           <Button
             type="button"
@@ -179,11 +190,12 @@ const EnvelopeAddresseeCard: React.FC = () => {
               "bg-legacy-green hover:bg-legacy-green/90 text-white",
               "disabled:bg-gray-300 disabled:cursor-not-allowed"
             )}
-            disabled={!isValid}
+              disabled={!isCurrentStepValid}
           >
             Continue
           </Button>
         </div>
+        )}
       </motion.form>
     </div>
   );
