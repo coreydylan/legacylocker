@@ -133,6 +133,7 @@ export function useSessionManager() {
     if (sessionIdParam) {
       if (sessionIdParam === currentMeta.sessionId) {
           console.log(`[SessionManager] Session ${sessionIdParam} already loaded, skipping restore.`);
+          if (!isHydrated) setHydrated(true);
           return;
       }
       
@@ -159,9 +160,11 @@ export function useSessionManager() {
         toast({ title: "Load Failed", description: "Could not load the session from the link. It might be expired or invalid.", variant: "destructive" });
         navigate(location.pathname, { replace: true });
         storeResetSession();
+        if (!isHydrated) setHydrated(true);
       }
     } else {
        console.log('[SessionManager] No session_id param found.');
+       if (!isHydrated) setHydrated(true);
     }
   }, [
     location.search, 
@@ -173,7 +176,8 @@ export function useSessionManager() {
     navigate, 
     toast, 
     setHydrated,
-    sessionMetadata.sessionId
+    sessionMetadata.sessionId,
+    isHydrated
   ]);
 
   const resetSessionAndState = useCallback(() => {

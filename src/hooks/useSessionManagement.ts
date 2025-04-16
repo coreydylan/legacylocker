@@ -1,16 +1,16 @@
-
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FormData } from '@/types/onboarding';
 import { 
-  saveSessionToBackend, 
+  // saveSessionToBackend, // <<< Commented out in service
   saveCurrentSession, 
   getCurrentSession,
   clearCurrentSession,
-  getSessionByToken,
   hasActiveSession
 } from '@/services/sessionService';
 import { useToast } from "@/hooks/use-toast";
 
+// <<< NOTE: This hook seems potentially legacy given the new useSessionManager >>>
+// <<< Consider deleting this hook entirely if it's no longer used. >>>
 export const useSessionManagement = (initialFormData: FormData) => {
   const [formData, setFormData] = useState<FormData>(initialFormData);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
@@ -31,39 +31,16 @@ export const useSessionManagement = (initialFormData: FormData) => {
 
   // Handle save progress
   const handleSaveProgress = async (email: string, data: FormData): Promise<boolean> => {
-    try {
-      const resumeToken = await saveSessionToBackend(email, data);
-      if (resumeToken) {
-        setLastSavedTime(new Date());
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error saving progress:", error);
-      return false;
-    }
+    // This likely calls the commented-out saveSessionToBackend
+    console.warn('handleSaveProgress in useSessionManagement likely calls legacy code.');
+    return false; // Return false as legacy code is disabled
   };
 
   // Restore session from token
   const restoreSessionFromToken = async (token: string): Promise<boolean> => {
-    try {
-      const session = await getSessionByToken(token);
-      if (session) {
-        setFormData(session.formData);
-        setLastSavedTime(session.lastUpdatedAt);
-        saveCurrentSession(session.formData);
-        
-        toast({
-          title: "Welcome back!",
-          description: "Your saved progress has been restored.",
-        });
-        return true;
-      }
-      return false;
-    } catch (error) {
-      console.error("Error restoring session:", error);
-      return false;
-    }
+    console.warn('restoreSessionFromToken in useSessionManagement is legacy code.');
+    toast({ title: "Error", description: "Session restore link is outdated.", variant: "destructive" });
+    return false;
   };
 
   // Handle closing the onboarding modal
@@ -94,7 +71,7 @@ export const useSessionManagement = (initialFormData: FormData) => {
     isSaveModalOpen,
     setIsSaveModalOpen,
     handleSaveProgress,
-    restoreSessionFromToken,
+    restoreSessionFromToken, // Returns a stub function now
     handleCloseOnboarding,
     isSessionPillVisible,
     handleContinueFromPill,

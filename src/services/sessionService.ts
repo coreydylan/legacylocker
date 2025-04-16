@@ -1,4 +1,3 @@
-
 import { FormData } from '@/types/onboarding';
 
 // Types
@@ -12,17 +11,13 @@ export interface SavedSession {
 
 // Constants
 const CURRENT_SESSION_KEY = 'legacy_locker_current_session';
-const SAVED_SESSION_KEY = 'legacy_locker_saved_session';
+// const SAVED_SESSION_KEY = 'legacy_locker_saved_session';
 
 // Function to save session to backend
+/*
 export const saveSessionToBackend = async (email: string, formData: FormData): Promise<string> => {
-  // This is a placeholder that will be replaced with an actual API call
   console.log('Saving session to backend for email:', email);
-  
-  // Mock a successful response with a token
   const resumeToken = generateMockToken();
-  
-  // For now, save to localStorage as a placeholder
   const session: SavedSession = {
     email,
     formData,
@@ -30,16 +25,14 @@ export const saveSessionToBackend = async (email: string, formData: FormData): P
     createdAt: new Date(),
     lastUpdatedAt: new Date()
   };
-  
   localStorage.setItem(SAVED_SESSION_KEY, JSON.stringify(session));
-  
-  // Simulate API delay
   await new Promise(resolve => setTimeout(resolve, 800));
-  
   return resumeToken;
 };
+*/
 
 // Function to save current form state locally (between page visits)
+// This is used for non-persistent local drafts before session activation
 export const saveCurrentSession = (formData: FormData): void => {
   try {
     localStorage.setItem(CURRENT_SESSION_KEY, JSON.stringify({
@@ -52,6 +45,7 @@ export const saveCurrentSession = (formData: FormData): void => {
 };
 
 // Function to retrieve current session
+// Used for local drafts
 export const getCurrentSession = (): { formData: FormData | null, lastUpdatedAt: Date | null } => {
   try {
     const sessionData = localStorage.getItem(CURRENT_SESSION_KEY);
@@ -69,36 +63,19 @@ export const getCurrentSession = (): { formData: FormData | null, lastUpdatedAt:
   return { formData: null, lastUpdatedAt: null };
 };
 
-// Function to check if there's an active session with meaningful data
+// Function to check if there's an active local draft session
+// This doesn't check Supabase or the main session store
 export const hasActiveSession = (): boolean => {
   try {
     const sessionData = localStorage.getItem(CURRENT_SESSION_KEY);
     if (!sessionData) return false;
-    
-    // Parse the session data
     const parsed = JSON.parse(sessionData);
-    
-    // Check if the formData has been populated with meaningful information
     if (parsed && parsed.formData) {
       const data = parsed.formData;
-      
-      // Only consider it an active session if the user has selected a gift type
-      // and has either filled out purchaser info or recipient info
-      if (data.giftType) {
-        const hasPurchaserInfo = data.purchaser && 
-          (data.purchaser.fullName || data.purchaser.email);
-          
-        const hasRecipientInfo = data.recipient && (
-          (data.recipient.type === 'individual' && (data.recipient.firstName || data.recipient.lastName)) || 
-          (data.recipient.type === 'couple' && (data.recipient.recipient1FirstName || data.recipient.recipient2FirstName))
-        );
-        
-        return hasPurchaserInfo || hasRecipientInfo;
-      }
-      
-      return false;
+      // Example check: has selected an edition type?
+      return !!data.selectedEdition;
+      // Adjust this check based on when a local draft should be considered active
     }
-    
     return false;
   } catch (error) {
     console.error('Error checking active session:', error);
@@ -106,21 +83,23 @@ export const hasActiveSession = (): boolean => {
   }
 };
 
-// Function to clear current session
+// Function to clear current local draft session
 export const clearCurrentSession = (): void => {
   localStorage.removeItem(CURRENT_SESSION_KEY);
 };
 
-// Helper function to generate a mock token
+// <<< Comment out legacy token generator >>>
+/*
 const generateMockToken = (): string => {
   return 'xxxx-xxxx-xxxx-xxxx'.replace(/x/g, () => {
     return Math.floor(Math.random() * 16).toString(16);
   });
 };
+*/
 
-// Function to retrieve a session by resume token (mock implementation)
+// <<< Comment out legacy token retrieval >>>
+/*
 export const getSessionByToken = async (token: string): Promise<SavedSession | null> => {
-  // This will be replaced with an actual API call later
   try {
     const savedSessionStr = localStorage.getItem(SAVED_SESSION_KEY);
     if (savedSessionStr) {
@@ -139,12 +118,14 @@ export const getSessionByToken = async (token: string): Promise<SavedSession | n
     return null;
   }
 };
+*/
 
-// Check if a token is expired (older than 30 days)
+// <<< Comment out legacy token expiration check >>>
+/*
 export const isTokenExpired = (session: SavedSession): boolean => {
   const now = new Date();
   const expiryDate = new Date(session.createdAt);
-  expiryDate.setDate(expiryDate.getDate() + 30); // 30 day expiry
-  
+  expiryDate.setDate(expiryDate.getDate() + 30);
   return now > expiryDate;
 };
+*/
