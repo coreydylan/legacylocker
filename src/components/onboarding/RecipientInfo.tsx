@@ -207,78 +207,75 @@ const RecipientInfo: React.FC = () => {
     debouncedSave.cancel();
     updateSession('recipient', data); 
 
-    // --- Final Save and Email Logic ---
-    let purchaserEmail: string | undefined;
     try {
       console.log('[SUBMIT] RecipientInfo: Calling final saveSessionToSupabase...');
       await saveSessionToSupabase(); 
       console.log('[SUBMIT] RecipientInfo: Final session save successful.');
 
-      // --- Call Backend API to Send Resume Email ---
-      // Get necessary data from the session store
-      const { session } = useSessionStore.getState();
-      purchaserEmail = session.purchaser?.email || session.email; // Use purchaser email or the saved email
-      const sessionId = session.sessionId;
-      
-      // Determine recipient's first name based on the form data type
-      const recipientFirstName = data.type === 'individual' 
-                                  ? data.firstName 
-                                  : data.recipient1FirstName; // Use first name for couple
+      // --- Send Resume Email AFTER successful save --- 
+      const currentState = useSessionStore.getState(); // Get latest state *after* save
+      const purchaserEmail = currentState.session.purchaser?.email || currentState.session.email;
+      const sessionId = currentState.session.sessionId;
+      const recipientFirstName = data.type === 'individual' ? data.firstName : data.recipient1FirstName;
 
-      console.log(`[SUBMIT] RecipientInfo: Checking API call condition - sessionId: ${sessionId}, purchaserEmail: ${purchaserEmail}`);
+      console.log(`[SUBMIT EMAIL] RecipientInfo: Checking conditions - sessionId: ${sessionId}, purchaserEmail: ${purchaserEmail}`);
       
-      // Send email if we have a session ID and purchaser email
       if (sessionId && purchaserEmail) {
-          console.log(`[SUBMIT] RecipientInfo: Attempting call to /api/send-resume-email for ${purchaserEmail} / ${sessionId}.`);
+          console.log(`[SUBMIT EMAIL] RecipientInfo: Attempting call to /api/send-resume-email...`);
           try {
               const response = await fetch('/api/send-resume-email', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ email: purchaserEmail, sessionId, recipientFirstName }), // Include recipientFirstName
+                  body: JSON.stringify({ email: purchaserEmail, sessionId, recipientFirstName }),
               });
               
               if (!response.ok) {
-                  // Throw an error to be caught by the outer catch block
-                  throw new Error(`API responded with status: ${response.status}`);
+                  // Log API error but don't throw here to avoid blocking navigation
+                  console.error(`[SUBMIT EMAIL] RecipientInfo: API call failed with status: ${response.status}`);
+                  // Optionally show a different toast for API failure
+                  toast({
+                      title: "Error Sending Email",
+                      description: "We saved your progress, but couldn't send the resume link email. Please try again later or contact support.",
+                      variant: "destructive",
+                  });
+              } else {
+                 const responseData = await response.json(); 
+                 console.log('[SUBMIT EMAIL] RecipientInfo: API call successful.', responseData);
+                 // Show success toast ONLY if API call is successful
+                 toast({
+                    title: "Magic Link Sent",
+                    description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
+                 });
               }
-              
-              const responseData = await response.json(); // Assuming your API returns JSON
-              console.log('[SUBMIT] RecipientInfo: API call to /api/send-resume-email successful.', responseData);
-
           } catch (err) {
-              console.error('[SUBMIT] RecipientInfo: API call to /api/send-resume-email FAILED:', err);
-              // Log the error but don't block navigation
+              console.error('[SUBMIT EMAIL] RecipientInfo: Exception during API call:', err);
+              // Show error toast on exception
+               toast({
+                   title: "Error Sending Email",
+                   description: "An unexpected error occurred while sending the resume link email. Please try again later or contact support.",
+                   variant: "destructive",
+               });
           }
-          
-          // Show toast after attempting to send email
-          toast({
-            title: "Magic Link Sent",
-            description: `We emailed a magic link to ${purchaserEmail}. Your progress is saved automatically.`,
-          });
-
       } else {
-         console.log('[SUBMIT] RecipientInfo: Conditions NOT met for calling email API.');
-         if (!sessionId) {
-             console.warn('[SUBMIT] RecipientInfo: Session ID not found for email API.');
-         }
-         if (!purchaserEmail) {
-             console.warn('[SUBMIT] RecipientInfo: Purchaser email not found for email API.');
-         }
+         console.warn('[SUBMIT EMAIL] RecipientInfo: Conditions NOT met for sending email.');
+         if (!sessionId) console.warn('[SUBMIT EMAIL] - Session ID missing.');
+         if (!purchaserEmail) console.warn('[SUBMIT EMAIL] - Purchaser email missing.');
+         // Optionally inform user progress was saved but email couldn't be sent due to missing info
+         // toast({ ... }); 
       }
-      // --- End API Call Logic ---
+      // --- End Email Logic ---
 
     } catch (error) {
-      console.error('[SUBMIT] RecipientInfo: Final saveSessionToSupabase FAILED:', error);
-      // Show a generic save toast even if email failed or wasn't sent
+      console.error('[SUBMIT SAVE] RecipientInfo: Final saveSessionToSupabase FAILED:', error);
       toast({
-        title: "Progress Saved",
-        description: "Your progress has been saved automatically.",
-        variant: "default" // Or use a different variant if preferred
+        title: "Error Saving Progress",
+        description: "We couldn't save your latest changes. Please check your connection and try again.",
+        variant: "destructive",
       });
+      return; // Prevent navigation if save fails
     }
-    // --- End Final Save and Email Logic ---
 
-    console.log('RecipientInfo: Calling goNext()...');
+    console.log('RecipientInfo: Save successful, calling goNext()...');
     goNext(); 
   };
 
