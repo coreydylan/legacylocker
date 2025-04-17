@@ -16,66 +16,94 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if we're in development mode
-    if (process.env.NODE_ENV === 'development') {
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // Check if we're on localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      setIsAuthenticated(true);
-      setIsLoading(false);
-      return;
-    }
-
-    // For production, check if user is authenticated
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setIsAuthenticated(true);
-      }
-      setIsLoading(false);
-    };
-
     checkAuth();
   }, []);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Simple password check - replace with your actual admin password
-    const adminPassword = process.env.VITE_ADMIN_PASSWORD || 'legacylocker2024';
-    
-    if (password === adminPassword) {
-      // Sign in with Supabase using email/password
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: 'admin@legacylockerco.com',
-        password: adminPassword,
-      });
-      
-      if (error) {
-        console.error('Supabase auth error:', error);
-        toast({
-          title: 'Authentication Error',
-          description: 'Failed to authenticate with the server',
-          variant: 'destructive',
-        });
+  const checkAuth = async () => {
+    try {
+      console.log('Checking authentication status in AdminAuth...');
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+
+      if (authError) {
+        console.error('Auth error:', authError);
+        setIsAuthenticated(false);
+        setIsLoading(false);
         return;
       }
+
+      console.log('Auth session in AdminAuth:', session);
+
+      // For development/localhost, bypass authentication
+      if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('Development environment detected, bypassing authentication');
+        setIsAuthenticated(true);
+        setIsLoading(false);
+        return;
+      }
+
+      if (session) {
+        console.log('Valid session found');
+        setIsAuthenticated(true);
+      } else {
+        console.log('No valid session found');
+        setIsAuthenticated(false);
+      }
+    } catch (error) {
+      console.error('Error checking auth:', error);
+      setIsAuthenticated(false);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      console.log('Attempting login...');
+      const adminPassword = process.env.VITE_ADMIN_PASSWORD || 'legacylocker2024';
       
-      setIsAuthenticated(true);
-      toast({
-        title: 'Success',
-        description: 'You have been authenticated as an admin',
-      });
-    } else {
+      if (password === adminPassword) {
+        // Sign in with Supabase using email/password
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: 'admin@legacylockerco.com',
+          password: adminPassword,
+        });
+        
+        if (error) {
+          console.error('Supabase auth error:', error);
+          toast({
+            title: 'Authentication Error',
+            description: error.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        console.log('Login successful:', data);
+        setIsAuthenticated(true);
+        toast({
+          title: 'Success',
+          description: 'You have been authenticated as an admin',
+        });
+      } else {
+        console.log('Invalid password attempt');
+        toast({
+          title: 'Error',
+          description: 'Invalid password',
+          variant: 'destructive',
+        });
+      }
+    } catch (error) {
+      console.error('Login error:', error);
       toast({
         title: 'Error',
-        description: 'Invalid password',
+        description: 'An unexpected error occurred',
         variant: 'destructive',
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -116,7 +144,6 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  // Wrap authenticated content in AdminLayout
   return <AdminLayout>{children}</AdminLayout>;
 };
 

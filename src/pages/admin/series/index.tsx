@@ -48,7 +48,7 @@ const AdminSeriesPage = () => {
   const [regions, setRegions] = useState<string[]>([]);
 
   useEffect(() => {
-    fetchSeries();
+    checkAuthAndFetchSeries();
   }, []);
 
   useEffect(() => {
@@ -79,21 +79,62 @@ const AdminSeriesPage = () => {
     setFilteredSeries(filtered);
   }, [series, searchTerm, selectedTheme, selectedRegion]);
 
+  const checkAuthAndFetchSeries = async () => {
+    try {
+      console.log('Checking authentication status...');
+      const { data: { session }, error: authError } = await supabase.auth.getSession();
+      
+      if (authError) {
+        console.error('Auth error:', authError);
+        throw authError;
+      }
+
+      console.log('Auth session:', session);
+      
+      if (!session) {
+        console.log('No active session found');
+        toast({
+          title: 'Authentication Required',
+          description: 'Please log in to view series',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      await fetchSeries();
+    } catch (error) {
+      console.error('Error in auth check:', error);
+      toast({
+        title: 'Authentication Error',
+        description: 'Failed to verify authentication status',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const fetchSeries = async () => {
     setIsLoading(true);
     try {
+      console.log('Fetching series...');
       const { data, error } = await supabase
         .from('story_series')
         .select('*')
         .order('natural_language_name', { ascending: true });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
       
+      console.log('Fetched series data:', data);
       setSeries(data || []);
       
       // Extract unique themes and regions for filters
       const uniqueThemes = [...new Set(data?.map(item => item.theme).filter(Boolean) as string[])];
       const uniqueRegions = [...new Set(data?.map(item => item.region_key).filter(Boolean) as string[])];
+      
+      console.log('Unique themes:', uniqueThemes);
+      console.log('Unique regions:', uniqueRegions);
       
       setThemes(uniqueThemes);
       setRegions(uniqueRegions);
