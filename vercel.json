@@ -9,5 +9,9 @@
       "main": true
     }
   },
-  "crons": []
+  "crons": [],
+  "rewrites": [
+    { "source": "/admin/:path*", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 } 
