@@ -35,12 +35,12 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       console.log('Auth session in AdminAuth:', session);
 
       // For development/localhost, bypass authentication
-      if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log('Development environment detected, bypassing authentication');
-        setIsAuthenticated(true);
-        setIsLoading(false);
-        return;
-      }
+      // REMOVE: if (process.env.NODE_ENV === 'development' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      // REMOVE:   console.log('Development environment detected, bypassing authentication');
+      // REMOVE:   setIsAuthenticated(true);
+      // REMOVE:   setIsLoading(false);
+      // REMOVE:   return;
+      // REMOVE: }
 
       if (session) {
         console.log('Valid session found');

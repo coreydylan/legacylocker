@@ -93,7 +93,6 @@ const SeriesDetailPage = () => {
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSample, setEditingSample] = useState<StorySample | null>(null);
-  const [isFlipped, setIsFlipped] = useState(false);
   
   useEffect(() => {
     if (id) {
@@ -155,6 +154,7 @@ const SeriesDetailPage = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
+        console.log('Setting imagePreview in handleImageChange:', reader.result);
       };
       reader.readAsDataURL(file);
     }
@@ -225,17 +225,16 @@ const SeriesDetailPage = () => {
     setImageFile(null);
     setImagePreview(null);
     setEditingSample(null);
-    setIsFlipped(false);
   };
   
   const handleOpenDialog = (sample?: StorySample) => {
     if (sample) {
       setEditingSample(sample);
       setImagePreview(sample.image_url);
+      console.log('Setting imagePreview in handleOpenDialog:', sample.image_url);
     } else {
       resetForm();
     }
-    setIsFlipped(false);
     setIsDialogOpen(true);
   };
   
@@ -485,73 +484,65 @@ const SeriesDetailPage = () => {
                   New Sample
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[600px]">
+              <DialogContent className="sm:max-w-5xl">
                 <DialogHeader>
                   <DialogTitle>{editingSample ? 'Edit Sample Artwork' : 'Create New Sample'}</DialogTitle>
                   <DialogDescription>
-                    {isFlipped ? 'Card Back (Preview)' : 'Upload the front artwork for your sample.'}
+                    Upload the front artwork for your sample.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 min-h-[400px]">
                   <div className="space-y-4">
-                    {!isFlipped ? (
-                      <>
-                        <div className="grid gap-2">
-                          <Label htmlFor="imageUpload">Front Artwork</Label>
-                          <div className="flex items-center space-x-4">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              onClick={() => document.getElementById('imageUpload')?.click()}
-                              disabled={isUploading}
-                            >
-                              {isUploading ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <Upload className="h-4 w-4 mr-2" />
-                              )}
-                              {imagePreview ? 'Change Image' : 'Upload Image'}
-                            </Button>
-                            <input
-                              id="imageUpload"
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleImageChange}
-                              disabled={isUploading}
-                            />
-                            {imagePreview && (
-                               <Button
-                                 type="button"
-                                 variant="ghost"
-                                 size="sm"
-                                 onClick={() => {
-                                   setImageFile(null);
-                                   setImagePreview(null);
-                                   const input = document.getElementById('imageUpload') as HTMLInputElement;
-                                   if (input) input.value = '';
-                                 }}
-                                 disabled={isUploading}
-                                >
-                                 <X className="h-4 w-4 mr-1" /> Remove
-                               </Button>
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="imageUpload">Front Artwork</Label>
+                        <div className="flex items-center space-x-4">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => document.getElementById('imageUpload')?.click()}
+                            disabled={isUploading}
+                          >
+                            {isUploading ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-2" />
                             )}
-                          </div>
-                          {isUploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
+                            {imagePreview ? 'Change Image' : 'Upload Image'}
+                          </Button>
+                          <input
+                            id="imageUpload"
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={handleImageChange}
+                            disabled={isUploading}
+                          />
+                          {imagePreview && (
+                             <Button
+                               type="button"
+                               variant="ghost"
+                               size="sm"
+                               onClick={() => {
+                                 setImageFile(null);
+                                 setImagePreview(null);
+                                 const input = document.getElementById('imageUpload') as HTMLInputElement;
+                                 if (input) input.value = '';
+                               }}
+                               disabled={isUploading}
+                              >
+                               <X className="h-4 w-4 mr-1" /> Remove
+                             </Button>
+                          )}
                         </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center h-full text-muted-foreground">
-                        (Card Back Editor - Coming Soon)
+                        {isUploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
                       </div>
-                    )}
+                    </>
                   </div>
 
                   <div className="flex flex-col justify-center items-center h-full">
                     <SamplePreview
                       imageUrl={imagePreview}
-                      isFlipped={isFlipped}
-                      setIsFlipped={setIsFlipped}
                       className="w-full"
                     />
                   </div>
@@ -560,16 +551,14 @@ const SeriesDetailPage = () => {
                   <Button variant="outline" onClick={handleCloseDialog}>
                     Cancel
                   </Button>
-                  {!isFlipped && (
-                     <Button onClick={handleSave} disabled={isSaving || isUploading}>
-                      {isSaving ? (
-                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      ) : (
-                         <Save className="h-4 w-4 mr-2" />
-                      )}
-                      {editingSample ? 'Save Artwork' : 'Create Sample'}
-                     </Button>
-                  )}
+                  <Button onClick={handleSave} disabled={isSaving || isUploading}>
+                    {isSaving ? (
+                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                       <Save className="h-4 w-4 mr-2" />
+                    )}
+                    {editingSample ? 'Save Artwork' : 'Create Sample'}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
