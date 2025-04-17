@@ -1,17 +1,10 @@
 import { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '@/lib/supabaseClient';
 
 interface StorySeries {
   emoji: string;
   natural_language_name: string;
 }
-
-// Supabase client configuration
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
-
-// Initialize Supabase client outside of the hook
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export function useRegionalStories() {
   const [stories, setStories] = useState<StorySeries[]>([]);
