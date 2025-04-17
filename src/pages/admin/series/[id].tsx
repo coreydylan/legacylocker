@@ -58,21 +58,39 @@ interface StorySeriesRow {
 
 interface StorySample {
   id: string;
-  series_id: string;
+  story_series_id: string;
   headline: string;
+  subtitle: string | null;
   story_body: string;
-  footer_note: string;
-  image_url: string;
+  badge_text: string | null;
+  badge_copy: string | null;
+  badge_color: string | null;
+  frame_color: string | null;
+  icon: string | null;
+  card_count: number | null;
+  edition_text: string | null;
+  image_url: string | null;
   is_default: boolean;
-  frame_color: string;
-  icon: string;
-  badge_copy: string;
-  badge_color: string;
-  card_count: number;
-  edition_text: string;
-  badge_off_or_on: boolean;
   created_at: string;
   updated_at: string;
+}
+
+interface SamplePreviewProps {
+  imageUrl: string;
+  headline: string;
+  subtitle: string;
+  storyBody: string;
+  badgeText: string;
+  badgeCopy: string;
+  badgeColor: string;
+  frameColor: string;
+  icon: string;
+  cardCount: number;
+  editionText: string;
+  showFlipButton?: boolean;
+  isFlipped?: boolean;
+  displayMode?: 'dialog' | 'thumbnail';
+  className?: string;
 }
 
 const SeriesDetailPage = () => {
@@ -92,7 +110,39 @@ const SeriesDetailPage = () => {
   
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingSample, setEditingSample] = useState<StorySample | null>(null);
+  const [selectedSample, setSelectedSample] = useState<StorySample | null>(null);
+  const [activeEditTab, setActiveEditTab] = useState<'front' | 'back'>('front');
+  const [cardBackData, setCardBackData] = useState<{
+    headline: string;
+    subtitle: string;
+    storyBody: string;
+    badgeText: string;
+    customNote: string;
+    cardNumber: number;
+    totalCards: number;
+    editionTitle: string;
+    giftFromCopy: string;
+    footerOn: boolean;
+    frameColor: string;
+    cardDetailsBgColor: string;
+    badgeColor: string;
+    icons: string[];
+  }>({
+    headline: '',
+    subtitle: '',
+    storyBody: '',
+    badgeText: '',
+    customNote: '',
+    cardNumber: 1,
+    totalCards: 12,
+    editionTitle: 'Legacy Locker',
+    giftFromCopy: 'A Gift From',
+    footerOn: true,
+    frameColor: '#2C5530',
+    cardDetailsBgColor: '#F9F5EC',
+    badgeColor: '#ED9831',
+    icons: []
+  });
   
   useEffect(() => {
     if (id) {
@@ -224,16 +274,62 @@ const SeriesDetailPage = () => {
   const resetForm = () => {
     setImageFile(null);
     setImagePreview(null);
-    setEditingSample(null);
+    setSelectedSample(null);
+    setCardBackData({
+      headline: '',
+      subtitle: '',
+      storyBody: '',
+      badgeText: '',
+      customNote: '',
+      cardNumber: 1,
+      totalCards: 12,
+      editionTitle: 'Legacy Locker',
+      giftFromCopy: 'A Gift From',
+      footerOn: true,
+      frameColor: '#2C5530',
+      cardDetailsBgColor: '#F9F5EC',
+      badgeColor: '#ED9831',
+      icons: []
+    });
   };
   
   const handleOpenDialog = (sample?: StorySample) => {
     if (sample) {
-      setEditingSample(sample);
-      setImagePreview(sample.image_url);
-      console.log('Setting imagePreview in handleOpenDialog:', sample.image_url);
+      setSelectedSample(sample);
+      setCardBackData({
+        headline: sample.headline || '',
+        subtitle: sample.subtitle || '',
+        storyBody: sample.story_body || '',
+        badgeText: sample.badge_text || '',
+        customNote: '',
+        cardNumber: sample.card_count || 1,
+        totalCards: 12,
+        editionTitle: sample.edition_text || 'Legacy Locker',
+        giftFromCopy: 'A Gift From',
+        footerOn: true,
+        frameColor: sample.frame_color || '#2C5530',
+        cardDetailsBgColor: '#F9F5EC',
+        badgeColor: '#ED9831',
+        icons: sample.icon ? [sample.icon] : []
+      });
     } else {
-      resetForm();
+      setSelectedSample(null);
+      setCardBackData({
+        headline: '',
+        subtitle: '',
+        storyBody: '',
+        badgeText: '',
+        customNote: '',
+        cardNumber: 1,
+        totalCards: 12,
+        editionTitle: 'Legacy Locker',
+        giftFromCopy: 'A Gift From',
+        footerOn: true,
+        frameColor: '#2C5530',
+        cardDetailsBgColor: '#F9F5EC',
+        badgeColor: '#ED9831',
+        icons: []
+      });
     }
     setIsDialogOpen(true);
   };
@@ -244,121 +340,75 @@ const SeriesDetailPage = () => {
   };
   
   const handleSave = async () => {
-    if (!editingSample && !imageFile) {
-      toast({
-        title: 'No Changes',
-        description: 'Please select an image to upload.',
-        variant: 'default',
-      });
-      return;
-    }
+    if (!selectedSample && !imageFile) return;
 
-    setIsSaving(true);
-    try {
-      // Check if user is authenticated
-      const { data: authData, error: authError } = await supabase.auth.getSession();
-      if (authError || !authData.session) {
-        console.error('Authentication error:', authError);
-        toast({
-          title: 'Authentication Error',
-          description: 'You must be logged in to save samples',
-          variant: 'destructive',
-        });
+    const sampleData: Partial<StorySample> = {
+      headline: cardBackData.headline || '',
+      story_body: cardBackData.storyBody || '',
+      subtitle: cardBackData.subtitle,
+      badge_text: cardBackData.badgeText,
+      badge_copy: null,
+      frame_color: cardBackData.frameColor,
+      icon: cardBackData.icons[0] || null,
+      card_count: cardBackData.cardNumber,
+      edition_text: cardBackData.editionTitle
+    };
+
+    if (imageFile) {
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('story_samples')
+        .upload(`${Date.now()}-${imageFile.name}`, imageFile);
+
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError);
         return;
       }
 
-      let imageUrl = imagePreview;
-      
-      // Upload new image if selected
-      if (imageFile) {
-        try {
-          imageUrl = await uploadImage(imageFile);
-        } catch (uploadError) {
-          toast({
-            title: 'Upload Error',
-            description: 'Failed to upload image. Please try again.',
-            variant: 'destructive',
-          });
-          setIsSaving(false);
-          return;
-        }
+      if (uploadData) {
+        const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/story_samples/${uploadData.path}`;
+        sampleData.image_url = imageUrl;
       }
-      
-      const sampleData: Partial<StorySample> = {};
-      if (imageUrl !== imagePreview || (imageUrl && !editingSample)) {
-         sampleData.image_url = imageUrl;
-      } else if (!imageUrl && editingSample?.image_url) {
-        sampleData.image_url = null;
-      }
-
-      if (Object.keys(sampleData).length === 0 && !imageFile) {
-         toast({
-          title: 'No Changes',
-          description: 'No changes detected.',
-          variant: 'default',
-         });
-         setIsSaving(false);
-         return;
-      }
-
-      console.log('Saving sample data:', sampleData);
-      
-      if (editingSample) {
-        // Update existing sample
-        const { error } = await supabase
-          .from('story_samples')
-          .update(sampleData)
-          .eq('id', editingSample.id);
-          
-        if (error) {
-          console.error('Update error details:', error);
-          throw error;
-        }
-        
-        toast({
-          title: 'Success',
-          description: 'Sample updated successfully',
-        });
-      } else {
-        // Create new sample
-        if (!imageUrl) {
-          toast({ title: 'Error', description: 'Cannot create sample without artwork.', variant: 'destructive' });
-          setIsSaving(false);
-          return;
-        }
-        const { error } = await supabase
-          .from('story_samples')
-          .insert([{
-            story_series_id: id,
-            id: uuidv4(),
-            image_url: imageUrl,
-            headline: 'Untitled',
-            story_body: '',
-          }]);
-          
-        if (error) {
-          console.error('Insert error details:', error);
-          throw error;
-        }
-        
-        toast({
-          title: 'Success',
-          description: 'Sample created successfully',
-        });
-      }
-      
-      await fetchSamples();
-      handleCloseDialog();
-    } catch (error) {
-      console.error('Error saving sample:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save sample.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsSaving(false);
     }
+
+    if (selectedSample) {
+      // Remove fields that don't exist in the database schema
+      const { 
+        badge_color, 
+        ...validSampleData 
+      } = sampleData;
+
+      const { error } = await supabase
+        .from('story_samples')
+        .update(validSampleData)
+        .eq('id', selectedSample.id);
+
+      if (error) {
+        console.error('Error updating sample:', error);
+        return;
+      }
+    } else {
+      // Remove fields that don't exist in the database schema
+      const { 
+        badge_color, 
+        ...validSampleData 
+      } = sampleData;
+
+      const { error } = await supabase.from('story_samples').insert([
+        {
+          ...validSampleData,
+          story_series_id: id,
+          is_default: false
+        }
+      ]);
+
+      if (error) {
+        console.error('Error creating sample:', error);
+        return;
+      }
+    }
+
+    setIsDialogOpen(false);
+    await fetchSamples();
   };
   
   const handleDelete = async (sampleId: string) => {
@@ -486,78 +536,302 @@ const SeriesDetailPage = () => {
               </DialogTrigger>
               <DialogContent className="sm:max-w-5xl">
                 <DialogHeader>
-                  <DialogTitle>{editingSample ? 'Edit Sample Artwork' : 'Create New Sample'}</DialogTitle>
+                  <DialogTitle>{selectedSample ? 'Edit Sample' : 'Create New Sample'}</DialogTitle>
                   <DialogDescription>
-                    Upload the front artwork for your sample.
+                    {activeEditTab === 'front' ? 'Upload the front artwork for your sample.' : 'Customize the back of your sample card.'}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 min-h-[400px]">
-                  <div className="space-y-4">
-                    <>
-                      <div className="grid gap-2">
-                        <Label htmlFor="imageUpload">Front Artwork</Label>
-                        <div className="flex items-center space-x-4">
-                          <Button
-                            type="button"
-                            variant="outline"
-                            onClick={() => document.getElementById('imageUpload')?.click()}
-                            disabled={isUploading}
-                          >
-                            {isUploading ? (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            ) : (
-                              <Upload className="h-4 w-4 mr-2" />
-                            )}
-                            {imagePreview ? 'Change Image' : 'Upload Image'}
-                          </Button>
-                          <input
-                            id="imageUpload"
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={handleImageChange}
-                            disabled={isUploading}
-                          />
-                          {imagePreview && (
-                             <Button
-                               type="button"
-                               variant="ghost"
-                               size="sm"
-                               onClick={() => {
-                                 setImageFile(null);
-                                 setImagePreview(null);
-                                 const input = document.getElementById('imageUpload') as HTMLInputElement;
-                                 if (input) input.value = '';
-                               }}
-                               disabled={isUploading}
+                
+                <Tabs value={activeEditTab} onValueChange={(value) => setActiveEditTab(value as 'front' | 'back')}>
+                  <TabsList className="grid w-full grid-cols-2">
+                    <TabsTrigger value="front">Front</TabsTrigger>
+                    <TabsTrigger value="back">Back</TabsTrigger>
+                  </TabsList>
+                  
+                  <TabsContent value="front" className="mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="imageUpload">Sample Image</Label>
+                          <div className="mt-2 flex items-center space-x-4">
+                            <Button
+                              variant="outline"
+                              onClick={() => document.getElementById('imageUpload')?.click()}
+                              disabled={isUploading}
+                            >
+                              {isUploading ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4 mr-2" />
+                              )}
+                              {imagePreview ? 'Replace Image' : 'Upload Image'}
+                            </Button>
+                            <input
+                              id="imageUpload"
+                              type="file"
+                              accept="image/*"
+                              onChange={handleImageChange}
+                              className="hidden"
+                            />
+                            {imagePreview && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  setImageFile(null);
+                                  setImagePreview(null);
+                                  const input = document.getElementById('imageUpload') as HTMLInputElement;
+                                  if (input) input.value = '';
+                                }}
+                                disabled={isUploading}
                               >
-                               <X className="h-4 w-4 mr-1" /> Remove
-                             </Button>
-                          )}
+                                <X className="h-4 w-4 mr-1" /> Remove
+                              </Button>
+                            )}
+                          </div>
+                          {isUploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
                         </div>
-                        {isUploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
                       </div>
-                    </>
-                  </div>
-
-                  <div className="flex flex-col justify-center items-center h-full">
-                    <SamplePreview
-                      imageUrl={imagePreview}
-                      className="w-full"
-                    />
-                  </div>
-                </div>
+                      
+                      <div className="flex flex-col justify-center items-center h-full">
+                        <SamplePreview
+                          imageUrl={imagePreview}
+                          className="w-full"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                  
+                  <TabsContent value="back" className="mt-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                        <div>
+                          <Label htmlFor="headline">Headline</Label>
+                          <Input
+                            id="headline"
+                            value={cardBackData.headline}
+                            onChange={(e) => setCardBackData({ ...cardBackData, headline: e.target.value })}
+                            placeholder="Enter headline..."
+                            maxLength={25}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {cardBackData.headline.length}/25 characters
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="subtitle">Subtitle</Label>
+                          <Input
+                            id="subtitle"
+                            value={cardBackData.subtitle}
+                            onChange={(e) => setCardBackData({ ...cardBackData, subtitle: e.target.value })}
+                            placeholder="Enter subtitle..."
+                            maxLength={50}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {cardBackData.subtitle.length}/50 characters
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="badgeText">Badge Text</Label>
+                          <Input
+                            id="badgeText"
+                            value={cardBackData.badgeText}
+                            onChange={(e) => setCardBackData({ ...cardBackData, badgeText: e.target.value })}
+                            placeholder="Enter badge text..."
+                            maxLength={20}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {cardBackData.badgeText.length}/20 characters
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="storyBody">Story Body</Label>
+                          <Textarea
+                            id="storyBody"
+                            value={cardBackData.storyBody}
+                            onChange={(e) => setCardBackData({ ...cardBackData, storyBody: e.target.value })}
+                            placeholder="Enter story text..."
+                            className="min-h-[200px]"
+                            maxLength={1700}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {cardBackData.storyBody.length}/1700 characters
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="customNote">Custom Note</Label>
+                          <Input
+                            id="customNote"
+                            value={cardBackData.customNote}
+                            onChange={(e) => setCardBackData({ ...cardBackData, customNote: e.target.value })}
+                            placeholder="Enter custom note..."
+                            maxLength={200}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {cardBackData.customNote.length}/200 characters
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="cardNumber">Card Number</Label>
+                          <Input
+                            id="cardNumber"
+                            type="number"
+                            value={cardBackData.cardNumber}
+                            onChange={(e) => setCardBackData({ ...cardBackData, cardNumber: Number(e.target.value) })}
+                            placeholder="Enter card number..."
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="totalCards">Total Cards</Label>
+                          <Input
+                            id="totalCards"
+                            type="number"
+                            value={cardBackData.totalCards}
+                            onChange={(e) => setCardBackData({ ...cardBackData, totalCards: Number(e.target.value) })}
+                            placeholder="Enter total cards..."
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="editionTitle">Edition Title</Label>
+                          <Input
+                            id="editionTitle"
+                            value={cardBackData.editionTitle}
+                            onChange={(e) => setCardBackData({ ...cardBackData, editionTitle: e.target.value })}
+                            placeholder="Enter edition title..."
+                            maxLength={50}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {cardBackData.editionTitle.length}/50 characters
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="giftFromCopy">Gift From Copy</Label>
+                          <Input
+                            id="giftFromCopy"
+                            value={cardBackData.giftFromCopy}
+                            onChange={(e) => setCardBackData({ ...cardBackData, giftFromCopy: e.target.value })}
+                            placeholder="Enter gift from copy..."
+                            maxLength={50}
+                          />
+                          <div className="text-xs text-gray-500 mt-1">
+                            {cardBackData.giftFromCopy.length}/50 characters
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="footerOn">Footer On</Label>
+                          <Checkbox
+                            id="footerOn"
+                            checked={cardBackData.footerOn}
+                            onCheckedChange={(value) => setCardBackData({ ...cardBackData, footerOn: !!value })}
+                          />
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="frameColor">Frame Color</Label>
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              id="frameColor"
+                              type="color"
+                              value={cardBackData.frameColor}
+                              onChange={(e) => setCardBackData({ ...cardBackData, frameColor: e.target.value })}
+                              className="w-12 h-8 p-1"
+                            />
+                            <Input
+                              type="text"
+                              value={cardBackData.frameColor}
+                              onChange={(e) => setCardBackData({ ...cardBackData, frameColor: e.target.value })}
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="cardDetailsBgColor">Card Details Background Color</Label>
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              id="cardDetailsBgColor"
+                              type="color"
+                              value={cardBackData.cardDetailsBgColor}
+                              onChange={(e) => setCardBackData({ ...cardBackData, cardDetailsBgColor: e.target.value })}
+                              className="w-12 h-8 p-1"
+                            />
+                            <Input
+                              type="text"
+                              value={cardBackData.cardDetailsBgColor}
+                              onChange={(e) => setCardBackData({ ...cardBackData, cardDetailsBgColor: e.target.value })}
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+                        
+                        <div>
+                          <Label htmlFor="badgeColor">Badge Color</Label>
+                          <div className="flex items-center space-x-2">
+                            <Input
+                              id="badgeColor"
+                              type="color"
+                              value={cardBackData.badgeColor}
+                              onChange={(e) => setCardBackData({ ...cardBackData, badgeColor: e.target.value })}
+                              className="w-12 h-8 p-1"
+                            />
+                            <Input
+                              type="text"
+                              value={cardBackData.badgeColor}
+                              onChange={(e) => setCardBackData({ ...cardBackData, badgeColor: e.target.value })}
+                              className="flex-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="flex flex-col justify-center items-center h-full">
+                        <SamplePreview
+                          imageUrl={imagePreview}
+                          className="w-full"
+                          headline={cardBackData.headline}
+                          subtitle={cardBackData.subtitle}
+                          storyBody={cardBackData.storyBody}
+                          badgeText={cardBackData.badgeText}
+                          customNote={cardBackData.customNote}
+                          cardNumber={cardBackData.cardNumber}
+                          totalCards={cardBackData.totalCards}
+                          editionTitle={cardBackData.editionTitle}
+                          giftFromCopy={cardBackData.giftFromCopy}
+                          footerOn={cardBackData.footerOn}
+                          frameColor={cardBackData.frameColor}
+                          cardDetailsBgColor={cardBackData.cardDetailsBgColor}
+                          badgeColor={cardBackData.badgeColor}
+                          icons={cardBackData.icons}
+                          showFlipButton={true}
+                          isFlipped={true}
+                          displayMode="dialog"
+                        />
+                      </div>
+                    </div>
+                  </TabsContent>
+                </Tabs>
+                
                 <DialogFooter>
                   <Button variant="outline" onClick={handleCloseDialog}>
                     Cancel
                   </Button>
                   <Button onClick={handleSave} disabled={isSaving || isUploading}>
                     {isSaving ? (
-                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                       <Save className="h-4 w-4 mr-2" />
+                      <Save className="h-4 w-4 mr-2" />
                     )}
-                    {editingSample ? 'Save Artwork' : 'Create Sample'}
+                    {selectedSample ? 'Save Changes' : 'Create Sample'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -577,15 +851,21 @@ const SeriesDetailPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {samples.map((sample) => (
                 <Card key={sample.id} className="overflow-hidden">
-                  {sample.image_url && (
-                    <div className="aspect-video overflow-hidden">
-                      <img
-                        src={sample.image_url}
-                        alt={sample.headline}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
+                  <div className="aspect-[2/3] w-full">
+                    <SamplePreview
+                      imageUrl={sample.image_url}
+                      headline={sample.headline}
+                      subtitle={sample.subtitle}
+                      storyBody={sample.story_body}
+                      badgeText={sample.badge_text}
+                      cardNumber={sample.card_count}
+                      editionTitle={sample.edition_text || 'Legacy Locker'}
+                      frameColor={sample.frame_color || '#2C5530'}
+                      icons={sample.icon ? [sample.icon] : []}
+                      showFlipButton={true}
+                      displayMode="thumbnail"
+                    />
+                  </div>
                   <CardHeader className="pb-2">
                     <div className="flex justify-between items-start">
                       <CardTitle className="text-lg">{sample.headline}</CardTitle>
