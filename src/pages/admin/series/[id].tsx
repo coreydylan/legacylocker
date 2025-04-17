@@ -534,276 +534,277 @@ const SeriesDetailPage = () => {
                 <DialogHeader>
                   <DialogTitle>{selectedSample ? 'Edit Sample' : 'Create New Sample'}</DialogTitle>
                   <DialogDescription>
-                    {activeEditTab === 'front' ? 'Upload the front artwork for your sample.' : 'Customize the back of your sample card.'}
+                    Customize your sample card details and upload artwork.
                   </DialogDescription>
                 </DialogHeader>
                 
-                <Tabs value={activeEditTab} onValueChange={(value) => setActiveEditTab(value as 'front' | 'back')}>
-                  <TabsList className="grid w-full grid-cols-2">
-                    <TabsTrigger value="front">Front</TabsTrigger>
-                    <TabsTrigger value="back">Back</TabsTrigger>
-                  </TabsList>
-                  
-                  <TabsContent value="front" className="mt-4">
-                    <div className="space-y-4">
-                      <div>
-                        <Label htmlFor="imageUpload">Sample Image</Label>
-                        <div className="mt-2 flex flex-col space-y-2">
-                          <div className="flex items-center space-x-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
+                    <div>
+                      <Label htmlFor="imageUpload">Sample Image</Label>
+                      <div className="mt-2 flex flex-col space-y-2">
+                        <div className="flex items-center space-x-4">
+                          <Button
+                            variant="outline"
+                            onClick={() => document.getElementById('imageUpload')?.click()}
+                            disabled={isUploading}
+                          >
+                            {isUploading ? (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            ) : (
+                              <Upload className="h-4 w-4 mr-2" />
+                            )}
+                            {imagePreview ? 'Replace Image' : 'Upload Image'}
+                          </Button>
+                          <input
+                            id="imageUpload"
+                            type="file"
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="hidden"
+                          />
+                          {imagePreview && (
                             <Button
-                              variant="outline"
-                              onClick={() => document.getElementById('imageUpload')?.click()}
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setImageFile(null);
+                                setImagePreview(null);
+                                const input = document.getElementById('imageUpload') as HTMLInputElement;
+                                if (input) input.value = '';
+                              }}
                               disabled={isUploading}
                             >
-                              {isUploading ? (
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                              ) : (
-                                <Upload className="h-4 w-4 mr-2" />
-                              )}
-                              {imagePreview ? 'Replace Image' : 'Upload Image'}
+                              <X className="h-4 w-4 mr-1" /> Remove
                             </Button>
-                            <input
-                              id="imageUpload"
-                              type="file"
-                              accept="image/*"
-                              onChange={handleImageChange}
-                              className="hidden"
-                            />
-                            {imagePreview && (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => {
-                                  setImageFile(null);
-                                  setImagePreview(null);
-                                  const input = document.getElementById('imageUpload') as HTMLInputElement;
-                                  if (input) input.value = '';
-                                }}
-                                disabled={isUploading}
-                              >
-                                <X className="h-4 w-4 mr-1" /> Remove
-                              </Button>
-                            )}
-                          </div>
-                          {isUploading && (
-                            <div className="text-sm text-amber-600">
-                              <Loader2 className="h-3 w-3 inline-block mr-1 animate-spin" />
-                              Uploading image... Please wait.
-                            </div>
-                          )}
-                          {!imagePreview && !isUploading && (
-                            <p className="text-xs text-muted-foreground">
-                              Upload a high-quality image for the front of the card.
-                              <br />
-                              Recommended dimensions: 1200x1800px (4x6 inches at 300dpi).
-                            </p>
                           )}
                         </div>
+                        {isUploading && (
+                          <div className="text-sm text-amber-600">
+                            <Loader2 className="h-3 w-3 inline-block mr-1 animate-spin" />
+                            Uploading image... Please wait.
+                          </div>
+                        )}
+                        {!imagePreview && !isUploading && (
+                          <p className="text-xs text-muted-foreground">
+                            Upload a high-quality image for the front of the card.
+                            <br />
+                            Recommended dimensions: 1200x1800px (4x6 inches at 300dpi).
+                          </p>
+                        )}
                       </div>
                     </div>
-                  </TabsContent>
-                  
-                  <TabsContent value="back" className="mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-4">
-                        <div>
-                          <Label htmlFor="headline">Headline</Label>
-                          <Input
-                            id="headline"
-                            value={cardBackData.headline}
-                            onChange={(e) => setCardBackData({ ...cardBackData, headline: e.target.value })}
-                            placeholder="Enter headline..."
-                            maxLength={25}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {cardBackData.headline.length}/25 characters
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="subtitle">Subtitle</Label>
-                          <Input
-                            id="subtitle"
-                            value={cardBackData.subtitle}
-                            onChange={(e) => setCardBackData({ ...cardBackData, subtitle: e.target.value })}
-                            placeholder="Enter subtitle..."
-                            maxLength={50}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {cardBackData.subtitle.length}/50 characters
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="badgeText">Badge Text</Label>
-                          <Input
-                            id="badgeText"
-                            value={cardBackData.badgeText}
-                            onChange={(e) => setCardBackData({ ...cardBackData, badgeText: e.target.value })}
-                            placeholder="Enter badge text..."
-                            maxLength={20}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {cardBackData.badgeText.length}/20 characters
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="storyBody">Story Body</Label>
-                          <Textarea
-                            id="storyBody"
-                            value={cardBackData.storyBody}
-                            onChange={(e) => setCardBackData({ ...cardBackData, storyBody: e.target.value })}
-                            placeholder="Enter story text..."
-                            className="min-h-[200px]"
-                            maxLength={1700}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {cardBackData.storyBody.length}/1700 characters
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="customNote">Custom Note</Label>
-                          <Input
-                            id="customNote"
-                            value={cardBackData.customNote}
-                            onChange={(e) => setCardBackData({ ...cardBackData, customNote: e.target.value })}
-                            placeholder="Enter custom note..."
-                            maxLength={200}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {cardBackData.customNote.length}/200 characters
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="cardNumber">Card Number</Label>
-                          <Input
-                            id="cardNumber"
-                            type="number"
-                            value={cardBackData.cardNumber}
-                            onChange={(e) => setCardBackData({ ...cardBackData, cardNumber: Number(e.target.value) })}
-                            placeholder="Enter card number..."
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="totalCards">Total Cards</Label>
-                          <Input
-                            id="totalCards"
-                            type="number"
-                            value={cardBackData.totalCards}
-                            onChange={(e) => setCardBackData({ ...cardBackData, totalCards: Number(e.target.value) })}
-                            placeholder="Enter total cards..."
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="editionTitle">Edition Title</Label>
-                          <Input
-                            id="editionTitle"
-                            value={cardBackData.editionTitle}
-                            onChange={(e) => setCardBackData({ ...cardBackData, editionTitle: e.target.value })}
-                            placeholder="Enter edition title..."
-                            maxLength={50}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {cardBackData.editionTitle.length}/50 characters
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="giftFromCopy">Gift From Copy</Label>
-                          <Input
-                            id="giftFromCopy"
-                            value={cardBackData.giftFromCopy}
-                            onChange={(e) => setCardBackData({ ...cardBackData, giftFromCopy: e.target.value })}
-                            placeholder="Enter gift from copy..."
-                            maxLength={50}
-                          />
-                          <div className="text-xs text-gray-500 mt-1">
-                            {cardBackData.giftFromCopy.length}/50 characters
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="footerOn">Footer On</Label>
-                          <Checkbox
-                            id="footerOn"
-                            checked={cardBackData.footerOn}
-                            onCheckedChange={(value) => setCardBackData({ ...cardBackData, footerOn: !!value })}
-                          />
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="frameColor">Frame Color</Label>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              id="frameColor"
-                              type="color"
-                              value={cardBackData.frameColor}
-                              onChange={(e) => setCardBackData({ ...cardBackData, frameColor: e.target.value })}
-                              className="w-12 h-8 p-1"
-                            />
-                            <Input
-                              type="text"
-                              value={cardBackData.frameColor}
-                              onChange={(e) => setCardBackData({ ...cardBackData, frameColor: e.target.value })}
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="cardDetailsBgColor">Card Details Background Color</Label>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              id="cardDetailsBgColor"
-                              type="color"
-                              value={cardBackData.cardDetailsBgColor}
-                              onChange={(e) => setCardBackData({ ...cardBackData, cardDetailsBgColor: e.target.value })}
-                              className="w-12 h-8 p-1"
-                            />
-                            <Input
-                              type="text"
-                              value={cardBackData.cardDetailsBgColor}
-                              onChange={(e) => setCardBackData({ ...cardBackData, cardDetailsBgColor: e.target.value })}
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
-                        
-                        <div>
-                          <Label htmlFor="badgeColor">Badge Color</Label>
-                          <div className="flex items-center space-x-2">
-                            <Input
-                              id="badgeColor"
-                              type="color"
-                              value={cardBackData.badgeColor}
-                              onChange={(e) => setCardBackData({ ...cardBackData, badgeColor: e.target.value })}
-                              className="w-12 h-8 p-1"
-                            />
-                            <Input
-                              type="text"
-                              value={cardBackData.badgeColor}
-                              onChange={(e) => setCardBackData({ ...cardBackData, badgeColor: e.target.value })}
-                              className="flex-1"
-                            />
-                          </div>
-                        </div>
+
+                    <div>
+                      <Label htmlFor="headline">Headline</Label>
+                      <Input
+                        id="headline"
+                        value={cardBackData.headline}
+                        onChange={(e) => setCardBackData({ ...cardBackData, headline: e.target.value })}
+                        placeholder="Enter headline..."
+                        maxLength={25}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {cardBackData.headline.length}/25 characters
                       </div>
-                      
-                      <div className="flex flex-col justify-center items-center h-full">
-                        <SamplePreview
-                          imageUrl={imagePreview}
-                          className="w-full"
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="subtitle">Subtitle</Label>
+                      <Input
+                        id="subtitle"
+                        value={cardBackData.subtitle}
+                        onChange={(e) => setCardBackData({ ...cardBackData, subtitle: e.target.value })}
+                        placeholder="Enter subtitle..."
+                        maxLength={50}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {cardBackData.subtitle.length}/50 characters
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="badgeText">Badge Text</Label>
+                      <Input
+                        id="badgeText"
+                        value={cardBackData.badgeText}
+                        onChange={(e) => setCardBackData({ ...cardBackData, badgeText: e.target.value })}
+                        placeholder="Enter badge text..."
+                        maxLength={20}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {cardBackData.badgeText.length}/20 characters
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="storyBody">Story Body</Label>
+                      <Textarea
+                        id="storyBody"
+                        value={cardBackData.storyBody}
+                        onChange={(e) => setCardBackData({ ...cardBackData, storyBody: e.target.value })}
+                        placeholder="Enter story text..."
+                        className="min-h-[200px]"
+                        maxLength={1700}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {cardBackData.storyBody.length}/1700 characters
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="customNote">Custom Note</Label>
+                      <Input
+                        id="customNote"
+                        value={cardBackData.customNote}
+                        onChange={(e) => setCardBackData({ ...cardBackData, customNote: e.target.value })}
+                        placeholder="Enter custom note..."
+                        maxLength={200}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {cardBackData.customNote.length}/200 characters
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="cardNumber">Card Number</Label>
+                      <Input
+                        id="cardNumber"
+                        type="number"
+                        value={cardBackData.cardNumber}
+                        onChange={(e) => setCardBackData({ ...cardBackData, cardNumber: Number(e.target.value) })}
+                        placeholder="Enter card number..."
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="totalCards">Total Cards</Label>
+                      <Input
+                        id="totalCards"
+                        type="number"
+                        value={cardBackData.totalCards}
+                        onChange={(e) => setCardBackData({ ...cardBackData, totalCards: Number(e.target.value) })}
+                        placeholder="Enter total cards..."
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="editionTitle">Edition Title</Label>
+                      <Input
+                        id="editionTitle"
+                        value={cardBackData.editionTitle}
+                        onChange={(e) => setCardBackData({ ...cardBackData, editionTitle: e.target.value })}
+                        placeholder="Enter edition title..."
+                        maxLength={50}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {cardBackData.editionTitle.length}/50 characters
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="giftFromCopy">Gift From Copy</Label>
+                      <Input
+                        id="giftFromCopy"
+                        value={cardBackData.giftFromCopy}
+                        onChange={(e) => setCardBackData({ ...cardBackData, giftFromCopy: e.target.value })}
+                        placeholder="Enter gift from copy..."
+                        maxLength={50}
+                      />
+                      <div className="text-xs text-gray-500 mt-1">
+                        {cardBackData.giftFromCopy.length}/50 characters
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="footerOn">Footer On</Label>
+                      <Checkbox
+                        id="footerOn"
+                        checked={cardBackData.footerOn}
+                        onCheckedChange={(value) => setCardBackData({ ...cardBackData, footerOn: !!value })}
+                      />
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="frameColor">Frame Color</Label>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="frameColor"
+                          type="color"
+                          value={cardBackData.frameColor}
+                          onChange={(e) => setCardBackData({ ...cardBackData, frameColor: e.target.value })}
+                          className="w-12 h-8 p-1"
+                        />
+                        <Input
+                          type="text"
+                          value={cardBackData.frameColor}
+                          onChange={(e) => setCardBackData({ ...cardBackData, frameColor: e.target.value })}
+                          className="flex-1"
                         />
                       </div>
                     </div>
-                  </TabsContent>
-                </Tabs>
+                    
+                    <div>
+                      <Label htmlFor="cardDetailsBgColor">Card Details Background Color</Label>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="cardDetailsBgColor"
+                          type="color"
+                          value={cardBackData.cardDetailsBgColor}
+                          onChange={(e) => setCardBackData({ ...cardBackData, cardDetailsBgColor: e.target.value })}
+                          className="w-12 h-8 p-1"
+                        />
+                        <Input
+                          type="text"
+                          value={cardBackData.cardDetailsBgColor}
+                          onChange={(e) => setCardBackData({ ...cardBackData, cardDetailsBgColor: e.target.value })}
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label htmlFor="badgeColor">Badge Color</Label>
+                      <div className="flex items-center space-x-2">
+                        <Input
+                          id="badgeColor"
+                          type="color"
+                          value={cardBackData.badgeColor}
+                          onChange={(e) => setCardBackData({ ...cardBackData, badgeColor: e.target.value })}
+                          className="w-12 h-8 p-1"
+                        />
+                        <Input
+                          type="text"
+                          value={cardBackData.badgeColor}
+                          onChange={(e) => setCardBackData({ ...cardBackData, badgeColor: e.target.value })}
+                          className="flex-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col justify-center items-center h-full">
+                    <SamplePreview
+                      imageUrl={imagePreview}
+                      headline={cardBackData.headline}
+                      subtitle={cardBackData.subtitle}
+                      storyBody={cardBackData.storyBody}
+                      badgeText={cardBackData.badgeText}
+                      customNote={cardBackData.customNote}
+                      cardNumber={cardBackData.cardNumber}
+                      totalCards={cardBackData.totalCards}
+                      editionTitle={cardBackData.editionTitle}
+                      giftFromCopy={cardBackData.giftFromCopy}
+                      footerOn={cardBackData.footerOn}
+                      frameColor={cardBackData.frameColor}
+                      cardDetailsBgColor={cardBackData.cardDetailsBgColor}
+                      badgeColor={cardBackData.badgeColor}
+                      icons={cardBackData.icons}
+                      className="w-full"
+                    />
+                  </div>
+                </div>
                 
                 <DialogFooter>
                   <Button variant="outline" onClick={handleCloseDialog}>
