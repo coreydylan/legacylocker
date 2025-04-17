@@ -95,6 +95,53 @@
   }
 }
 
+/* Manrope Header Classes */
+.manrope-header-1 {
+  @apply font-manrope font-extrabold text-5xl tracking-tight;
+}
+
+.manrope-header-2 {
+  @apply font-manrope font-bold text-4xl tracking-tight;
+}
+
+.manrope-header-3 {
+  @apply font-manrope font-semibold text-3xl tracking-tight;
+}
+
+.manrope-header-4 {
+  @apply font-manrope font-medium text-2xl tracking-tight;
+}
+
+.manrope-header-5 {
+  @apply font-manrope font-medium text-xl tracking-tight;
+}
+
+.manrope-header-6 {
+  @apply font-manrope font-normal text-lg tracking-tight;
+}
+
+/* Responsive variants */
+@media (max-width: 768px) {
+  .manrope-header-1 {
+    @apply text-4xl;
+  }
+  .manrope-header-2 {
+    @apply text-3xl;
+  }
+  .manrope-header-3 {
+    @apply text-2xl;
+  }
+  .manrope-header-4 {
+    @apply text-xl;
+  }
+  .manrope-header-5 {
+    @apply text-lg;
+  }
+  .manrope-header-6 {
+    @apply text-base;
+  }
+}
+
 .card-shadow {
   box-shadow: 0 4px 20px rgba(44, 85, 48, 0.15);
 }

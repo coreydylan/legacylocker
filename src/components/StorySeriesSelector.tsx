@@ -133,6 +133,11 @@ const StorySeriesSelector = () => {
   };
 
   const proceedWithSelection = (series: SeriesType | StoryOption) => {
+    initializeNewLocalSession({
+      id: series.id,
+      label: series.label,
+      type: series.type
+    });
     setSelectedSeriesForModal(series);
     setDialogOpen(false);
     setOnboardingModalOpen(true);

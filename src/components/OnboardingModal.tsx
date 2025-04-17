@@ -63,6 +63,16 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
     }
   }, [session?.updatedAt]);
 
+  useEffect(() => {
+    if (selectedSeries && !session?.selectedEdition) {
+      sessionManager.initializeNewLocalSession({
+        id: selectedSeries.id,
+        label: selectedSeries.label,
+        type: selectedSeries.type
+      });
+    }
+  }, [selectedSeries, session?.selectedEdition, sessionManager]);
+
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
       console.log("OnboardingModal: Modal close triggered (onOpenChange: false)...");

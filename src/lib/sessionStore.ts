@@ -633,12 +633,8 @@ export const isValidSession = (session: SessionData | null | undefined): session
 
   // --- Conditional Checks based on progress --- 
   
-  // Only check these fields if we're past step 1
+  // Only check recipientType if we're past step 1
   if (session.currentStep > 1) {
-    // selectedEdition should exist after step 1 (where it's chosen)
-    if (!session.selectedEdition) return false;
-    
-    // recipientType should exist after step 1 (where it's chosen)
     if (!session.recipientType) return false;
   }
   
@@ -654,6 +650,11 @@ export const isValidSession = (session: SessionData | null | undefined): session
     const hasIndividualData = session.recipient.firstName;
     const hasCoupleData = session.recipient.recipient1FirstName;
     if (!hasIndividualData && !hasCoupleData) return false;
+  }
+
+  // Only check selectedEdition if we're past step 5 (WELCOME_CARD)
+  if (session.currentStep > 5) {
+    if (!session.selectedEdition) return false;
   }
 
   // Check updatedAt timestamp validity (if present)

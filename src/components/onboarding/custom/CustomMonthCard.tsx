@@ -259,7 +259,7 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
           {/* Left Side: Chevron and Month/Year */}
           <div className="flex items-center gap-2 md:gap-3 px-2 py-2 md:px-4 md:py-3">
             <ChevronDown className="h-4 w-4 text-gray-400 transition-transform duration-200 group-data-[state=open]/trigger:rotate-180" />
-            <span className="text-xs md:text-sm font-medium text-neutral-800 no-underline hover:no-underline">
+            <span className="manrope-header-4 text-neutral-800 no-underline hover:no-underline">
               {month} {year}
             </span>
           </div>
@@ -297,7 +297,7 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
                 {monthData.storyLocked ? <Lock size={14} /> : <Unlock size={14} />}
               </button>
               {/* Tab Text */}
-              <span className="text-xs md:text-sm font-medium text-gray-700 no-underline hover:no-underline">Story</span>
+              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline">Story</span>
             </div>
 
             {/* Artwork Tab/Indicator */}
@@ -329,7 +329,7 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
               >
                 {monthData.artworkLocked ? <Lock size={14} /> : <Unlock size={14} />}
               </button>
-              <span className="text-xs md:text-sm font-medium text-gray-700 no-underline hover:no-underline">Artwork</span>
+              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline">Artwork</span>
             </div>
 
             {/* Notes Tab/Indicator */}
@@ -361,7 +361,7 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
               >
                 {monthData.notesLocked ? <Lock size={14} /> : <Unlock size={14} />}
               </button>
-              <span className="text-xs md:text-sm font-medium text-gray-700 no-underline hover:no-underline">Custom Notes</span>
+              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline">Custom Notes</span>
             </div>
           </div>
         </div>
