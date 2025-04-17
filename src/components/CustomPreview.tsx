@@ -24,13 +24,13 @@ interface StorySample {
   footer_off_or_on: boolean;
 }
 
-interface StoryPreviewProps {
+interface CustomPreviewProps {
   samples: StorySample[];
   className?: string;
   onSampleSelect?: (sample: StorySample) => void;
 }
 
-export const StoryPreview: React.FC<StoryPreviewProps> = ({
+export const CustomPreview: React.FC<CustomPreviewProps> = ({
   samples,
   className,
   onSampleSelect,
@@ -112,7 +112,7 @@ export const StoryPreview: React.FC<StoryPreviewProps> = ({
   const handleExploreCTA = () => {
     const handleEditionSelection = (window as any).handleStoryEditionSelection;
     if (handleEditionSelection) {
-      handleEditionSelection('signature');
+      handleEditionSelection('custom');
     }
   };
 
@@ -175,9 +175,9 @@ export const StoryPreview: React.FC<StoryPreviewProps> = ({
               <span className="mr-3 mt-1 text-2xl">✨</span>
               <button
                 onClick={handleExploreCTA}
-                className="group text-left px-2 py-1 rounded-sm transition-colors text-legacy-slate text-[clamp(20px,2vw,26px)] leading-relaxed flex items-center bg-legacy-green/10 hover:bg-legacy-green/20"
+                className="group text-left px-2 py-1 rounded-sm transition-colors text-legacy-slate text-[clamp(20px,2vw,26px)] leading-relaxed flex items-center bg-legacy-gold/10 hover:bg-legacy-gold/20"
               >
-                <span>Explore more signature stories</span>
+                <span>Start a Custom Edition</span>
                 <ChevronRightIcon className="w-5 h-5 ml-2 text-legacy-slate/10 transition-all group-hover:text-legacy-slate/60" />
               </button>
             </p>
@@ -248,9 +248,9 @@ export const StoryPreview: React.FC<StoryPreviewProps> = ({
 
           <button
             onClick={handleExploreCTA}
-            className="w-full flex items-center justify-center space-x-2 py-3 text-sm font-medium text-legacy-slate bg-legacy-green/10 hover:bg-legacy-green/20 rounded-lg transition-colors"
+            className="w-full flex items-center justify-center space-x-2 py-3 text-sm font-medium text-legacy-slate bg-legacy-gold/10 hover:bg-legacy-gold/20 rounded-lg transition-colors"
           >
-            <span>Explore more signature stories</span>
+            <span>Start a Custom Edition</span>
             <ChevronRightIcon className="w-4 h-4 ml-1 text-legacy-slate/10 transition-colors hover:text-legacy-slate/60" />
           </button>
         </div>

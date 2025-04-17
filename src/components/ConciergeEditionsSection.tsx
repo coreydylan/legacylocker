@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from '@/lib/supabaseClient';
-import { StoryPreview } from '@/components/StoryPreview';
+import { ConciergePreview } from '@/components/ConciergePreview';
 import { Loader2 } from 'lucide-react';
 import { useRegionalStories } from "@/hooks/useRegionalStories";
 
-// IDs of the specific story series we want to show
-const FEATURED_SERIES_IDS = [
+// IDs of the specific story series we want to show for concierge editions
+const FEATURED_CONCIERGE_IDS = [
   '05515e4b-0932-4c8a-9adc-373ccbaac1df', // San Diego baseball
   'f5e2d04a-4926-4c79-ac53-035b22641a8c', // Jazz in New Orleans
   '5faa9c88-820e-41bc-9579-2e6b50c98744'  // History of San Francisco
@@ -30,7 +30,7 @@ interface StorySample {
   footer_off_or_on: boolean;
 }
 
-export const SignatureEditionsSection = () => {
+export const ConciergeEditionsSection = () => {
   const [samples, setSamples] = useState<StorySample[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +49,7 @@ export const SignatureEditionsSection = () => {
 
         // Filter samples client-side to match our featured series
         const matchingSamples = allSamples?.filter(sample => 
-          FEATURED_SERIES_IDS.includes(sample.story_series_id)
+          FEATURED_CONCIERGE_IDS.includes(sample.story_series_id)
         ) || [];
 
         if (matchingSamples.length > 0) {
@@ -86,7 +86,7 @@ export const SignatureEditionsSection = () => {
   }, [stories]);
 
   return (
-    <section id="signature-editions" className="bg-white py-24">
+    <section id="concierge-editions" className="bg-white py-24">
       <div className="container mx-auto px-6 md:px-6">
         <div className="space-y-8">
           {/* Title Block */}
@@ -97,8 +97,8 @@ export const SignatureEditionsSection = () => {
             className="text-[clamp(20px,2vw,26px)] leading-relaxed"
           >
             <div className="text-[clamp(24px,2.4vw,32px)]">
-              <span className="font-bold bg-legacy-green/10 px-3 py-1 rounded-md">
-                signature editions
+              <span className="font-bold bg-orange-500/10 px-3 py-1 rounded-md text-orange-500">
+                concierge editions
               </span>
             </div>
           </motion.div>
@@ -112,19 +112,19 @@ export const SignatureEditionsSection = () => {
           >
             <div className="space-y-6">
               <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                Our lives are shaped by the places we love, the teams we root for, the music that moves us, and the moments that made history. Signature Editions bring those stories to life — with beautifully illustrated cards that trace the cultural threads that connect us.
+                Some stories are too important to rush. They deserve time, care, and someone to help bring them to life.
               </p>
 
               <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                Whether it's San Diego baseball, New Orleans jazz, or San Francisco's roots, each edition is locally contextualized and thoughtfully crafted. You'll receive 12 stories throughout the year, each one tied to a real moment in history from the month it arrives — creating a rhythm of discovery that unfolds over time.
+                Concierge Editions are our most hands-on offering — a fully guided process where our team works with you to uncover and preserve a meaningful story. Whether it's a legacy gift for a parent, a tribute to someone you love, or the untold history of your family, we help shape it into something extraordinary.
               </p>
 
               <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                We cover themes across sports, history, music, art, and more — so it's easy to find one that fits anyone.
+                You'll work one-on-one with our researchers, writers, and illustrators to craft a 12-card story series — each card arriving throughout the year, beautifully written, illustrated, and timed to perfection.
               </p>
 
               <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                And the best part? They're ready to go. You can personalize each card with custom milestone footers — birthdays, anniversaries, or just because — and be done in under 5 minutes. You pick the story. We handle the magic.
+                It's for the stories that should never be forgotten — and the people who deserve to receive them.
               </p>
             </div>
           </motion.div>
@@ -144,7 +144,7 @@ export const SignatureEditionsSection = () => {
               <div className="text-center text-red-500 py-8">{error}</div>
             ) : samples.length > 0 ? (
               <div className="w-full">
-                <StoryPreview
+                <ConciergePreview
                   samples={samples}
                   className="[&_button]:bg-legacy-cream [&_button]:text-legacy-slate [&_button]:hover:bg-legacy-slate/10 [&_button]:px-6 [&_button]:py-4 [&_button]:rounded-lg [&_button]:font-medium [&_button.active]:bg-legacy-slate [&_button.active]:text-white"
                 />

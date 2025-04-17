@@ -29,14 +29,15 @@ interface SamplePreviewProps {
   isFlipped?: boolean;
   onFlip?: () => void;
   // Display mode
-  displayMode?: 'thumbnail' | 'dialog' | 'fullsize';
+  displayMode?: 'thumbnail' | 'dialog' | 'fullsize' | 'mobile';
 }
 
 // Scale factors for different display modes
 const SCALE_FACTORS = {
   thumbnail: 0.15,
   dialog: 0.35,
-  fullsize: 1.0
+  fullsize: 1.0,
+  mobile: 0.31
 };
 
 // Use forwardRef to allow parent components to get a ref to the inner div

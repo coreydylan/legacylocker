@@ -123,6 +123,14 @@ const StorySeriesSelector = () => {
     setDialogOpen(true);
   };
 
+  // Expose the function globally
+  useEffect(() => {
+    (window as any).handleStoryEditionSelection = handleEditionSelection;
+    return () => {
+      delete (window as any).handleStoryEditionSelection;
+    };
+  }, []);
+
   const handleStorySeriesSelection = (series: SeriesType | StoryOption) => {
     if (isStartOverConfirmationRequired) {
       setSeriesToConfirm(series);

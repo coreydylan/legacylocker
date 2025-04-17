@@ -14,7 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { NarrativeExplainerSection } from '@/components/NarrativeExplainerSection';
 import { SignatureEditionsSection } from '@/components/SignatureEditionsSection';
 import { CustomEditionsSection } from '@/components/CustomEditionsSection';
-import { ConciergeServiceSection } from '@/components/ConciergeServiceSection';
+import { ConciergeEditionsSection } from '@/components/ConciergeEditionsSection';
 
 const Index = () => {
   const location = useLocation();
@@ -29,13 +29,18 @@ const Index = () => {
         <NarrativeExplainerSection />
         <SignatureEditionsSection />
         <CustomEditionsSection />
-        <BenefitsSection />
-        <AudiencePortraits />
-        <FeaturesSection />
+        <ConciergeEditionsSection />
+        {/* Commenting out "making magic by mail" section */}
+        {/* <BenefitsSection /> */}
+        {/* Commenting out "made for meaning makers" section */}
+        {/* <AudiencePortraits /> */}
+        {/* Commenting out "every story starts with a spark" section */}
+        {/* <FeaturesSection /> */}
         <StorySeriesSelector />
         <TestimonialsSection />
         <FAQSection />
-        <ConciergeServiceSection />
+        {/* Commenting out "concierge family stories" section */}
+        {/* <ConciergeServiceSection /> */}
         <ClosingCTASection />
       </main>
       <Footer />

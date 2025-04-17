@@ -24,13 +24,13 @@ interface StorySample {
   footer_off_or_on: boolean;
 }
 
-interface StoryPreviewProps {
+interface SignaturePreviewProps {
   samples: StorySample[];
   className?: string;
   onSampleSelect?: (sample: StorySample) => void;
 }
 
-export const StoryPreview: React.FC<StoryPreviewProps> = ({
+export const SignaturePreview: React.FC<SignaturePreviewProps> = ({
   samples,
   className,
   onSampleSelect,

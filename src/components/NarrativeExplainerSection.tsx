@@ -2,6 +2,8 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { useNextHoliday } from "@/hooks/useNextHoliday";
 import { useRegionalStories } from "@/hooks/useRegionalStories";
+import { FadeContent } from "@/components/FadeContent";
+import { FadeSection } from "@/components/FadeSection";
 
 interface NarrativeExplainerSectionProps {
   onThemeSelect?: (theme: string) => void;
@@ -200,26 +202,30 @@ export const NarrativeExplainerSection = ({ onThemeSelect }: NarrativeExplainerS
           </motion.div>
 
           {/* Step 3 Block */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="text-[clamp(20px,2vw,26px)] leading-relaxed space-y-12"
-          >
-            <div className="space-y-4">
-              <div className="text-[clamp(24px,2.4vw,32px)]">
-                <span className="font-bold bg-[#E6F3F5]/80 px-3 py-1 rounded-md">
-                  3. We handle the rest
-                </span>
-              </div>
+          <FadeSection>
+            <FadeContent isLastInSection>
+              <motion.div
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.3 }}
+                className="text-[clamp(20px,2vw,26px)] leading-relaxed space-y-12"
+              >
+                <div className="space-y-4">
+                  <div className="text-[clamp(24px,2.4vw,32px)]">
+                    <span className="font-bold bg-[#E6F3F5]/80 px-3 py-1 rounded-md">
+                      3. We handle the rest
+                    </span>
+                  </div>
 
-              <p>
-                while you rest easy knowing each story will arrive  
-                printed on premium archival stock, packaged with care,  
-                and timed to land right when it matters.
-              </p>
-            </div>
-          </motion.div>
+                  <p>
+                    while you rest easy knowing each story will arrive  
+                    printed on premium archival stock, packaged with care,  
+                    and timed to land right when it matters.
+                  </p>
+                </div>
+              </motion.div>
+            </FadeContent>
+          </FadeSection>
         </div>
       </div>
     </section>

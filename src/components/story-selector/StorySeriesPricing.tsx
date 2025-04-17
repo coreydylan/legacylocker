@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Check, ArrowRight } from 'lucide-react';
@@ -54,7 +55,7 @@ const pricingTiers: PricingTier[] = [
   },
   {
     title: "Concierge Edition",
-    price: "Custom Pricing",
+    price: "$199+",
     description: "For stories that need a little more magic.",
     features: [
       "Work directly with our writers and in-house genealogist",
@@ -118,36 +119,30 @@ const StorySeriesPricing: React.FC<StorySeriesPricingProps> = ({ onEditionSelect
   };
 
   return (
-    <div className="w-full py-20 bg-white">
+    <section className="w-full py-32 bg-white">
       <div className="container mx-auto px-6">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl md:text-4xl font-medium font-pangaia text-legacy-dark mb-6">
-            Choose Your Story Series
-          </h2>
-          <p className="text-lg text-legacy-dark/70 max-w-2xl mx-auto">
-            Select the perfect way to tell your story, from our curated collections to fully personalized experiences.
-          </p>
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {pricingTiers.map((tier, index) => (
-            <div
+            <motion.div
               key={index}
-              className={`border-2 ${getColorClasses(tier.color)} rounded-lg overflow-hidden hover:shadow-lg transition-shadow`}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: index * 0.2 }}
+              viewport={{ once: true }}
+              className={`border-2 ${getColorClasses(tier.color)} rounded-lg overflow-hidden hover:shadow-lg transition-shadow flex flex-col`}
             >
-              <div className={`${getBgColor(tier.color)} p-6`}>
-                <h3 className={`text-2xl font-medium font-pangaia ${getTextColor(tier.color)}`}>
-                  {tier.title}
-                </h3>
-                <div className="mt-4">
+              <div className={`${getBgColor(tier.color)} p-6 relative`}>
+                <div className="flex justify-between items-start">
+                  <h3 className={`text-2xl font-medium font-pangaia ${getTextColor(tier.color)}`}>
+                    {tier.title}
+                  </h3>
                   <span className="text-3xl font-bold">{tier.price}</span>
-                  <span className="text-legacy-dark/80"> / one-time</span>
                 </div>
-                <p className="text-legacy-dark/70 mt-2">{tier.description}</p>
+                <p className="text-legacy-dark/70 mt-4">{tier.description}</p>
               </div>
               
-              <div className="p-6">
-                <ul className="space-y-3">
+              <div className="p-6 flex-1 flex flex-col">
+                <ul className="space-y-3 mb-6">
                   {tier.features.map((feature, featureIndex) => (
                     <li key={featureIndex} className="flex items-start">
                       <Check className={`h-5 w-5 ${getTextColor(tier.color)} mr-2 flex-shrink-0 mt-0.5`} />
@@ -156,14 +151,13 @@ const StorySeriesPricing: React.FC<StorySeriesPricingProps> = ({ onEditionSelect
                   ))}
                 </ul>
                 
-                {tier.setupTime && (
-                  <p className="text-sm text-legacy-dark/60 mt-4">{tier.setupTime}</p>
-                )}
-                
-                <div className="flex flex-col h-full">
-                  <div className="flex-grow"></div>
+                <div className="mt-auto space-y-4">
+                  {tier.setupTime && (
+                    <p className="text-sm text-legacy-dark/60 text-center">{tier.setupTime}</p>
+                  )}
+                  
                   <Button
-                    className={`w-full mt-8 ${
+                    className={`w-full ${
                       tier.color === 'green' 
                         ? 'bg-legacy-green hover:bg-legacy-green/90' 
                         : tier.color === 'gold' 
@@ -183,11 +177,11 @@ const StorySeriesPricing: React.FC<StorySeriesPricingProps> = ({ onEditionSelect
                   )}
                 </div>
               </div>
-            </div>
+            </motion.div>
           ))}
         </div>
       </div>
-    </div>
+    </section>
   );
 };
 

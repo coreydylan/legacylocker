@@ -1,13 +1,6 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 
 // Define the shimmer animation keyframes
 const shimmerKeyframes = `
@@ -172,23 +165,13 @@ const HeroSection = () => {
         </div>
         
         <div className="w-full md:w-1/2 mt-10 md:mt-0">
-          <Carousel className="w-full max-w-lg mx-auto">
-            <CarouselContent>
-              {[1, 2, 3].map((_, index) => (
-                <CarouselItem key={index} className="flex justify-center">
-                  <div className="h-full flex items-center justify-center p-1">
-                    <img 
-                      src="/lovable-uploads/004710e3-87a5-4295-8e50-1382f0a1a4d4.png" 
-                      alt="Legacy Locker Card Sample" 
-                      className="max-h-[500px] w-auto object-contain drop-shadow-xl transform rotate-3"
-                    />
-                  </div>
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            <CarouselPrevious className="-left-4 md:-left-10" />
-            <CarouselNext className="-right-4 md:-right-10" />
-          </Carousel>
+          <div className="flex justify-center">
+            <img 
+              src="/lovable-uploads/004710e3-87a5-4295-8e50-1382f0a1a4d4.png" 
+              alt="Legacy Locker Card Sample" 
+              className="max-h-[600px] w-auto object-contain drop-shadow-xl transform rotate-3"
+            />
+          </div>
         </div>
       </div>
     </section>
