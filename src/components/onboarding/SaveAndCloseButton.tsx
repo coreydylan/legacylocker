@@ -12,12 +12,16 @@ const SaveAndCloseButton: React.FC<SaveAndCloseButtonProps> = ({ onClose }) => {
   const { toast } = useToast();
   const {
     session,
+    sessionMetadata,
     saveSessionToDb,
     saveSession,
+    startSession,
   } = useSessionStore((state) => ({
     session: state.session,
+    sessionMetadata: state.sessionMetadata,
     saveSessionToDb: state.saveSessionToDb,
     saveSession: state.saveSession,
+    startSession: state.startSession,
   }));
 
   const purchaserEmail = session.purchaser?.email;
@@ -31,6 +35,12 @@ const SaveAndCloseButton: React.FC<SaveAndCloseButtonProps> = ({ onClose }) => {
     (async () => {
       console.log('[SaveAndCloseButton] Async save process starting...');
       try {
+        // If session is not activated, activate it first
+        if (!sessionMetadata.sessionId) {
+          console.log('[SaveAndCloseButton] Session not activated, activating now');
+          await startSession('signature');
+        }
+
         console.log('[SaveAndCloseButton] Calling saveSession()...');
         saveSession();
         console.log('[SaveAndCloseButton] Calling saveSessionToDb()...');

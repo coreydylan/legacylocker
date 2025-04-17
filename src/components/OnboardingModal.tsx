@@ -40,7 +40,22 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
     isHydrated,
     prevStep,
     nextStep,
-  } = useSessionStore();
+    startSession,
+    saveSession,
+    saveSessionToDb,
+    resetSession: storeResetSession,
+  } = useSessionStore((state) => ({
+    session: state.session,
+    sessionMetadata: state.sessionMetadata,
+    isLoading: state.isLoading,
+    isHydrated: state.isHydrated,
+    prevStep: state.prevStep,
+    nextStep: state.nextStep,
+    startSession: state.startSession,
+    saveSession: state.saveSession,
+    saveSessionToDb: state.saveSessionToDb,
+    resetSession: state.resetSession,
+  }));
 
   const { closeOnboarding } = useModalStore();
   
@@ -65,19 +80,47 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   }, [session?.updatedAt]);
 
   useEffect(() => {
-    if (selectedSeries && !session?.selectedEdition) {
+    console.log('[OnboardingModal] Mount state:', {
+      isHydrated,
+      isLoading,
+      selectedSeries,
+      selectedEdition: session.selectedEdition
+    });
+
+    if (isHydrated && !isLoading && selectedSeries && !session.selectedEdition) {
+      console.log('[OnboardingModal] Initializing new session - guard passed');
       sessionManager.initializeNewLocalSession({
         id: selectedSeries.id,
         label: selectedSeries.label,
         type: selectedSeries.type
       });
     }
-  }, [selectedSeries, session?.selectedEdition, sessionManager]);
+  }, [isHydrated, isLoading, selectedSeries, session.selectedEdition]);
 
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
-      console.log("OnboardingModal: Modal close triggered via Dialog onOpenChange (e.g., overlay/esc) OR explicitly passed down.");
-      sessionManager.handleModalClose();
+      // If session is not activated and has data, show confirmation
+      if (!sessionMetadata.sessionId && session.selectedEdition) {
+        const hasData = session.purchaser?.email || 
+                       session.recipient?.firstName || 
+                       session.recipient?.lastName ||
+                       session.recipient?.relationship;
+        
+        if (hasData) {
+          if (window.confirm('You have unsaved progress. Would you like to save it before closing?')) {
+            // User wants to save - activate and save
+            startSession('signature');
+            saveSession();
+            saveSessionToDb();
+          }
+        }
+      }
+      
+      // Only reset if session is not active and has no data
+      if (!sessionMetadata.sessionId && !session.selectedEdition) {
+        storeResetSession();
+      }
+      
       onClose();
     }
   };

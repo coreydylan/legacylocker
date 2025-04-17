@@ -2,7 +2,7 @@
 
 import { useSessionStore } from '@/lib/sessionStore';
 import { useLocation } from 'react-router-dom';
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSessionManager } from '@/hooks/useSessionManager';
 import { Button } from "@/components/ui/button";
 
@@ -14,15 +14,76 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
         resetSessionAndState
     } = useSessionManager();
     
-    const { isLoading, isHydrated } = useSessionStore(state => ({ 
+    const {
+        isLoading,
+        isHydrated,
+        session,
+        setHydrated,
+    } = useSessionStore((state) => ({
         isLoading: state.isLoading,
-        isHydrated: state.isHydrated
+        isHydrated: state.isHydrated,
+        session: state.session,
+        setHydrated: state.setHydrated,
     }));
 
+    // Add a timeout to prevent infinite loading
+    const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
+
     useEffect(() => {
-        console.log('[SessionLoader] Location changed or mounted, attempting session load from URL...');
-        loadSessionFromUrlParam();
-    }, [location.search, loadSessionFromUrlParam]);
+        console.log('[SessionLoader] Component mounted with state:', {
+            isLoading,
+            isHydrated,
+            hasSessionId: !!session.sessionId,
+            hasSelectedEdition: !!session.selectedEdition,
+            locationSearch: location.search
+        });
+
+        // Set a timeout to force hydration if loading takes too long
+        const timeout = setTimeout(() => {
+            console.log('[SessionLoader] Loading timeout reached, forcing hydration');
+            if (!isHydrated) {
+                setHydrated(true);
+            }
+        }, 5000); // 5 second timeout
+
+        setLoadingTimeout(timeout);
+
+        return () => {
+            if (timeout) {
+                clearTimeout(timeout);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        const loadSession = async () => {
+            console.log('[SessionLoader] Starting session load from URL param');
+            try {
+                const success = await loadSessionFromUrlParam();
+                console.log('[SessionLoader] Session load result:', success);
+                console.log('[SessionLoader] Final session state:', {
+                    selectedEdition: session.selectedEdition,
+                    currentStep: session.currentStep,
+                    lastCompletedStep: session.lastCompletedStep
+                });
+            } catch (error) {
+                console.error('[SessionLoader] Error loading session:', error);
+            }
+        };
+
+        if (location.search) {
+            loadSession();
+        }
+    }, [location.search, loadSessionFromUrlParam, session]);
+
+    // Clear timeout when loading completes
+    useEffect(() => {
+        if (isHydrated && !isLoading && loadingTimeout) {
+            console.log('[SessionLoader] Loading completed, clearing timeout');
+            clearTimeout(loadingTimeout);
+            setLoadingTimeout(null);
+        }
+    }, [isHydrated, isLoading, loadingTimeout]);
 
     if (isLoading || !isHydrated) {
         return (

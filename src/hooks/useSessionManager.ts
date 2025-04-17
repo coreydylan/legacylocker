@@ -154,13 +154,14 @@ export function useSessionManager() {
       if (sessionIdParam === currentMeta.sessionId) {
           console.log(`[SessionManager] Session ${sessionIdParam} already loaded, skipping restore.`);
           if (!isHydrated) setHydrated(true);
-          return;
+          return true;
       }
       
       console.log(`[SessionManager] Found session_id param: ${sessionIdParam}. Attempting load.`);
       trackEvent('resume_session_attempt', { sessionId: sessionIdParam });
       
-      setHydrated(false);
+      // Don't set hydrated to false here, as it can cause the loading spinner to appear
+      // setHydrated(false);
       const success = await loadSessionFromDb(sessionIdParam);
       
       if (success) {
@@ -172,6 +173,7 @@ export function useSessionManager() {
         trackEvent('resume_session_success', { sessionId: sessionIdParam });
         toast({ title: "Session Resumed", description: "Your progress has been restored." });
         navigate(location.pathname, { replace: true });
+        return true;
       } else {
         console.warn('[SessionManager] Failed to load session from URL param or session was invalid/expired.');
         const errorType = 'not_found';
@@ -181,10 +183,12 @@ export function useSessionManager() {
         navigate(location.pathname, { replace: true });
         storeResetSession();
         if (!isHydrated) setHydrated(true);
+        return false;
       }
     } else {
        console.log('[SessionManager] No session_id param found.');
        if (!isHydrated) setHydrated(true);
+       return true;
     }
   }, [
     location.search, 

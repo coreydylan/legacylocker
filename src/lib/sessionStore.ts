@@ -1107,14 +1107,14 @@ export const useSessionStore = create<SessionStore>()(
 
               if (error) {
                   console.error(`[loadSessionFromDb] Error loading session ${sessionId}:`, error);
-                  set({ isLoading: false });
+                  set({ isLoading: false, isHydrated: true });
                   return false;
               }
 
               if (data && data.session_data) {
                   if (data.expires_at && new Date() > new Date(data.expires_at)) {
                       console.warn(`[loadSessionFromDb] Session ${sessionId} has expired (${data.expires_at}). Not loading.`);
-                      set({ isLoading: false });
+                      set({ isLoading: false, isHydrated: true });
                       return false; 
                   }
 
@@ -1143,17 +1143,17 @@ export const useSessionStore = create<SessionStore>()(
                   } else {
                       console.warn(`[loadSessionFromDb] Loaded session ${sessionId} is invalid. Resetting.`);
                       get().resetSession();
-                      set({ isLoading: false });
+                      set({ isLoading: false, isHydrated: true });
                       return false;
                   }
               } else {
                   console.warn(`[loadSessionFromDb] No session data found for ID ${sessionId}.`);
-                   set({ isLoading: false });
-                   return false;
+                  set({ isLoading: false, isHydrated: true });
+                  return false;
               }
           } catch (err) {
               console.error("[loadSessionFromDb] Unexpected error during Supabase select:", err);
-               set({ isLoading: false });
+               set({ isLoading: false, isHydrated: true });
               return false;
           }
       },
@@ -1198,8 +1198,8 @@ export const useSessionStore = create<SessionStore>()(
              // Always mark as hydrated after this process
              finalState.isHydrated = true;
              // Set loading state based on whether we have a session ID
-             finalState.isLoading = !finalState.sessionMetadata.sessionId;
-             console.log("[onRehydrateStorage] Post-hydration: isHydrated set to", finalState.isHydrated);
+             finalState.isLoading = false; // Always set to false after hydration
+             console.log("[onRehydrateStorage] Post-hydration: isHydrated set to", finalState.isHydrated, "isLoading set to", finalState.isLoading);
           }
         };
       },
