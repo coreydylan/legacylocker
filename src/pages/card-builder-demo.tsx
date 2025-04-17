@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
 import { CardBackBuilder } from '@/components/CardBackBuilder';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Label } from '../components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Slider } from '../components/ui/slider';
+import { Switch } from '../components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { cn } from '../lib/utils';
 
 const CardBuilderDemo: React.FC = () => {
   const [cardData, setCardData] = useState({

@@ -3,10 +3,8 @@
 @tailwind utilities;
 
 *, ::before, ::after {
-  box-sizing: border-box; /* border-box */
-  border-width: 0; /* Reset border width */
-  /* border-style: solid; */ /* Reset border style - Commented out */
-  /* border-color: #e5e7eb; */ /* Reset border color - Commented out */
+  box-sizing: border-box;
+  border-width: 0;
 } 
 
 @layer utilities {
@@ -15,9 +13,57 @@
   }
 } 
 
-/* High-specificity override for the onboarding header border */
 header.onboarding-header {
   border-style: none !important;
   border-width: 0 !important;
-  border: none !important; /* Add a general border: none just in case */
+  border: none !important;
+} 
+
+/* Card Flip Animation */
+.card-flip-container {
+  perspective: 1000px;
+  width: 100%;
+  height: 100%;
+}
+
+.card-flip {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-flip.flipped {
+  transform: rotateY(180deg);
+}
+
+.card-flip-front,
+.card-flip-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  transform-style: preserve-3d;
+}
+
+.card-flip-front {
+  z-index: 2;
+  transform: rotateY(0deg);
+}
+
+.card-flip-back {
+  z-index: 1;
+  transform: rotateY(180deg);
+}
+
+/* Card Glow Effect */
+.card-glow {
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+  transition: box-shadow 0.3s ease-in-out;
+}
+
+.card-glow:hover {
+  box-shadow: 0 0 30px rgba(255, 255, 255, 0.2);
 } 

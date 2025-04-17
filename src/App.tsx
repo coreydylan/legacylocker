@@ -20,6 +20,7 @@ import AdminSeriesDetailPage from "./pages/admin/series/[id]";
 import AdminAuth from "@/components/AdminAuth";
 import FontExamplesPage from "./pages/font-examples";
 import CardBuilderDemo from "./pages/card-builder-demo";
+import StoryPreviewDemo from "./pages/story-preview-demo";
 
 const queryClient = new QueryClient();
 
@@ -61,6 +62,7 @@ const AppContent = () => {
         } />
         <Route path="/font-examples" element={<FontExamplesPage />} />
         <Route path="/card-builder-demo" element={<CardBuilderDemo />} />
+        <Route path="/story-preview-demo" element={<StoryPreviewDemo />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>
