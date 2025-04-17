@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import OnboardingHeader from '@/components/onboarding/OnboardingHeader';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import SaveProgressModal from '@/components/onboarding/SaveProgressModal';
@@ -94,36 +94,60 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleModalCloseTrigger} modal>
-        <DialogContent className="sm:max-w-full w-full h-full p-0 m-0 bg-white flex flex-col">
-          <SafeAreaWrapper>
-            <VisuallyHidden>
-              <DialogTitle>Onboarding Form</DialogTitle>
-            </VisuallyHidden>
-            
-            {isLoading ? (
-              <div className="flex-grow flex items-center justify-center">
-                <p>Loading Session...</p>
-              </div>
-            ) : (
-              <>
-                <div className="flex-shrink-0 bg-white border-b w-full">
-                  <OnboardingHeader
-                    handleBack={handleBack}
-                    onClose={() => handleModalCloseTrigger(false)}
-                  />
+        <DialogPortal>
+          <DialogOverlay className="bg-black/30 backdrop-blur-[2px]" />
+          <DialogContent className={cn(
+            "fixed left-[50%] top-[50%] z-50",
+            "h-[85vh] w-[85vw] max-w-[1000px]",
+            "translate-x-[-50%] translate-y-[-50%]",
+            "flex flex-col",
+            "bg-white/90",
+            "border border-white/20",
+            "shadow-2xl",
+            "rounded-xl overflow-hidden",
+            "p-0",
+            "data-[state=open]:animate-in data-[state=closed]:animate-out",
+            "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+            "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
+            "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
+            "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]",
+            isMobile ? "" : "min-h-[600px]",
+            "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
+          )}>
+            <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white/30 pointer-events-none" />
+            <SafeAreaWrapper>
+              <VisuallyHidden>
+                <DialogTitle>Onboarding Form</DialogTitle>
+              </VisuallyHidden>
+              
+              {isLoading ? (
+                <div className="flex-grow flex items-center justify-center">
+                  <div className="text-lg font-medium text-legacy-green/90 backdrop-blur-sm px-4 py-2 rounded-lg bg-white/40">
+                    Loading Session...
+                  </div>
                 </div>
-                
-                <div className={cn(
-                  "flex-1 overflow-y-auto min-h-0",
-                  "pb-24 md:pb-0"
-                )}>
-                  <OnboardingFlow />
-                </div>
-              </>
-            )}
-          </SafeAreaWrapper>
-          <MobileNavFooter />
-        </DialogContent>
+              ) : (
+                <>
+                  <div className="flex-shrink-0 bg-white/40 border-b border-white/20 w-full backdrop-blur-sm">
+                    <OnboardingHeader
+                      handleBack={handleBack}
+                      onClose={() => handleModalCloseTrigger(false)}
+                    />
+                  </div>
+                  
+                  <div className={cn(
+                    "flex-1 overflow-y-auto min-h-0",
+                    "pb-24 md:pb-0",
+                    "bg-white/20 backdrop-blur-sm"
+                  )}>
+                    <OnboardingFlow />
+                  </div>
+                </>
+              )}
+            </SafeAreaWrapper>
+            <MobileNavFooter />
+          </DialogContent>
+        </DialogPortal>
       </Dialog>
 
       <SaveProgressModal

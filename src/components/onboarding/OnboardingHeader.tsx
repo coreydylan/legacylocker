@@ -57,9 +57,9 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
   };
 
   return (
-    <div className="sticky top-0 z-10 bg-legacy-cream">
+    <div className="sticky top-0 z-10 bg-legacy-green/5 backdrop-blur-sm min-h-[120px]">
       {selectedEdition && (
-        <div className="max-w-xl mx-auto flex gap-2 mb-2 pt-3 px-4">
+        <div className="max-w-xl mx-auto flex gap-2 mb-6 pt-3 px-4">
           {/* <<< First tag: General Edition Type >>> */}
           <div className={cn(badgeClasses, "flex-1 text-center truncate")}>
             {selectedEdition.type === 'concierge' ? 'Concierge Edition' : `${selectedEdition.type.charAt(0).toUpperCase() + selectedEdition.type.slice(1)} Edition`}
@@ -73,19 +73,7 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
         </div>
       )}
 
-      <div className="relative flex items-center w-full px-4 py-2 md:py-6 shadow-sm gap-2">
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 flex-shrink-0"
-            aria-label="Close onboarding"
-          >
-            <X className="h-6 w-6" />
-          </Button>
-        </div>
-
+      <div className="relative flex items-center w-full px-4 py-4 md:py-6 gap-2 mt-4 border-none">
         <div className="absolute left-1/2 -translate-x-1/2 flex items-center min-w-0">
           <OnboardingStepper />
         </div>
