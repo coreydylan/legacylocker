@@ -1,39 +1,34 @@
 export const config = {
-  runtime: 'edge',
-};
-
-export default async function handler(req: Request) {
-  try {
+    runtime: 'edge',
+  };
+  
+  export default async function handler(req: Request) {
     const geo = (req as any).geo || {};
-    const { latitude, longitude } = geo;
-
-    // Return a simple response with just the essential data
-    return new Response(
+  
+    const latitude = geo.latitude ?? 34.0522;
+    const longitude = geo.longitude ?? -118.2437;
+    const city = geo.city ?? "Los Angeles";
+    const region = geo.region ?? "CA";
+    const country = geo.country ?? "US";
+    const usedFallback = geo.latitude == null || geo.longitude == null;
+  
+    console.log(
       JSON.stringify({
-        latitude: latitude ? Number(latitude) : null,
-        longitude: longitude ? Number(longitude) : null
-      }),
-      {
-        status: 200,
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
+        rawGeo: geo,
+        usedFallback,
+        latitude,
+        longitude,
+        city,
+        region,
+        country
+      })
     );
-  } catch (error) {
-    // Return a simple error response
+  
     return new Response(
-      JSON.stringify({
-        latitude: null,
-        longitude: null,
-        error: "Failed to get location"
-      }),
+      JSON.stringify({ latitude, longitude, city, region, country, usedFallback }),
       {
         status: 200,
-        headers: {
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Content-Type': 'application/json' },
       }
     );
   }
-} 
