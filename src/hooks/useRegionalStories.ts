@@ -6,12 +6,6 @@ interface StorySeries {
   natural_language_name: string;
 }
 
-interface LocationData {
-  latitude: number | null;
-  longitude: number | null;
-  error?: string;
-}
-
 // Supabase client configuration
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -27,54 +21,20 @@ export function useRegionalStories() {
   useEffect(() => {
     async function fetchStories() {
       try {
-        // Step 1: Get user's location via IP
-        const locationResponse = await fetch("/api/geo");
-        const locationData: LocationData = await locationResponse.json();
-        
-        // Check for valid coordinates
-        if (!locationData.latitude || !locationData.longitude) {
-          throw new Error(locationData.error || "Location data unavailable");
-        }
-
-        // Step 2: Match region
-        const { data: regionMatch, error: regionError } = await supabase
-          .from("region_boxes")
-          .select("region_key")
-          .lte("min_lat", locationData.latitude)
-          .gte("max_lat", locationData.latitude)
-          .lte("min_lon", locationData.longitude)
-          .gte("max_lon", locationData.longitude)
-          .maybeSingle();
-
-        if (regionError) throw regionError;
-
-        const regionKey = regionMatch?.region_key || 'national';
-
-        // Step 3: Fetch regional stories
-        let { data: regionStories, error: storiesError } = await supabase
+        // TODO: Revisit geo-based story matching later
+        // For now, fetch predefined fallback stories directly from Supabase
+        const { data: fallbackStories, error } = await supabase
           .from("story_series")
           .select("emoji, natural_language_name")
-          .eq("region_key", regionKey)
-          .not("theme", "in.(Personal,Corporate,Ancestral)")
-          .limit(3);
+          .in("id", [
+            "05515e4b-0932-4c8a-9adc-373ccbaac1df", // San Diego baseball
+            "f5e2d04a-4926-4c79-ac53-035b22641a8c", // Jazz in New Orleans
+            "5faa9c88-820e-41bc-9579-2e6b50c98744"  // History of San Francisco
+          ]);
 
-        if (storiesError) throw storiesError;
+        if (error) throw error;
 
-        // Fill with fallback stories if needed
-        if (!regionStories || regionStories.length < 3) {
-          const { data: fallbackStories, error: fallbackError } = await supabase
-            .from("story_series")
-            .select("emoji, natural_language_name")
-            .eq("region_key", "national")
-            .not("theme", "in.(Personal,Corporate,Ancestral)")
-            .limit(3 - (regionStories?.length || 0));
-
-          if (fallbackError) throw fallbackError;
-
-          regionStories = [...(regionStories || []), ...(fallbackStories || [])];
-        }
-
-        setStories(regionStories || []);
+        setStories(fallbackStories || []);
       } catch (err) {
         console.error('Error fetching regional stories:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch stories');

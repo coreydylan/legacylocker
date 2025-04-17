@@ -12,6 +12,7 @@ import { useModalStore } from "@/lib/modalStore";
 import { useSessionStore } from "@/lib/sessionStore";
 import { useEffect } from "react";
 import SessionLoader from "@/components/SessionLoader";
+import AdminSamplesPage from "./pages/admin/samples";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const AppContent = () => {
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/personalize/:edition" element={<PersonalizePage />} />
+        <Route path="/admin/samples" element={<AdminSamplesPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

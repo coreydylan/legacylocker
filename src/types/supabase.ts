@@ -10,6 +10,15 @@ export interface StorySeriesRow {
   custom_edition_prompt: string | null;
   hidden_team: string | null; // For searching
   use_cases: string[] | null; // Assuming this might be an array if used
+  
+  // Sample-specific fields
+  is_sample?: boolean;
+  emoji?: string;
+  natural_language_name?: string;
+  headline?: string;
+  story_body?: string;
+  default_footer_note?: string;
+  sample_image_url?: string;
 }
 
 // Simplified type for options passed to the command menu

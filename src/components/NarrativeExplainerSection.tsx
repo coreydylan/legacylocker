@@ -54,11 +54,12 @@ export const NarrativeExplainerSection = ({ onThemeSelect }: NarrativeExplainerS
       <div className="space-y-2 pl-4">
         {stories.map((story, index) => (
           <p key={story.natural_language_name}>
+            <span className="mr-1">{story.emoji}</span>
             <button 
               className="dotted-underline text-legacy-green" 
               onClick={() => handleThemeSelect(story.natural_language_name)}
             >
-              {story.emoji} {story.natural_language_name}
+              {story.natural_language_name}
             </button>
           </p>
         ))}
