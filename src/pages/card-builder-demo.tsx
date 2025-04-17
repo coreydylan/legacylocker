@@ -23,7 +23,7 @@ const CardBuilderDemo: React.FC = () => {
     <div className="p-8">
       <h1 className="text-2xl font-bold mb-4">Card Back Builder Demo</h1>
       <div className="max-w-[1200px] mx-auto">
-        <CardBackBuilder
+            <CardBackBuilder
           customNote={cardData.customNote}
           cardNumber={cardData.cardNumber}
           totalCards={cardData.totalCards}

@@ -17,6 +17,7 @@ interface CardBackBuilderProps {
   cardDetailsBgColor?: string;
   badgeColor?: string;
   icons?: string[];
+  badgeOn?: boolean;
 }
 
 // Constants for card dimensions (4x6 inches at 300dpi)
@@ -52,7 +53,7 @@ const DIMENSIONS = {
   BADGE_TEXT_HEIGHT: Math.round(FRAME.HEIGHT * 0.11),
   BADGE_RIGHT_OFFSET: Math.round(FRAME.WIDTH * 0.04),
   BADGE_BOTTOM_OFFSET: Math.round(FRAME.HEIGHT * 0.112),
-  STORY_COPY_WIDTH: Math.round(FRAME.WIDTH * 0.75),
+  STORY_COPY_WIDTH: Math.round(FRAME.WIDTH * 0.89),
 };
 
 // Utility function for headline class (8 tiers)
@@ -84,6 +85,21 @@ function getSubtitleMargin(headlineClass: string): number {
   }
 }
 
+// Function to get story body margin based on headline class
+function getStoryMargin(headlineClass: string): number {
+  switch (headlineClass) {
+    case 'headline-xl': return 44; // Largest margin for largest font
+    case 'headline-lg': return 42;
+    case 'headline-md': return 40;
+    case 'headline-sm': return 38;
+    case 'headline-s':  return 36;
+    case 'headline-xs': return 34;
+    case 'headline-xxs': return 32;
+    case 'headline-xxxs': return 30; // Smallest margin for smallest font
+    default: return 44; // Default to largest margin
+  }
+}
+
 export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
   // Content
   headline = '',
@@ -101,10 +117,47 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
   cardDetailsBgColor = '#F9F5EC',
   badgeColor = '#ED9831',
   icons = [],
+  badgeOn = true,
 }) => {
 
   const headlineClass = getHeadlineClass(headline);
   const subtitleMargin = getSubtitleMargin(headlineClass);
+  const storyMargin = getStoryMargin(headlineClass);
+
+  // Determine badge text size class based on LONGEST line length
+  const badgeTextClass = useMemo(() => {
+    const lines = badgeText.split('\n');
+    // Find the maximum length of any line
+    const maxLength = lines.reduce((max, line) => Math.max(max, line.length), 0);
+    
+    if (maxLength <= 8) return 'badge-xl';
+    if (maxLength <= 10) return 'badge-lg'; // Adjusted threshold to match input validation max
+    if (maxLength <= 12) return 'badge-md'; // Adjusted threshold
+    // If longest line is > 12 (shouldn't happen with validation), default to smallest
+    // Or, adjust if validation changes. Let's keep 10 as max for now.
+    // We might need fewer classes if max line length is strictly 10.
+    // Let's simplify based on max 10 chars per line validation:
+    // if (maxLength <= 6) return 'badge-xl';
+    // if (maxLength <= 8) return 'badge-lg';
+    // return 'badge-md'; // 9-10 chars
+    
+    // Reverting to original thresholds but based on maxLength
+    if (maxLength <= 8) return 'badge-xl';
+    if (maxLength <= 12) return 'badge-lg'; // Max length per line is 10, so this tier might not be hit often
+    if (maxLength <= 16) return 'badge-md'; // Max length per line is 10
+    return 'badge-sm'; // Max length per line is 10
+    
+    // --- Let's simplify based on the 10 char limit per line --- 
+    // if (maxLength <= 6) return 'badge-xl'; // Use largest for short lines
+    // if (maxLength <= 8) return 'badge-lg'; // Medium for mid-length
+    // return 'badge-md'; // Smallest reasonable size for 9-10 chars
+    
+    // --- Final Simplification based on 10 char limit --- 
+    if (maxLength <= 6) return 'badge-xl'; // 1-6 Chars => Largest Font/Spacing
+    if (maxLength <= 8) return 'badge-lg'; // 7-8 Chars => Medium Font/Spacing
+    return 'badge-md'; // 9-10 Chars => Smallest Font/Spacing (Remove badge-sm?)
+
+  }, [badgeText]);
 
   return (
     <div 
@@ -164,8 +217,8 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
           style={{
             position: 'absolute',
             top: DIMENSIONS.TOP_MARGIN + DIMENSIONS.HEADER_HEIGHT + 
-                 DIMENSIONS.HEADER_TO_SUBTITLE_MARGIN + DIMENSIONS.SUBTITLE_HEIGHT + 
-                 DIMENSIONS.SUBTITLE_TO_STORY_MARGIN,
+                 subtitleMargin + DIMENSIONS.SUBTITLE_HEIGHT + 
+                 storyMargin,
             left: '50%',
             transform: 'translateX(-50%)',
             width: DIMENSIONS.STORY_COPY_WIDTH,
@@ -173,12 +226,11 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
             color: frameColor,
             fontSize: '24px',
             fontWeight: 400,
-            lineHeight: 1.6,
+            lineHeight: 1.3,
             textAlign: 'left',
             overflow: 'hidden',
-            columnCount: 2,
-            columnGap: '40px',
-            whiteSpace: 'normal'
+            whiteSpace: 'pre-line',
+            overflowWrap: 'break-word'
           }}
         >
           {storyBody}
@@ -202,10 +254,10 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         >
           <div style={{ 
             color: frameColor,
-            fontSize: '24px',
+            fontSize: '26px',
             fontWeight: 300,
             textTransform: 'uppercase',
-            letterSpacing: '0.05em',
+            letterSpacing: '0.09em',
             marginBottom: '8px',
           }}>
             CARD {cardNumber} OF {totalCards}
@@ -214,59 +266,56 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
             color: frameColor,
             fontSize: '32px',
             fontWeight: 600,
-            letterSpacing: '0.02em',
+            letterSpacing: '0.08em',
           }}>
             {editionTitle} • {giftFromCopy}
           </div>
         </div>
 
-        {/* Badge */}
-        <div
-          style={{
-            position: 'absolute',
-            right: DIMENSIONS.BADGE_RIGHT_OFFSET,
-            bottom: DIMENSIONS.BADGE_BOTTOM_OFFSET + (footerOn ? 0 : -DIMENSIONS.FOOTER_HEIGHT),
-            width: DIMENSIONS.BADGE_SIZE,
-            height: DIMENSIONS.BADGE_SIZE,
-            borderRadius: '50%',
-            backgroundColor: badgeColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          }}
-        >
+        {/* Badge - Conditionally Rendered */}
+        {badgeOn && (
           <div
             style={{
-              width: DIMENSIONS.BADGE_INNER_SIZE,
-              height: DIMENSIONS.BADGE_INNER_SIZE,
+              position: 'absolute',
+              right: DIMENSIONS.BADGE_RIGHT_OFFSET,
+              bottom: DIMENSIONS.BADGE_BOTTOM_OFFSET + (footerOn ? 0 : -DIMENSIONS.FOOTER_HEIGHT),
+              width: DIMENSIONS.BADGE_SIZE,
+              height: DIMENSIONS.BADGE_SIZE,
               borderRadius: '50%',
-              border: `${CANVAS.STROKE}px solid white`,
+              backgroundColor: badgeColor,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
             }}
           >
             <div
               style={{
-                width: DIMENSIONS.BADGE_TEXT_WIDTH,
-                height: DIMENSIONS.BADGE_TEXT_HEIGHT,
+                width: DIMENSIONS.BADGE_INNER_SIZE,
+                height: DIMENSIONS.BADGE_INNER_SIZE,
+                borderRadius: '50%',
+                border: `${CANVAS.STROKE}px solid white`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                color: 'white',
-                fontSize: '24px',
-                fontWeight: 500,
-                textAlign: 'center',
-                padding: '10px',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
               }}
             >
-              {badgeText}
+              <div
+                className={`badge-text-base ${badgeTextClass}`}
+                style={{
+                  width: DIMENSIONS.BADGE_TEXT_WIDTH,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  padding: '10px',
+                }}
+              >
+                {badgeText}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Custom Footer - Only shown when footerOn is true */}
         {footerOn && (

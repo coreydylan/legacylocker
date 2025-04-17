@@ -23,6 +23,7 @@ interface SamplePreviewProps {
   cardDetailsBgColor?: string;
   badgeColor?: string;
   icons?: string[];
+  badgeOn?: boolean;
   // Controls
   showFlipButton?: boolean;
   isFlipped?: boolean;
@@ -56,6 +57,7 @@ export function SamplePreview({
   cardDetailsBgColor = "#F9F5EC",
   badgeColor = "#ED9831",
   icons = [],
+  badgeOn = true,
   // Controls
   showFlipButton = true,
   isFlipped = false,
@@ -104,7 +106,10 @@ export function SamplePreview({
               transform: `scale(${scale})`,
               transformOrigin: 'center center',
               width: '1200px',
-              height: '1800px'
+              height: '1800px',
+              backgroundImage: 'url("../../styles/card-bg.webp")',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center center'
             }}>
               <CardBackBuilder
                 headline={headline}
@@ -121,6 +126,7 @@ export function SamplePreview({
                 cardDetailsBgColor={cardDetailsBgColor}
                 badgeColor={badgeColor}
                 icons={icons}
+                badgeOn={badgeOn}
               />
             </div>
           </div>

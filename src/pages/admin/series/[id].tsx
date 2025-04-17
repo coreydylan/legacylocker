@@ -92,6 +92,7 @@ interface SamplePreviewProps {
   isFlipped?: boolean;
   displayMode?: 'dialog' | 'thumbnail';
   className?: string;
+  badgeOn: boolean;
 }
 
 const SeriesDetailPage = () => {
@@ -128,6 +129,7 @@ const SeriesDetailPage = () => {
     cardDetailsBgColor: string;
     badgeColor: string;
     icons: string[];
+    badgeOn: boolean;
   }>({
     headline: '',
     subtitle: '',
@@ -142,7 +144,8 @@ const SeriesDetailPage = () => {
     frameColor: '#2C5530',
     cardDetailsBgColor: '#F9F5EC',
     badgeColor: '#ED9831',
-    icons: []
+    icons: [],
+    badgeOn: true
   });
   
   useEffect(() => {
@@ -272,7 +275,8 @@ const SeriesDetailPage = () => {
       frameColor: '#2C5530',
       cardDetailsBgColor: '#F9F5EC',
       badgeColor: '#ED9831',
-      icons: []
+      icons: [],
+      badgeOn: true
     });
   };
   
@@ -293,7 +297,8 @@ const SeriesDetailPage = () => {
         frameColor: sample.frame_color || '#2C5530',
         cardDetailsBgColor: '#F9F5EC',
         badgeColor: '#ED9831',
-        icons: sample.icon ? [sample.icon] : []
+        icons: sample.icon ? [sample.icon] : [],
+        badgeOn: true
       });
     } else {
       setSelectedSample(null);
@@ -311,7 +316,8 @@ const SeriesDetailPage = () => {
         frameColor: '#2C5530',
         cardDetailsBgColor: '#F9F5EC',
         badgeColor: '#ED9831',
-        icons: []
+        icons: [],
+        badgeOn: true
       });
     }
     setIsDialogOpen(true);
@@ -626,16 +632,32 @@ const SeriesDetailPage = () => {
                     </div>
                     
                     <div>
-                      <Label htmlFor="badgeText">Badge Text</Label>
-                      <Input
+                      <Label htmlFor="badgeText">Badge Text (Max 2 lines, 10 chars/line)</Label>
+                      <Textarea
                         id="badgeText"
                         value={cardBackData.badgeText}
-                        onChange={(e) => setCardBackData({ ...cardBackData, badgeText: e.target.value })}
-                        placeholder="Enter badge text..."
-                        maxLength={20}
+                        onChange={(e) => {
+                          const newValue = e.target.value;
+                          const lines = newValue.split('\n');
+                          
+                          // Validate: Max 2 lines AND max 10 chars per line
+                          const isValid = 
+                            lines.length <= 2 && 
+                            lines.every(line => line.length <= 10);
+                            
+                          if (isValid) {
+                            setCardBackData({ ...cardBackData, badgeText: newValue });
+                          }
+                          // If invalid, do nothing, effectively preventing the update
+                        }}
+                        placeholder="Enter badge text... (Max 2 lines, 10 chars/line)"
+                        rows={2}
+                        maxLength={21} // Max chars (10 + newline + 10)
+                        className="h-auto"
                       />
                       <div className="text-xs text-gray-500 mt-1">
-                        {cardBackData.badgeText.length}/20 characters
+                        {/* Display character count, maybe add line check warning if complex */} 
+                        {cardBackData.badgeText.length}/21 characters total
                       </div>
                     </div>
                     
@@ -783,6 +805,15 @@ const SeriesDetailPage = () => {
                         />
                       </div>
                     </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="badgeOn"
+                        checked={cardBackData.badgeOn}
+                        onCheckedChange={(checked) => setCardBackData({ ...cardBackData, badgeOn: !!checked })}
+                      />
+                      <Label htmlFor="badgeOn">Show Badge</Label>
+                    </div>
                   </div>
                   
                   <div className="flex flex-col justify-center items-center h-full">
@@ -802,6 +833,7 @@ const SeriesDetailPage = () => {
                       cardDetailsBgColor={cardBackData.cardDetailsBgColor}
                       badgeColor={cardBackData.badgeColor}
                       icons={cardBackData.icons}
+                      badgeOn={cardBackData.badgeOn}
                       displayMode="dialog"
                       className="w-full"
                     />
