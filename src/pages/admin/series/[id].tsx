@@ -86,37 +86,14 @@ const SeriesDetailPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [activeTab, setActiveTab] = useState<'samples' | 'edit'>('samples');
   
-  // Form state
-  const [headline, setHeadline] = useState('');
-  const [storyBody, setStoryBody] = useState('');
-  const [footerNote, setFooterNote] = useState('');
-  const [isDefault, setIsDefault] = useState(false);
+  // Simplified Form state
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [frameColor, setFrameColor] = useState('');
-  const [icon, setIcon] = useState('');
-  const [badgeCopy, setBadgeCopy] = useState('');
-  const [badgeColor, setBadgeColor] = useState('');
-  const [cardCount, setCardCount] = useState(0);
-  const [editionText, setEditionText] = useState('');
-  const [badgeOffOrOn, setBadgeOffOrOn] = useState(false);
   
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSample, setEditingSample] = useState<StorySample | null>(null);
-  
-  const [sample, setSample] = useState<StorySeriesRow>({
-    id: '',
-    title: '',
-    description: '',
-    theme: '',
-    region_key: '',
-    created_at: '',
-    updated_at: '',
-    emoji: '',
-    natural_language_name: '',
-    story_body: '',
-  });
+  const [isFlipped, setIsFlipped] = useState(false);
   
   useEffect(() => {
     if (id) {
@@ -245,40 +222,20 @@ const SeriesDetailPage = () => {
   };
   
   const resetForm = () => {
-    setHeadline('');
-    setStoryBody('');
-    setFooterNote('');
-    setIsDefault(false);
     setImageFile(null);
     setImagePreview(null);
     setEditingSample(null);
-    setFrameColor('');
-    setIcon('');
-    setBadgeCopy('');
-    setBadgeColor('');
-    setCardCount(0);
-    setEditionText('');
-    setBadgeOffOrOn(false);
+    setIsFlipped(false);
   };
   
   const handleOpenDialog = (sample?: StorySample) => {
     if (sample) {
       setEditingSample(sample);
-      setHeadline(sample.headline ?? '');
-      setStoryBody(sample.story_body ?? '');
-      setFooterNote(sample.footer_note || '');
-      setIsDefault(sample.is_default);
       setImagePreview(sample.image_url);
-      setFrameColor(sample.frame_color);
-      setIcon(sample.icon);
-      setBadgeCopy(sample.badge_copy);
-      setBadgeColor(sample.badge_color);
-      setCardCount(sample.card_count);
-      setEditionText(sample.edition_text);
-      setBadgeOffOrOn(sample.badge_off_or_on);
     } else {
       resetForm();
     }
+    setIsFlipped(false);
     setIsDialogOpen(true);
   };
   
@@ -288,6 +245,15 @@ const SeriesDetailPage = () => {
   };
   
   const handleSave = async () => {
+    if (!editingSample && !imageFile) {
+      toast({
+        title: 'No Changes',
+        description: 'Please select an image to upload.',
+        variant: 'default',
+      });
+      return;
+    }
+
     setIsSaving(true);
     try {
       // Check if user is authenticated
@@ -306,25 +272,36 @@ const SeriesDetailPage = () => {
       
       // Upload new image if selected
       if (imageFile) {
-        imageUrl = await uploadImage(imageFile);
+        try {
+          imageUrl = await uploadImage(imageFile);
+        } catch (uploadError) {
+          toast({
+            title: 'Upload Error',
+            description: 'Failed to upload image. Please try again.',
+            variant: 'destructive',
+          });
+          setIsSaving(false);
+          return;
+        }
       }
       
-      const sampleData = {
-        story_series_id: id,
-        headline,
-        story_body: storyBody,
-        footer_note: footerNote || null,
-        image_url: imageUrl,
-        is_default: isDefault,
-        frame_color: frameColor,
-        icon,
-        badge_copy: badgeCopy,
-        badge_color: badgeColor,
-        card_count: cardCount,
-        edition_text: editionText,
-        badge_off_or_on: badgeOffOrOn,
-      };
-      
+      const sampleData: Partial<StorySample> = {};
+      if (imageUrl !== imagePreview || (imageUrl && !editingSample)) {
+         sampleData.image_url = imageUrl;
+      } else if (!imageUrl && editingSample?.image_url) {
+        sampleData.image_url = null;
+      }
+
+      if (Object.keys(sampleData).length === 0 && !imageFile) {
+         toast({
+          title: 'No Changes',
+          description: 'No changes detected.',
+          variant: 'default',
+         });
+         setIsSaving(false);
+         return;
+      }
+
       console.log('Saving sample data:', sampleData);
       
       if (editingSample) {
@@ -345,9 +322,20 @@ const SeriesDetailPage = () => {
         });
       } else {
         // Create new sample
+        if (!imageUrl) {
+          toast({ title: 'Error', description: 'Cannot create sample without artwork.', variant: 'destructive' });
+          setIsSaving(false);
+          return;
+        }
         const { error } = await supabase
           .from('story_samples')
-          .insert([{ ...sampleData, id: uuidv4() }]);
+          .insert([{
+            story_series_id: id,
+            id: uuidv4(),
+            image_url: imageUrl,
+            headline: 'Untitled',
+            story_body: '',
+          }]);
           
         if (error) {
           console.error('Insert error details:', error);
@@ -360,27 +348,13 @@ const SeriesDetailPage = () => {
         });
       }
       
-      // If this is set as default, update other samples
-      if (isDefault) {
-        const otherSamples = samples.filter(s => s.id !== editingSample?.id);
-        for (const sample of otherSamples) {
-          await supabase
-            .from('story_samples')
-            .update({ is_default: false })
-            .eq('id', sample.id);
-        }
-      }
-      
-      // Refresh samples
       await fetchSamples();
-      
-      // Close dialog
       handleCloseDialog();
     } catch (error) {
       console.error('Error saving sample:', error);
       toast({
         title: 'Error',
-        description: 'Failed to save sample. Please check your authentication and try again.',
+        description: 'Failed to save sample.',
         variant: 'destructive',
       });
     } finally {
@@ -448,22 +422,6 @@ const SeriesDetailPage = () => {
     }
   };
   
-  const editSample = (sample: StorySample) => {
-    setEditingSample(sample);
-    setHeadline(sample.headline);
-    setStoryBody(sample.story_body);
-    setFooterNote(sample.footer_note);
-    setFrameColor(sample.frame_color);
-    setIcon(sample.icon);
-    setBadgeCopy(sample.badge_copy);
-    setBadgeColor(sample.badge_color);
-    setCardCount(sample.card_count);
-    setEditionText(sample.edition_text);
-    setIsDefault(sample.is_default);
-    setImagePreview(sample.image_url);
-    setBadgeOffOrOn(sample.badge_off_or_on);
-  };
-  
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -527,172 +485,91 @@ const SeriesDetailPage = () => {
                   New Sample
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[900px]">
+              <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
-                  <DialogTitle>Edit Sample</DialogTitle>
+                  <DialogTitle>{editingSample ? 'Edit Sample Artwork' : 'Create New Sample'}</DialogTitle>
                   <DialogDescription>
-                    Fill in the details for your story sample.
+                    {isFlipped ? 'Card Back (Preview)' : 'Upload the front artwork for your sample.'}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4 min-h-[400px]">
                   <div className="space-y-4">
-                    <div className="grid gap-2">
-                      <Label htmlFor="headline">Headline</Label>
-                      <Input
-                        id="headline"
-                        placeholder="e.g. The First Game"
-                        value={headline}
-                        onChange={(e) => setHeadline(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="storyBody">Story Body</Label>
-                      <Textarea
-                        id="storyBody"
-                        placeholder="Enter the story text..."
-                        className="min-h-[200px]"
-                        value={storyBody}
-                        onChange={(e) => setStoryBody(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="footerNote">Footer Note (Optional)</Label>
-                      <Textarea
-                        id="footerNote"
-                        placeholder="Enter a footer note..."
-                        className="min-h-[80px]"
-                        value={footerNote}
-                        onChange={(e) => setFooterNote(e.target.value)}
-                      />
-                    </div>
-
-                    <div className="grid gap-2">
-                      <Label htmlFor="imageUpload">Front Artwork</Label>
-                      <div className="flex items-center space-x-4">
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => document.getElementById('imageUpload')?.click()}
-                        >
-                          <Upload className="h-4 w-4 mr-2" />
-                          Upload Image
-                        </Button>
-                        <input
-                          id="imageUpload"
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleImageChange}
-                        />
+                    {!isFlipped ? (
+                      <>
+                        <div className="grid gap-2">
+                          <Label htmlFor="imageUpload">Front Artwork</Label>
+                          <div className="flex items-center space-x-4">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => document.getElementById('imageUpload')?.click()}
+                              disabled={isUploading}
+                            >
+                              {isUploading ? (
+                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              ) : (
+                                <Upload className="h-4 w-4 mr-2" />
+                              )}
+                              {imagePreview ? 'Change Image' : 'Upload Image'}
+                            </Button>
+                            <input
+                              id="imageUpload"
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleImageChange}
+                              disabled={isUploading}
+                            />
+                            {imagePreview && (
+                               <Button
+                                 type="button"
+                                 variant="ghost"
+                                 size="sm"
+                                 onClick={() => {
+                                   setImageFile(null);
+                                   setImagePreview(null);
+                                   const input = document.getElementById('imageUpload') as HTMLInputElement;
+                                   if (input) input.value = '';
+                                 }}
+                                 disabled={isUploading}
+                                >
+                                 <X className="h-4 w-4 mr-1" /> Remove
+                               </Button>
+                            )}
+                          </div>
+                          {isUploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        (Card Back Editor - Coming Soon)
                       </div>
-                    </div>
-
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="isDefault"
-                        checked={isDefault}
-                        onCheckedChange={(checked) =>
-                          setIsDefault(checked as boolean)
-                        }
-                      />
-                      <Label htmlFor="isDefault">Set as default sample</Label>
-                    </div>
+                    )}
                   </div>
 
-                  <div className="hidden md:block self-start">
+                  <div className="flex flex-col justify-center items-center h-full">
                     <SamplePreview
-                      headline={headline}
-                      storyBody={storyBody}
-                      footerNote={footerNote}
                       imageUrl={imagePreview}
-                      emoji={series.emoji}
+                      isFlipped={isFlipped}
+                      setIsFlipped={setIsFlipped}
+                      className="w-full"
                     />
-                  </div>
-                </div>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="frame_color">Frame Color</Label>
-                      <Input
-                        id="frame_color"
-                        value={frameColor}
-                        onChange={(e) => setFrameColor(e.target.value)}
-                        placeholder="e.g. #FF0000 or red"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="icon">Icon</Label>
-                      <Input
-                        id="icon"
-                        value={icon}
-                        onChange={(e) => setIcon(e.target.value)}
-                        placeholder="Icon identifier"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="badge_copy">Badge Copy</Label>
-                      <Input
-                        id="badge_copy"
-                        value={badgeCopy}
-                        onChange={(e) => setBadgeCopy(e.target.value)}
-                        placeholder="Text to display in badge"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="badge_color">Badge Color</Label>
-                      <Input
-                        id="badge_color"
-                        value={badgeColor}
-                        onChange={(e) => setBadgeColor(e.target.value)}
-                        placeholder="e.g. #FF0000 or red"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="card_count">Card Count</Label>
-                      <Input
-                        id="card_count"
-                        type="number"
-                        value={cardCount}
-                        onChange={(e) => setCardCount(parseInt(e.target.value) || 0)}
-                        placeholder="Number of cards in series"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="edition_text">Edition Text</Label>
-                      <Input
-                        id="edition_text"
-                        value={editionText}
-                        onChange={(e) => setEditionText(e.target.value)}
-                        placeholder="Text describing the edition type"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="badge_off_or_on">Badge Display</Label>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="badge_off_or_on"
-                        checked={badgeOffOrOn}
-                        onCheckedChange={(checked) => setBadgeOffOrOn(checked as boolean)}
-                      />
-                      <Label htmlFor="badge_off_or_on">Show Badge</Label>
-                    </div>
                   </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={handleCloseDialog}>
                     Cancel
                   </Button>
-                  <Button onClick={handleSave}>
-                    <Save className="h-4 w-4 mr-2" />
-                    Update
-                  </Button>
+                  {!isFlipped && (
+                     <Button onClick={handleSave} disabled={isSaving || isUploading}>
+                      {isSaving ? (
+                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                         <Save className="h-4 w-4 mr-2" />
+                      )}
+                      {editingSample ? 'Save Artwork' : 'Create Sample'}
+                     </Button>
+                  )}
                 </DialogFooter>
               </DialogContent>
             </Dialog>
