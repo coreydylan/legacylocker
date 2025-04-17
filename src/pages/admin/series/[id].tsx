@@ -43,29 +43,33 @@ import {
 } from 'lucide-react';
 import { SamplePreview } from '@/components/admin/SamplePreview';
 
-interface StorySeries {
+interface StorySeriesRow {
   id: string;
-  theme: string | null;
-  subject: string | null;
-  context: string | null;
-  series_type: string | null;
-  edition: string | null;
-  display_title: string;
-  custom_edition_prompt: string | null;
-  hidden_team: string | null;
-  natural_language_name: string | null;
-  region_key: string | null;
-  emoji: string | null;
+  title: string;
+  description: string;
+  theme: string;
+  region_key: string;
+  created_at: string;
+  updated_at: string;
+  emoji: string;
+  natural_language_name: string;
+  story_body: string;
 }
 
 interface StorySample {
   id: string;
-  story_series_id: string;
+  series_id: string;
   headline: string;
-  body: string;
-  footer_note: string | null;
-  image_url: string | null;
+  story_body: string;
+  footer_note: string;
+  image_url: string;
   is_default: boolean;
+  frame_color: string;
+  icon: string;
+  badge_copy: string;
+  badge_color: string;
+  card_count: number;
+  edition_text: string;
   created_at: string;
   updated_at: string;
 }
@@ -74,7 +78,7 @@ const SeriesDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const [series, setSeries] = useState<StorySeries | null>(null);
+  const [series, setSeries] = useState<StorySeriesRow | null>(null);
   const [samples, setSamples] = useState<StorySample[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -83,20 +87,39 @@ const SeriesDetailPage = () => {
   
   // Form state
   const [headline, setHeadline] = useState('');
-  const [body, setBody] = useState('');
+  const [storyBody, setStoryBody] = useState('');
   const [footerNote, setFooterNote] = useState('');
   const [isDefault, setIsDefault] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [frameColor, setFrameColor] = useState('');
+  const [icon, setIcon] = useState('');
+  const [badgeCopy, setBadgeCopy] = useState('');
+  const [badgeColor, setBadgeColor] = useState('');
+  const [cardCount, setCardCount] = useState(0);
+  const [editionText, setEditionText] = useState('');
   
   // Character counters
   const headlineCharCount = headline.length;
-  const bodyCharCount = body.length;
+  const storyBodyCharCount = storyBody.length;
   const footerNoteCharCount = footerNote.length;
   
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSample, setEditingSample] = useState<StorySample | null>(null);
+  
+  const [sample, setSample] = useState<StorySeriesRow>({
+    id: '',
+    title: '',
+    description: '',
+    theme: '',
+    region_key: '',
+    created_at: '',
+    updated_at: '',
+    emoji: '',
+    natural_language_name: '',
+    story_body: '',
+  });
   
   useEffect(() => {
     if (id) {
@@ -226,22 +249,34 @@ const SeriesDetailPage = () => {
   
   const resetForm = () => {
     setHeadline('');
-    setBody('');
+    setStoryBody('');
     setFooterNote('');
     setIsDefault(false);
     setImageFile(null);
     setImagePreview(null);
     setEditingSample(null);
+    setFrameColor('');
+    setIcon('');
+    setBadgeCopy('');
+    setBadgeColor('');
+    setCardCount(0);
+    setEditionText('');
   };
   
   const handleOpenDialog = (sample?: StorySample) => {
     if (sample) {
       setEditingSample(sample);
       setHeadline(sample.headline);
-      setBody(sample.body);
+      setStoryBody(sample.story_body);
       setFooterNote(sample.footer_note || '');
       setIsDefault(sample.is_default);
       setImagePreview(sample.image_url);
+      setFrameColor(sample.frame_color);
+      setIcon(sample.icon);
+      setBadgeCopy(sample.badge_copy);
+      setBadgeColor(sample.badge_color);
+      setCardCount(sample.card_count);
+      setEditionText(sample.edition_text);
     } else {
       resetForm();
     }
@@ -278,10 +313,16 @@ const SeriesDetailPage = () => {
       const sampleData = {
         story_series_id: id,
         headline,
-        body,
+        story_body: storyBody,
         footer_note: footerNote || null,
         image_url: imageUrl,
         is_default: isDefault,
+        frame_color: frameColor,
+        icon,
+        badge_copy: badgeCopy,
+        badge_color: badgeColor,
+        card_count: cardCount,
+        edition_text: editionText,
       };
       
       console.log('Saving sample data:', sampleData);
@@ -407,6 +448,21 @@ const SeriesDetailPage = () => {
     }
   };
   
+  const editSample = (sample: StorySample) => {
+    setEditingSample(sample);
+    setHeadline(sample.headline);
+    setStoryBody(sample.story_body);
+    setFooterNote(sample.footer_note);
+    setFrameColor(sample.frame_color);
+    setIcon(sample.icon);
+    setBadgeCopy(sample.badge_copy);
+    setBadgeColor(sample.badge_color);
+    setCardCount(sample.card_count);
+    setEditionText(sample.edition_text);
+    setIsDefault(sample.is_default);
+    setImagePreview(sample.image_url);
+  };
+  
   if (isLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
@@ -446,7 +502,7 @@ const SeriesDetailPage = () => {
         
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-bold">
-            {series.natural_language_name || series.display_title}
+            {series.natural_language_name || series.title}
           </h1>
           <Button onClick={() => setActiveTab('edit')} variant="outline">
             Edit Series
@@ -494,17 +550,17 @@ const SeriesDetailPage = () => {
                     </div>
 
                     <div className="grid gap-2">
-                      <Label htmlFor="body">Story Body</Label>
+                      <Label htmlFor="storyBody">Story Body</Label>
                       <Textarea
-                        id="body"
+                        id="storyBody"
                         placeholder="Enter the story text..."
                         className="min-h-[200px]"
                         maxLength={1700}
-                        value={body}
-                        onChange={(e) => setBody(e.target.value)}
+                        value={storyBody}
+                        onChange={(e) => setStoryBody(e.target.value)}
                       />
                       <div className="text-xs text-gray-500">
-                        {bodyCharCount}/1700 characters
+                        {storyBodyCharCount}/1700 characters
                       </div>
                     </div>
 
@@ -559,11 +615,74 @@ const SeriesDetailPage = () => {
                   <div className="hidden md:block">
                     <SamplePreview
                       headline={headline}
-                      storyBody={body}
+                      storyBody={storyBody}
                       footerNote={footerNote}
                       imageUrl={imagePreview}
                       emoji={series.emoji}
                     />
+                  </div>
+                </div>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="frame_color">Frame Color</Label>
+                      <Input
+                        id="frame_color"
+                        value={frameColor}
+                        onChange={(e) => setFrameColor(e.target.value)}
+                        placeholder="e.g. #FF0000 or red"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="icon">Icon</Label>
+                      <Input
+                        id="icon"
+                        value={icon}
+                        onChange={(e) => setIcon(e.target.value)}
+                        placeholder="Icon identifier"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="badge_copy">Badge Copy</Label>
+                      <Input
+                        id="badge_copy"
+                        value={badgeCopy}
+                        onChange={(e) => setBadgeCopy(e.target.value)}
+                        placeholder="Text to display in badge"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="badge_color">Badge Color</Label>
+                      <Input
+                        id="badge_color"
+                        value={badgeColor}
+                        onChange={(e) => setBadgeColor(e.target.value)}
+                        placeholder="e.g. #FF0000 or red"
+                      />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="card_count">Card Count</Label>
+                      <Input
+                        id="card_count"
+                        type="number"
+                        value={cardCount}
+                        onChange={(e) => setCardCount(parseInt(e.target.value) || 0)}
+                        placeholder="Number of cards in series"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edition_text">Edition Text</Label>
+                      <Input
+                        id="edition_text"
+                        value={editionText}
+                        onChange={(e) => setEditionText(e.target.value)}
+                        placeholder="Text describing the edition type"
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
@@ -611,7 +730,7 @@ const SeriesDetailPage = () => {
                       )}
                     </div>
                     <CardDescription className="line-clamp-2">
-                      {sample.body.substring(0, 100)}...
+                      {sample.story_body.substring(0, 100)}...
                     </CardDescription>
                   </CardHeader>
                   <CardFooter className="flex justify-between pt-2">

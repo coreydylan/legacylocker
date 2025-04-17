@@ -6,6 +6,8 @@ import { FlipHorizontal } from 'lucide-react';
 
 interface SamplePreviewProps {
   headline: string;
+  subtitle?: string;
+  badgeText?: string;
   storyBody: string;
   footerNote?: string;
   imageUrl?: string;
@@ -15,6 +17,8 @@ interface SamplePreviewProps {
 
 export function SamplePreview({
   headline,
+  subtitle,
+  badgeText,
   storyBody,
   footerNote,
   imageUrl,
@@ -51,6 +55,11 @@ export function SamplePreview({
                 <p className="text-gray-400">No image uploaded</p>
               </div>
             )}
+            {badgeText && (
+              <div className="absolute top-4 right-4 bg-red-500 text-white px-2 py-1 rounded-full text-sm font-medium">
+                {badgeText}
+              </div>
+            )}
           </Card>
 
           {/* Back of card */}
@@ -61,7 +70,10 @@ export function SamplePreview({
             )}
             style={{ transform: "rotateY(180deg)" }}
           >
-            <h3 className="text-xl font-semibold mb-2">{headline}</h3>
+            <h3 className="text-xl font-semibold mb-1">{headline}</h3>
+            {subtitle && (
+              <p className="text-sm text-gray-500 mb-4">{subtitle}</p>
+            )}
             <p className="text-sm text-gray-600 flex-grow">{storyBody}</p>
             {footerNote && (
               <p className="text-xs text-gray-500 mt-4">{footerNote}</p>

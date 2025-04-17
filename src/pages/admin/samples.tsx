@@ -31,6 +31,8 @@ const AdminSamplesPage = () => {
   const [emoji, setEmoji] = useState('');
   const [naturalLanguageName, setNaturalLanguageName] = useState('');
   const [headline, setHeadline] = useState('');
+  const [subtitle, setSubtitle] = useState('');
+  const [badgeText, setBadgeText] = useState('');
   const [storyBody, setStoryBody] = useState('');
   const [defaultFooterNote, setDefaultFooterNote] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -38,6 +40,8 @@ const AdminSamplesPage = () => {
   
   // Character counters
   const headlineCharCount = headline.length;
+  const subtitleCharCount = subtitle.length;
+  const badgeTextCharCount = badgeText.length;
   const storyBodyCharCount = storyBody.length;
   const defaultFooterNoteCharCount = defaultFooterNote.length;
   
@@ -52,6 +56,8 @@ const AdminSamplesPage = () => {
       setEmoji(selectedSample.emoji || '');
       setNaturalLanguageName(selectedSample.natural_language_name || '');
       setHeadline(selectedSample.headline || '');
+      setSubtitle(selectedSample.subtitle || '');
+      setBadgeText(selectedSample.badge_text || '');
       setStoryBody(selectedSample.story_body || '');
       setDefaultFooterNote(selectedSample.default_footer_note || '');
       setImagePreview(selectedSample.sample_image_url || null);
@@ -60,6 +66,8 @@ const AdminSamplesPage = () => {
       setEmoji('');
       setNaturalLanguageName('');
       setHeadline('');
+      setSubtitle('');
+      setBadgeText('');
       setStoryBody('');
       setDefaultFooterNote('');
       setImagePreview(null);
@@ -162,6 +170,8 @@ const AdminSamplesPage = () => {
         emoji,
         natural_language_name: naturalLanguageName,
         headline,
+        subtitle,
+        badge_text: badgeText,
         story_body: storyBody,
         default_footer_note: defaultFooterNote,
         sample_image_url: sampleImageUrl,
@@ -224,6 +234,8 @@ const AdminSamplesPage = () => {
         emoji: '🎁',
         natural_language_name: 'Welcome Sample',
         headline: 'Welcome to Legacy Locker',
+        subtitle: 'Your first story',
+        badge_text: 'New',
         story_body: 'This is a sample story. Edit this to create your own sample.',
         default_footer_note: 'Created with Legacy Locker',
         is_sample: true,
@@ -349,6 +361,34 @@ const AdminSamplesPage = () => {
                 />
                 <div className="text-xs text-gray-500 mt-1">
                   {headlineCharCount}/25 characters
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="subtitle">Subtitle</Label>
+                <Input
+                  id="subtitle"
+                  value={subtitle}
+                  onChange={(e) => setSubtitle(e.target.value)}
+                  placeholder="e.g. A journey begins"
+                  maxLength={50}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {subtitleCharCount}/50 characters
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="badgeText">Badge Text</Label>
+                <Input
+                  id="badgeText"
+                  value={badgeText}
+                  onChange={(e) => setBadgeText(e.target.value)}
+                  placeholder="e.g. New"
+                  maxLength={20}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {badgeTextCharCount}/20 characters
                 </div>
               </div>
               

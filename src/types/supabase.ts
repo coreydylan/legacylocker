@@ -16,9 +16,17 @@ export interface StorySeriesRow {
   emoji?: string;
   natural_language_name?: string;
   headline?: string;
+  subtitle?: string;
+  badge_text?: string;
   story_body?: string;
   default_footer_note?: string;
   sample_image_url?: string;
+  frame_color?: string;
+  icon?: string;
+  badge_copy?: string;
+  badge_color?: string;
+  card_count?: number;
+  edition_text?: string;
 }
 
 // Simplified type for options passed to the command menu
