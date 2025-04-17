@@ -11,6 +11,7 @@ import AdminLayout from './AdminLayout';
 const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -62,39 +63,29 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     
     try {
       console.log('Attempting login...');
-      const adminPassword = process.env.VITE_ADMIN_PASSWORD || 'legacylocker2024';
       
-      if (password === adminPassword) {
-        // Sign in with Supabase using email/password
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: 'admin@legacylockerco.com',
-          password: adminPassword,
-        });
-        
-        if (error) {
-          console.error('Supabase auth error:', error);
-          toast({
-            title: 'Authentication Error',
-            description: error.message,
-            variant: 'destructive',
-          });
-          return;
-        }
-        
-        console.log('Login successful:', data);
-        setIsAuthenticated(true);
+      // Sign in with Supabase using email/password
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        console.error('Supabase auth error:', error);
         toast({
-          title: 'Success',
-          description: 'You have been authenticated as an admin',
-        });
-      } else {
-        console.log('Invalid password attempt');
-        toast({
-          title: 'Error',
-          description: 'Invalid password',
+          title: 'Authentication Error',
+          description: error.message,
           variant: 'destructive',
         });
+        return;
       }
+      
+      console.log('Login successful:', data);
+      setIsAuthenticated(true);
+      toast({
+        title: 'Success',
+        description: 'You have been authenticated as an admin',
+      });
     } catch (error) {
       console.error('Login error:', error);
       toast({
@@ -104,6 +95,34 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to log out',
+          variant: 'destructive',
+        });
+        return;
+      }
+      setIsAuthenticated(false);
+      navigate('/');
+      toast({
+        title: 'Success',
+        description: 'You have been logged out',
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -125,6 +144,17 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
           <CardContent>
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Enter admin email"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
@@ -132,6 +162,7 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="Enter admin password"
+                  required
                 />
               </div>
               <Button type="submit" className="w-full">
@@ -144,7 +175,7 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  return <AdminLayout>{children}</AdminLayout>;
+  return <AdminLayout onLogout={handleLogout}>{children}</AdminLayout>;
 };
 
 export default AdminAuth; 

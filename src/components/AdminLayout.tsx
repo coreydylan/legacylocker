@@ -14,9 +14,10 @@ import {
 
 interface AdminLayoutProps {
   children: React.ReactNode;
+  onLogout: () => Promise<void>;
 }
 
-const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
+const AdminLayout: React.FC<AdminLayoutProps> = ({ children, onLogout }) => {
   const location = useLocation();
   
   const isActive = (path: string) => {
@@ -59,11 +60,13 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
           </ul>
         </nav>
         <div className="absolute bottom-0 w-64 p-4 border-t border-gray-200">
-          <Button asChild variant="ghost" className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50">
-            <Link to="/">
-              <LogOut className="h-4 w-4" />
-              <span className="ml-2">Exit Admin</span>
-            </Link>
+          <Button 
+            variant="ghost" 
+            className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-50"
+            onClick={onLogout}
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="ml-2">Logout</span>
           </Button>
         </div>
       </div>
@@ -71,10 +74,12 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
       {/* Mobile header */}
       <div className="md:hidden bg-white border-b border-gray-200 p-4 flex justify-between items-center">
         <h1 className="text-xl font-bold">Legacy Locker Admin</h1>
-        <Button asChild variant="ghost" size="sm">
-          <Link to="/">
-            <LogOut className="h-4 w-4" />
-          </Link>
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={onLogout}
+        >
+          <LogOut className="h-4 w-4" />
         </Button>
       </div>
       
