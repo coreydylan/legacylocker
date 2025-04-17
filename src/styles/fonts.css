@@ -1,0 +1,327 @@
+/* Source Serif 4 Variable Font Styles */
+
+/* Base font family */
+.source-serif {
+  font-family: "source-serif-4-variable", sans-serif;
+}
+
+/* Default instance */
+.source-serif-default {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-variation-settings: "opsz" 20, "wght" 400;
+}
+
+/* Italic variations */
+.source-serif-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 20, "wght" 400;
+}
+
+.source-serif-semibold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 20, "wght" 600;
+}
+
+.source-serif-bold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 20, "wght" 700;
+}
+
+.source-serif-black-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 20, "wght" 900;
+}
+
+/* Subhead variations */
+.source-serif-subhead-extralight-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 14, "wght" 200;
+}
+
+.source-serif-subhead-light-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 14, "wght" 300;
+}
+
+.source-serif-subhead-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 14, "wght" 400;
+}
+
+.source-serif-subhead-semibold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 14, "wght" 600;
+}
+
+.source-serif-subhead-bold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 14, "wght" 700;
+}
+
+.source-serif-subhead-black-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 14, "wght" 900;
+}
+
+/* Display variations */
+.source-serif-display-extralight-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 72, "wght" 200;
+}
+
+.source-serif-display-light-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 72, "wght" 300;
+}
+
+.source-serif-display-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 72, "wght" 400;
+}
+
+.source-serif-display-semibold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 72, "wght" 600;
+}
+
+.source-serif-display-bold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 72, "wght" 700;
+}
+
+.source-serif-display-black-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 72, "wght" 900;
+}
+
+/* Caption variations */
+.source-serif-caption-extralight-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 10, "wght" 200;
+}
+
+.source-serif-caption-light-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 10, "wght" 300;
+}
+
+.source-serif-caption-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 10, "wght" 400;
+}
+
+.source-serif-caption-semibold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 10, "wght" 600;
+}
+
+.source-serif-caption-bold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 10, "wght" 700;
+}
+
+.source-serif-caption-black-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 10, "wght" 900;
+}
+
+/* Small Text variations */
+.source-serif-smtext-extralight-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 8, "wght" 200;
+}
+
+.source-serif-smtext-light-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 8, "wght" 300;
+}
+
+.source-serif-smtext-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 8, "wght" 400;
+}
+
+.source-serif-smtext-semibold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 8, "wght" 600;
+}
+
+.source-serif-smtext-bold-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 8, "wght" 700;
+}
+
+.source-serif-smtext-black-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 8, "wght" 900;
+}
+
+/* Weight variations */
+.source-serif-extralight-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 20, "wght" 200;
+}
+
+.source-serif-light-italic {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: italic;
+  font-variation-settings: "opsz" 20, "wght" 300;
+}
+
+/* Roman (non-italic) variations */
+.source-serif-roman {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: normal;
+  font-variation-settings: "opsz" 20, "wght" 400;
+}
+
+.source-serif-extralight {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: normal;
+  font-variation-settings: "opsz" 20, "wght" 200;
+}
+
+.source-serif-light {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: normal;
+  font-variation-settings: "opsz" 20, "wght" 300;
+}
+
+.source-serif-semibold {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: normal;
+  font-variation-settings: "opsz" 20, "wght" 600;
+}
+
+.source-serif-bold {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: normal;
+  font-variation-settings: "opsz" 20, "wght" 700;
+}
+
+.source-serif-black {
+  font-family: "source-serif-4-variable", sans-serif;
+  font-style: normal;
+  font-variation-settings: "opsz" 20, "wght" 900;
+}
+
+/* Source Code Pro Font Styles */
+
+/* Base font family */
+.source-code-pro {
+  font-family: "Source Code Pro", monospace;
+}
+
+/* Regular weight */
+.source-code-pro-regular {
+  font-family: "Source Code Pro", monospace;
+  font-weight: 400;
+}
+
+/* Light weight */
+.source-code-pro-light {
+  font-family: "Source Code Pro", monospace;
+  font-weight: 300;
+}
+
+/* Extra light weight */
+.source-code-pro-extralight {
+  font-family: "Source Code Pro", monospace;
+  font-weight: 200;
+}
+
+/* Medium weight */
+.source-code-pro-medium {
+  font-family: "Source Code Pro", monospace;
+  font-weight: 500;
+}
+
+/* Semi-bold weight */
+.source-code-pro-semibold {
+  font-family: "Source Code Pro", monospace;
+  font-weight: 600;
+}
+
+/* Bold weight */
+.source-code-pro-bold {
+  font-family: "Source Code Pro", monospace;
+  font-weight: 700;
+}
+
+/* Black weight */
+.source-code-pro-black {
+  font-family: "Source Code Pro", monospace;
+  font-weight: 900;
+}
+
+/* Italic variations */
+.source-code-pro-italic {
+  font-family: "Source Code Pro", monospace;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.source-code-pro-light-italic {
+  font-family: "Source Code Pro", monospace;
+  font-style: italic;
+  font-weight: 300;
+}
+
+.source-code-pro-extralight-italic {
+  font-family: "Source Code Pro", monospace;
+  font-style: italic;
+  font-weight: 200;
+}
+
+.source-code-pro-medium-italic {
+  font-family: "Source Code Pro", monospace;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.source-code-pro-semibold-italic {
+  font-family: "Source Code Pro", monospace;
+  font-style: italic;
+  font-weight: 600;
+}
+
+.source-code-pro-bold-italic {
+  font-family: "Source Code Pro", monospace;
+  font-style: italic;
+  font-weight: 700;
+}
+
+.source-code-pro-black-italic {
+  font-family: "Source Code Pro", monospace;
+  font-style: italic;
+  font-weight: 900;
+} 

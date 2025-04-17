@@ -18,6 +18,8 @@ import AdminDashboard from "./pages/admin";
 import AdminSeriesPage from "./pages/admin/series";
 import AdminSeriesDetailPage from "./pages/admin/series/[id]";
 import AdminAuth from "@/components/AdminAuth";
+import FontExamplesPage from "./pages/font-examples";
+import CardBuilderDemo from "./pages/card-builder-demo";
 
 const queryClient = new QueryClient();
 
@@ -57,6 +59,8 @@ const AppContent = () => {
             <AdminSeriesDetailPage />
           </AdminAuth>
         } />
+        <Route path="/font-examples" element={<FontExamplesPage />} />
+        <Route path="/card-builder-demo" element={<CardBuilderDemo />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </>

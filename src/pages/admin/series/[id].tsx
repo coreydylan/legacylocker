@@ -70,6 +70,7 @@ interface StorySample {
   badge_color: string;
   card_count: number;
   edition_text: string;
+  badge_off_or_on: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -98,6 +99,7 @@ const SeriesDetailPage = () => {
   const [badgeColor, setBadgeColor] = useState('');
   const [cardCount, setCardCount] = useState(0);
   const [editionText, setEditionText] = useState('');
+  const [badgeOffOrOn, setBadgeOffOrOn] = useState(false);
   
   // Character counters
   const headlineCharCount = headline.length;
@@ -261,6 +263,7 @@ const SeriesDetailPage = () => {
     setBadgeColor('');
     setCardCount(0);
     setEditionText('');
+    setBadgeOffOrOn(false);
   };
   
   const handleOpenDialog = (sample?: StorySample) => {
@@ -277,6 +280,7 @@ const SeriesDetailPage = () => {
       setBadgeColor(sample.badge_color);
       setCardCount(sample.card_count);
       setEditionText(sample.edition_text);
+      setBadgeOffOrOn(sample.badge_off_or_on);
     } else {
       resetForm();
     }
@@ -323,6 +327,7 @@ const SeriesDetailPage = () => {
         badge_color: badgeColor,
         card_count: cardCount,
         edition_text: editionText,
+        badge_off_or_on: badgeOffOrOn,
       };
       
       console.log('Saving sample data:', sampleData);
@@ -461,6 +466,7 @@ const SeriesDetailPage = () => {
     setEditionText(sample.edition_text);
     setIsDefault(sample.is_default);
     setImagePreview(sample.image_url);
+    setBadgeOffOrOn(sample.badge_off_or_on);
   };
   
   if (isLoading) {
@@ -612,7 +618,7 @@ const SeriesDetailPage = () => {
                     </div>
                   </div>
 
-                  <div className="hidden md:block">
+                  <div className="hidden md:block self-start">
                     <SamplePreview
                       headline={headline}
                       storyBody={storyBody}
@@ -682,6 +688,17 @@ const SeriesDetailPage = () => {
                         onChange={(e) => setEditionText(e.target.value)}
                         placeholder="Text describing the edition type"
                       />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="badge_off_or_on">Badge Display</Label>
+                    <div className="flex items-center space-x-2">
+                      <Checkbox
+                        id="badge_off_or_on"
+                        checked={badgeOffOrOn}
+                        onCheckedChange={(checked) => setBadgeOffOrOn(checked as boolean)}
+                      />
+                      <Label htmlFor="badge_off_or_on">Show Badge</Label>
                     </div>
                   </div>
                 </div>
