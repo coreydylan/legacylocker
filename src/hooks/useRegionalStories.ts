@@ -55,7 +55,7 @@ export function useRegionalStories() {
           .from("story_series")
           .select("emoji, natural_language_name")
           .eq("region_key", regionKey)
-          .not("theme", "in", ["Personal", "Corporate", "Ancestral"])
+          .not("theme", "in.(Personal,Corporate,Ancestral)")
           .limit(3);
 
         if (storiesError) throw storiesError;
@@ -66,7 +66,7 @@ export function useRegionalStories() {
             .from("story_series")
             .select("emoji, natural_language_name")
             .eq("region_key", "national")
-            .not("theme", "in", ["Personal", "Corporate", "Ancestral"])
+            .not("theme", "in.(Personal,Corporate,Ancestral)")
             .limit(3 - (regionStories?.length || 0));
 
           if (fallbackError) throw fallbackError;
