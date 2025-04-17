@@ -213,58 +213,40 @@ const SeriesDetailPage = () => {
   const uploadImage = async (file: File) => {
     setIsUploading(true);
     try {
-      // Check if user is authenticated
-      const { data: authData, error: authError } = await supabase.auth.getSession();
-      if (authError || !authData.session) {
-        console.error('Authentication error:', authError);
-        toast({
-          title: 'Authentication Error',
-          description: 'You must be logged in to upload images',
-          variant: 'destructive',
-        });
-        throw new Error('Not authenticated');
-      }
-
+      // Create a unique filename with timestamp
+      const timestamp = Date.now();
       const fileExt = file.name.split('.').pop();
-      const fileName = `${uuidv4()}.${fileExt}`;
-      const filePath = `story-samples/${fileName}`;
+      const fileName = `sample-images/${timestamp}.${fileExt}`;
       
-      console.log('Uploading to path:', filePath);
+      console.log('Attempting to upload image to user-uploads bucket:', fileName);
       
-      // First try to upload to the user-uploads bucket
+      // Try uploading to user-uploads bucket (which we know works from ArtworkTab component)
       const { error: uploadError } = await supabase.storage
         .from('user-uploads')
-        .upload(filePath, file);
+        .upload(fileName, file, { 
+          cacheControl: '3600',
+          upsert: true 
+        });
         
       if (uploadError) {
-        console.error('Upload error details:', uploadError);
-        
-        // If that fails, try the story_samples bucket
-        const { error: secondUploadError } = await supabase.storage
-          .from('story_samples')
-          .upload(fileName, file);
-          
-        if (secondUploadError) {
-          console.error('Second upload error details:', secondUploadError);
-          throw secondUploadError;
-        }
-        
-        // Get public URL from story_samples bucket
-        const { data } = supabase.storage
-          .from('story_samples')
-          .getPublicUrl(fileName);
-          
-        return data.publicUrl;
+        console.error('Upload error:', uploadError);
+        toast({
+          title: 'Upload Failed',
+          description: `Error: ${uploadError.message}`,
+          variant: 'destructive',
+        });
+        throw uploadError;
       }
       
-      // Get public URL from user-uploads bucket
-      const { data } = supabase.storage
+      // Get the public URL
+      const { data: publicUrlData } = supabase.storage
         .from('user-uploads')
-        .getPublicUrl(filePath);
-        
-      return data.publicUrl;
+        .getPublicUrl(fileName);
+      
+      console.log('Upload successful, URL:', publicUrlData.publicUrl);
+      return publicUrlData.publicUrl;
     } catch (error) {
-      console.error('Error uploading image:', error);
+      console.error('Error in uploadImage:', error);
       throw error;
     } finally {
       setIsUploading(false);
@@ -342,73 +324,87 @@ const SeriesDetailPage = () => {
   const handleSave = async () => {
     if (!selectedSample && !imageFile) return;
 
-    const sampleData: Partial<StorySample> = {
-      headline: cardBackData.headline || '',
-      story_body: cardBackData.storyBody || '',
-      subtitle: cardBackData.subtitle,
-      badge_text: cardBackData.badgeText,
-      badge_copy: null,
-      frame_color: cardBackData.frameColor,
-      icon: cardBackData.icons[0] || null,
-      card_count: cardBackData.cardNumber,
-      edition_text: cardBackData.editionTitle
-    };
+    try {
+      const sampleData: Partial<StorySample> = {
+        headline: cardBackData.headline || '',
+        story_body: cardBackData.storyBody || '',
+        subtitle: cardBackData.subtitle,
+        badge_text: cardBackData.badgeText,
+        badge_copy: null,
+        frame_color: cardBackData.frameColor,
+        icon: cardBackData.icons[0] || null,
+        card_count: cardBackData.cardNumber,
+        edition_text: cardBackData.editionTitle
+      };
 
-    if (imageFile) {
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from('story_samples')
-        .upload(`${Date.now()}-${imageFile.name}`, imageFile);
-
-      if (uploadError) {
-        console.error('Error uploading image:', uploadError);
-        return;
-      }
-
-      if (uploadData) {
-        const imageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/story_samples/${uploadData.path}`;
-        sampleData.image_url = imageUrl;
-      }
-    }
-
-    if (selectedSample) {
-      // Remove fields that don't exist in the database schema
-      const { 
-        badge_color, 
-        ...validSampleData 
-      } = sampleData;
-
-      const { error } = await supabase
-        .from('story_samples')
-        .update(validSampleData)
-        .eq('id', selectedSample.id);
-
-      if (error) {
-        console.error('Error updating sample:', error);
-        return;
-      }
-    } else {
-      // Remove fields that don't exist in the database schema
-      const { 
-        badge_color, 
-        ...validSampleData 
-      } = sampleData;
-
-      const { error } = await supabase.from('story_samples').insert([
-        {
-          ...validSampleData,
-          story_series_id: id,
-          is_default: false
+      // Upload image if provided
+      if (imageFile) {
+        try {
+          const imageUrl = await uploadImage(imageFile);
+          sampleData.image_url = imageUrl;
+        } catch (uploadError) {
+          console.error('Image upload failed:', uploadError);
+          toast({
+            title: 'Upload Error',
+            description: 'Failed to upload image. Please try again.',
+            variant: 'destructive',
+          });
+          return;
         }
-      ]);
-
-      if (error) {
-        console.error('Error creating sample:', error);
-        return;
       }
-    }
 
-    setIsDialogOpen(false);
-    await fetchSamples();
+      if (selectedSample) {
+        // Update existing sample
+        const { error } = await supabase
+          .from('story_samples')
+          .update(sampleData)
+          .eq('id', selectedSample.id);
+
+        if (error) {
+          console.error('Error updating sample:', error);
+          toast({
+            title: 'Update Error',
+            description: 'Failed to update sample. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      } else {
+        // Create new sample
+        const { error } = await supabase.from('story_samples').insert([
+          {
+            ...sampleData,
+            story_series_id: id,
+            is_default: false
+          }
+        ]);
+
+        if (error) {
+          console.error('Error creating sample:', error);
+          toast({
+            title: 'Creation Error',
+            description: 'Failed to create sample. Please try again.',
+            variant: 'destructive',
+          });
+          return;
+        }
+      }
+
+      toast({
+        title: 'Success',
+        description: selectedSample ? 'Sample updated successfully' : 'Sample created successfully',
+      });
+
+      setIsDialogOpen(false);
+      await fetchSamples();
+    } catch (error) {
+      console.error('Unexpected error saving sample:', error);
+      toast({
+        title: 'Error',
+        description: 'An unexpected error occurred. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
   
   const handleDelete = async (sampleId: string) => {
@@ -549,11 +545,11 @@ const SeriesDetailPage = () => {
                   </TabsList>
                   
                   <TabsContent value="front" className="mt-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div className="space-y-4">
-                        <div>
-                          <Label htmlFor="imageUpload">Sample Image</Label>
-                          <div className="mt-2 flex items-center space-x-4">
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="imageUpload">Sample Image</Label>
+                        <div className="mt-2 flex flex-col space-y-2">
+                          <div className="flex items-center space-x-4">
                             <Button
                               variant="outline"
                               onClick={() => document.getElementById('imageUpload')?.click()}
@@ -590,15 +586,20 @@ const SeriesDetailPage = () => {
                               </Button>
                             )}
                           </div>
-                          {isUploading && <p className="text-sm text-muted-foreground">Uploading...</p>}
+                          {isUploading && (
+                            <div className="text-sm text-amber-600">
+                              <Loader2 className="h-3 w-3 inline-block mr-1 animate-spin" />
+                              Uploading image... Please wait.
+                            </div>
+                          )}
+                          {!imagePreview && !isUploading && (
+                            <p className="text-xs text-muted-foreground">
+                              Upload a high-quality image for the front of the card.
+                              <br />
+                              Recommended dimensions: 1200x1800px (4x6 inches at 300dpi).
+                            </p>
+                          )}
                         </div>
-                      </div>
-                      
-                      <div className="flex flex-col justify-center items-center h-full">
-                        <SamplePreview
-                          imageUrl={imagePreview}
-                          className="w-full"
-                        />
                       </div>
                     </div>
                   </TabsContent>
@@ -798,23 +799,6 @@ const SeriesDetailPage = () => {
                         <SamplePreview
                           imageUrl={imagePreview}
                           className="w-full"
-                          headline={cardBackData.headline}
-                          subtitle={cardBackData.subtitle}
-                          storyBody={cardBackData.storyBody}
-                          badgeText={cardBackData.badgeText}
-                          customNote={cardBackData.customNote}
-                          cardNumber={cardBackData.cardNumber}
-                          totalCards={cardBackData.totalCards}
-                          editionTitle={cardBackData.editionTitle}
-                          giftFromCopy={cardBackData.giftFromCopy}
-                          footerOn={cardBackData.footerOn}
-                          frameColor={cardBackData.frameColor}
-                          cardDetailsBgColor={cardBackData.cardDetailsBgColor}
-                          badgeColor={cardBackData.badgeColor}
-                          icons={cardBackData.icons}
-                          showFlipButton={true}
-                          isFlipped={true}
-                          displayMode="dialog"
                         />
                       </div>
                     </div>

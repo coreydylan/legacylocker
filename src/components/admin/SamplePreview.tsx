@@ -77,17 +77,22 @@ export function SamplePreview({
       {/* Front of card - only shown when not flipped */}
       {!flipped && (
         <Card className="absolute inset-0 overflow-hidden">
-          {imageUrl ? (
-            <img
-              src={imageUrl}
-              alt="Card front"
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
-              No image uploaded
-            </div>
-          )}
+          <div className="w-full h-full bg-white flex items-center justify-center">
+            {imageUrl ? (
+              <img
+                src={imageUrl}
+                alt="Card front"
+                className="w-full h-full object-contain"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center bg-muted text-muted-foreground">
+                <p className="text-sm text-center px-4">
+                  No image uploaded.<br />
+                  Upload an image for the front of the card.
+                </p>
+              </div>
+            )}
+          </div>
         </Card>
       )}
       
