@@ -14,6 +14,9 @@ import { useEffect } from "react";
 import SessionLoader from "@/components/SessionLoader";
 import AdminSamplesPage from "./pages/admin/samples";
 import AdminTestPage from "./pages/admin/test";
+import AdminDashboard from "./pages/admin";
+import AdminSeriesPage from "./pages/admin/series";
+import AdminSeriesDetailPage from "./pages/admin/series/[id]";
 import AdminAuth from "@/components/AdminAuth";
 
 const queryClient = new QueryClient();
@@ -34,9 +37,24 @@ const AppContent = () => {
         <Route path="/" element={<Index />} />
         <Route path="/personalize/:edition" element={<PersonalizePage />} />
         <Route path="/admin/test" element={<AdminTestPage />} />
+        <Route path="/admin" element={
+          <AdminAuth>
+            <AdminDashboard />
+          </AdminAuth>
+        } />
         <Route path="/admin/samples" element={
           <AdminAuth>
             <AdminSamplesPage />
+          </AdminAuth>
+        } />
+        <Route path="/admin/series" element={
+          <AdminAuth>
+            <AdminSeriesPage />
+          </AdminAuth>
+        } />
+        <Route path="/admin/series/:id" element={
+          <AdminAuth>
+            <AdminSeriesDetailPage />
           </AdminAuth>
         } />
         <Route path="*" element={<NotFound />} />

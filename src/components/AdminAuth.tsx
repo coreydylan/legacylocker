@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import AdminLayout from './AdminLayout';
 
 const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -45,9 +46,25 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     e.preventDefault();
     
     // Simple password check - replace with your actual admin password
-    const adminPassword = process.env.VITE_ADMIN_PASSWORD || 'admin123';
+    const adminPassword = process.env.VITE_ADMIN_PASSWORD || 'legacylocker2024';
     
     if (password === adminPassword) {
+      // Sign in with Supabase using email/password
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: 'admin@legacylockerco.com',
+        password: adminPassword,
+      });
+      
+      if (error) {
+        console.error('Supabase auth error:', error);
+        toast({
+          title: 'Authentication Error',
+          description: 'Failed to authenticate with the server',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       setIsAuthenticated(true);
       toast({
         title: 'Success',
@@ -99,7 +116,8 @@ const AdminAuth: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     );
   }
 
-  return <>{children}</>;
+  // Wrap authenticated content in AdminLayout
+  return <AdminLayout>{children}</AdminLayout>;
 };
 
 export default AdminAuth; 

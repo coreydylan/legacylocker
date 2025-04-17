@@ -70,24 +70,36 @@ const AdminSamplesPage = () => {
   const fetchSamples = async () => {
     setIsLoading(true);
     try {
+      console.log('Fetching samples from Supabase...');
+      
+      // First try to fetch all samples
       const { data, error } = await supabase
         .from('story_series')
-        .select('*')
-        .eq('is_sample', true);
+        .select('*');
         
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase error details:', error);
+        throw error;
+      }
       
-      setSamples(data || []);
+      console.log('Fetched data:', data);
+      
+      // Filter samples in memory if needed
+      const filteredSamples = data?.filter(sample => sample.is_sample === true) || [];
+      
+      console.log('Filtered samples:', filteredSamples);
+      
+      setSamples(filteredSamples);
       
       // Select the first sample if available
-      if (data && data.length > 0) {
-        setSelectedSample(data[0]);
+      if (filteredSamples.length > 0) {
+        setSelectedSample(filteredSamples[0]);
       }
     } catch (error) {
       console.error('Error fetching samples:', error);
       toast({
         title: 'Error',
-        description: 'Failed to fetch samples',
+        description: 'Failed to fetch samples. Check console for details.',
         variant: 'destructive',
       });
     } finally {
@@ -203,202 +215,270 @@ const AdminSamplesPage = () => {
     }
   };
   
-  return (
-    <div className="container mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-8">Admin Sample Story Builder</h1>
+  const createInitialSample = async () => {
+    try {
+      setIsSaving(true);
       
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column - Form */}
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">Sample Details</h2>
-            <Button onClick={handleNewSample} variant="outline" size="sm">
-              <Plus className="h-4 w-4 mr-2" />
-              New Sample
-            </Button>
-          </div>
-          
-          {/* Sample Selector */}
-          <div className="mb-6">
-            <Label htmlFor="sample-selector">Select Sample</Label>
-            <Select
-              value={selectedSample?.id || ''}
-              onValueChange={handleSampleSelect}
-            >
-              <SelectTrigger className="w-full">
-                <SelectValue placeholder="Select a sample to edit" />
-              </SelectTrigger>
-              <SelectContent>
-                {samples.map((sample) => (
-                  <SelectItem key={sample.id} value={sample.id}>
-                    {sample.natural_language_name || sample.display_title || 'Unnamed Sample'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="emoji">Emoji</Label>
-              <Input
-                id="emoji"
-                value={emoji}
-                onChange={(e) => setEmoji(e.target.value)}
-                placeholder="e.g. 🏀"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="naturalLanguageName">Natural Language Name</Label>
-              <Input
-                id="naturalLanguageName"
-                value={naturalLanguageName}
-                onChange={(e) => setNaturalLanguageName(e.target.value)}
-                placeholder="e.g. Basketball Fan's Journey"
-              />
-            </div>
-            
-            <div>
-              <Label htmlFor="headline">Headline</Label>
-              <Input
-                id="headline"
-                value={headline}
-                onChange={(e) => setHeadline(e.target.value)}
-                placeholder="e.g. The First Game"
-                maxLength={25}
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {headlineCharCount}/25 characters
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="storyBody">Story Body</Label>
-              <Textarea
-                id="storyBody"
-                value={storyBody}
-                onChange={(e) => setStoryBody(e.target.value)}
-                placeholder="Enter the story text..."
-                className="min-h-[200px]"
-                maxLength={1700}
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {storyBodyCharCount}/1700 characters
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="defaultFooterNote">Default Footer Note (Optional)</Label>
-              <Textarea
-                id="defaultFooterNote"
-                value={defaultFooterNote}
-                onChange={(e) => setDefaultFooterNote(e.target.value)}
-                placeholder="Enter a default footer note..."
-                className="min-h-[80px]"
-                maxLength={100}
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {defaultFooterNoteCharCount}/100 characters
-              </div>
-            </div>
-            
-            <div>
-              <Label htmlFor="imageUpload">Sample Image</Label>
-              <div className="mt-2 flex items-center space-x-4">
-                <Button
-                  variant="outline"
-                  onClick={() => document.getElementById('imageUpload')?.click()}
-                  disabled={isUploading}
-                >
-                  {isUploading ? (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  ) : (
-                    <Upload className="h-4 w-4 mr-2" />
-                  )}
-                  {imagePreview ? 'Replace Image' : 'Upload Image'}
-                </Button>
-                <input
-                  id="imageUpload"
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="hidden"
-                />
-                {imagePreview && (
-                  <div className="text-sm text-gray-500">
-                    Image selected
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <Button 
-              onClick={handleSave} 
-              className="w-full"
-              disabled={isSaving || isUploading}
-            >
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Save Sample
-            </Button>
-          </div>
-        </div>
+      const initialSample = {
+        id: uuidv4(),
+        emoji: '🎁',
+        natural_language_name: 'Welcome Sample',
+        headline: 'Welcome to Legacy Locker',
+        story_body: 'This is a sample story. Edit this to create your own sample.',
+        default_footer_note: 'Created with Legacy Locker',
+        is_sample: true,
+      };
+      
+      const { error } = await supabase
+        .from('story_series')
+        .insert([initialSample]);
         
-        {/* Right Column - Preview */}
-        <div>
-          <h2 className="text-xl font-semibold mb-4">Live Preview</h2>
-          
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'front' | 'back')}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="front">Front</TabsTrigger>
-              <TabsTrigger value="back">Back</TabsTrigger>
-            </TabsList>
+      if (error) throw error;
+      
+      toast({
+        title: 'Success',
+        description: 'Initial sample created successfully',
+      });
+      
+      // Refresh samples
+      await fetchSamples();
+    } catch (error) {
+      console.error('Error creating initial sample:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create initial sample',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  
+  return (
+    <div className="p-8">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Story Samples</h1>
+        <Button onClick={createInitialSample} disabled={isSaving}>
+          {isSaving ? (
+            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+          ) : (
+            <Plus className="h-4 w-4 mr-2" />
+          )}
+          Create Initial Sample
+        </Button>
+      </div>
+      
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-gray-900"></div>
+        </div>
+      ) : samples.length === 0 ? (
+        <div className="text-center py-12">
+          <h2 className="text-xl font-semibold mb-4">No samples found</h2>
+          <p className="mb-6">Create your first sample to get started.</p>
+          <Button onClick={createInitialSample} disabled={isSaving}>
+            {isSaving ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Plus className="h-4 w-4 mr-2" />
+            )}
+            Create Initial Sample
+          </Button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Left Column - Form */}
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-semibold">Sample Details</h2>
+              <Button onClick={handleNewSample} variant="outline" size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                New Sample
+              </Button>
+            </div>
             
-            <TabsContent value="front" className="mt-4">
-              <Card className="w-full aspect-[3/4] overflow-hidden">
-                <CardContent className="p-0 h-full">
-                  {imagePreview ? (
-                    <img 
-                      src={imagePreview} 
-                      alt="Sample card front" 
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                      <p className="text-gray-400">No image uploaded</p>
+            {/* Sample Selector */}
+            <div className="mb-6">
+              <Label htmlFor="sample-selector">Select Sample</Label>
+              <Select
+                value={selectedSample?.id || ''}
+                onValueChange={handleSampleSelect}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a sample to edit" />
+                </SelectTrigger>
+                <SelectContent>
+                  {samples.map((sample) => (
+                    <SelectItem key={sample.id} value={sample.id}>
+                      {sample.natural_language_name || sample.display_title || 'Unnamed Sample'}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="emoji">Emoji</Label>
+                <Input
+                  id="emoji"
+                  value={emoji}
+                  onChange={(e) => setEmoji(e.target.value)}
+                  placeholder="e.g. 🏀"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="naturalLanguageName">Natural Language Name</Label>
+                <Input
+                  id="naturalLanguageName"
+                  value={naturalLanguageName}
+                  onChange={(e) => setNaturalLanguageName(e.target.value)}
+                  placeholder="e.g. Basketball Fan's Journey"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="headline">Headline</Label>
+                <Input
+                  id="headline"
+                  value={headline}
+                  onChange={(e) => setHeadline(e.target.value)}
+                  placeholder="e.g. The First Game"
+                  maxLength={25}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {headlineCharCount}/25 characters
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="storyBody">Story Body</Label>
+                <Textarea
+                  id="storyBody"
+                  value={storyBody}
+                  onChange={(e) => setStoryBody(e.target.value)}
+                  placeholder="Enter the story text..."
+                  className="min-h-[200px]"
+                  maxLength={1700}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {storyBodyCharCount}/1700 characters
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="defaultFooterNote">Default Footer Note (Optional)</Label>
+                <Textarea
+                  id="defaultFooterNote"
+                  value={defaultFooterNote}
+                  onChange={(e) => setDefaultFooterNote(e.target.value)}
+                  placeholder="Enter a default footer note..."
+                  className="min-h-[80px]"
+                  maxLength={100}
+                />
+                <div className="text-xs text-gray-500 mt-1">
+                  {defaultFooterNoteCharCount}/100 characters
+                </div>
+              </div>
+              
+              <div>
+                <Label htmlFor="imageUpload">Sample Image</Label>
+                <div className="mt-2 flex items-center space-x-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => document.getElementById('imageUpload')?.click()}
+                    disabled={isUploading}
+                  >
+                    {isUploading ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Upload className="h-4 w-4 mr-2" />
+                    )}
+                    {imagePreview ? 'Replace Image' : 'Upload Image'}
+                  </Button>
+                  <input
+                    id="imageUpload"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                  {imagePreview && (
+                    <div className="text-sm text-gray-500">
+                      Image selected
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                </div>
+              </div>
+              
+              <Button 
+                onClick={handleSave} 
+                className="w-full"
+                disabled={isSaving || isUploading}
+              >
+                {isSaving ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Save className="h-4 w-4 mr-2" />
+                )}
+                Save Sample
+              </Button>
+            </div>
+          </div>
+          
+          {/* Right Column - Preview */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">Live Preview</h2>
             
-            <TabsContent value="back" className="mt-4">
-              <Card className="w-full aspect-[3/4] overflow-hidden">
-                <CardContent className="p-6 flex flex-col h-full">
-                  <div className="text-4xl mb-2">{emoji}</div>
-                  <h3 className="text-xl font-bold mb-4">{headline || 'Headline'}</h3>
-                  <div className="flex-grow overflow-y-auto">
-                    <p className="text-gray-700 whitespace-pre-line">
-                      {storyBody || 'Story body will appear here...'}
-                    </p>
-                  </div>
-                  {defaultFooterNote && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <p className="text-sm text-gray-500 italic">
-                        {defaultFooterNote}
+            <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'front' | 'back')}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="front">Front</TabsTrigger>
+                <TabsTrigger value="back">Back</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="front" className="mt-4">
+                <Card className="w-full aspect-[3/4] overflow-hidden">
+                  <CardContent className="p-0 h-full">
+                    {imagePreview ? (
+                      <img 
+                        src={imagePreview} 
+                        alt="Sample card front" 
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                        <p className="text-gray-400">No image uploaded</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="back" className="mt-4">
+                <Card className="w-full aspect-[3/4] overflow-hidden">
+                  <CardContent className="p-6 flex flex-col h-full">
+                    <div className="text-4xl mb-2">{emoji}</div>
+                    <h3 className="text-xl font-bold mb-4">{headline || 'Headline'}</h3>
+                    <div className="flex-grow overflow-y-auto">
+                      <p className="text-gray-700 whitespace-pre-line">
+                        {storyBody || 'Story body will appear here...'}
                       </p>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
+                    {defaultFooterNote && (
+                      <div className="mt-4 pt-4 border-t border-gray-200">
+                        <p className="text-sm text-gray-500 italic">
+                          {defaultFooterNote}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };
