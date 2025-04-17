@@ -21,6 +21,7 @@ import AdminAuth from "@/components/AdminAuth";
 import FontExamplesPage from "./pages/font-examples";
 import CardBuilderDemo from "./pages/card-builder-demo";
 import StoryPreviewDemo from "./pages/story-preview-demo";
+import OnboardingDesktopSaveButton from '@/components/OnboardingDesktopSaveButton';
 
 const queryClient = new QueryClient();
 
@@ -31,6 +32,7 @@ const AppContent = () => {
   return (
     <>
       <SessionBug />
+      <OnboardingDesktopSaveButton />
       <OnboardingModal 
         isOpen={isOnboardingOpen}
         onClose={closeOnboarding}

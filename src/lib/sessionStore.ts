@@ -995,38 +995,33 @@ export const useSessionStore = create<SessionStore>()(
 
       // <<< NEW ACTION: Save session state to Supabase >>>
       saveSessionToDb: async () => {
-        const { session, sessionMetadata } = get(); // Get metadata too
-        
-        // Start Debug Group
-        console.groupCollapsed(`[saveSessionToDb] Debug Report for Session: ${sessionMetadata.sessionId || 'N/A'}`);
+        const { session, sessionMetadata } = get();
+        const sessionId = sessionMetadata.sessionId;
 
-        // <<< 1. Log validation checks >>>
-        let isValidForSave = true;
-        if (!session) {
-            console.warn('[saveSessionToDb] Validation FAIL: session object is missing.');
-            isValidForSave = false;
+        if (!sessionId) {
+          console.warn('[saveSessionToDb] No session ID found, skipping save.');
+          return; // Do not save if there is no session ID
         }
-        if (!sessionMetadata.sessionId) {
-            console.warn('[saveSessionToDb] Validation FAIL: sessionMetadata.sessionId is missing.');
-            isValidForSave = false;
-        }
-        if (!session?.purchaser?.email) {
-             console.warn('[saveSessionToDb] Validation WARN: session.purchaser.email is missing.');
-             // Allow saving without email for now, but log it.
-             // isValidForSave = false; 
-        }
-         if (!session?.selectedEdition) {
-             console.warn('[saveSessionToDb] Validation WARN: session.selectedEdition is missing.');
-             // Allow saving without selectedEdition for now, but log it.
-             // isValidForSave = false; 
-         }
 
-        if (!isValidForSave) {
-            console.error("[saveSessionToDb] Aborting save due to missing required fields.");
-            console.groupEnd(); // End group before returning
-            // Throw an error here as well, consistent with DB errors
-            throw new Error("Missing required session data for save."); 
+        console.log(`[saveSessionToDb] Debug Report for Session: ${sessionId}`);
+
+        // <<< START RLS DEBUG LOGGING >>>
+        try {
+          const { data: authSessionData, error: authError } = await supabase.auth.getSession();
+          if (authError) {
+            console.error('[saveSessionToDb] Error getting Supabase auth session:', authError);
+          } else if (authSessionData?.session) {
+            console.log(`[saveSessionToDb] Auth check: User ID: ${authSessionData.session.user.id}, Email: ${authSessionData.session.user.email}`);
+          } else {
+            console.log('[saveSessionToDb] Auth check: No active Supabase user session found.');
+          }
+        } catch (authCatchError) {
+          console.error('[saveSessionToDb] Exception during auth check:', authCatchError);
         }
+        // <<< END RLS DEBUG LOGGING >>>
+
+        // Prepare the session data payload
+        const sessionDataToSave = cloneDeep(session);
 
         // Calculate expires_at
         const expiresAt = new Date();
@@ -1035,8 +1030,8 @@ export const useSessionStore = create<SessionStore>()(
 
         // <<< 2. Construct and Log Payload (Truncated) >>>
         const payload = {
-            id: sessionMetadata.sessionId, 
-            session_data: session, // Keep the full object here
+            id: sessionId, 
+            session_data: sessionDataToSave, // Keep the full object here
             email: session.purchaser?.email, 
             updated_at: session.updatedAt || new Date().toISOString(),
             expires_at: expiresAtISO 

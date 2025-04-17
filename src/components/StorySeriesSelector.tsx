@@ -132,7 +132,8 @@ const StorySeriesSelector = () => {
   }, []);
 
   const handleStorySeriesSelection = (series: SeriesType | StoryOption) => {
-    if (isStartOverConfirmationRequired) {
+    // Determine whether we need to ask the user if they want to start fresh.
+    if (isStartOverConfirmationRequired()) {
       setSeriesToConfirm(series);
       setConfirmDialogOpen(true);
     } else {

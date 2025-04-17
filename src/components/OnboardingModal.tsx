@@ -14,6 +14,7 @@ import MobileNavFooter from './onboarding/MobileNavFooter';
 import { cn } from '@/lib/utils';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
+import SaveAndCloseButton from './onboarding/SaveAndCloseButton';
 
 export type { FormData } from '@/types/onboarding';
 
@@ -75,9 +76,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
-      console.log("OnboardingModal: Modal close triggered (onOpenChange: false)...");
+      console.log("OnboardingModal: Modal close triggered via Dialog onOpenChange (e.g., overlay/esc) OR explicitly passed down.");
       sessionManager.handleModalClose();
-      closeOnboarding();
       onClose();
     }
   };
@@ -145,7 +145,12 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </>
               )}
             </SafeAreaWrapper>
-            <MobileNavFooter />
+            <MobileNavFooter triggerModalClose={() => handleModalCloseTrigger(false)} />
+            {!isMobile && sessionMetadata.isActive && (
+              <div className="fixed bottom-6 right-6 z-[100]">
+                <SaveAndCloseButton onClose={() => handleModalCloseTrigger(false)} />
+              </div>
+            )}
           </DialogContent>
         </DialogPortal>
       </Dialog>

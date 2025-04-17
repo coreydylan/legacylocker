@@ -7,20 +7,27 @@ import { ChevronLeft, ChevronRight, Save } from 'lucide-react';
 import SaveAndCloseButton from './SaveAndCloseButton'; // Reuse existing button
 import { cn } from '@/lib/utils';
 
-const MobileNavFooter: React.FC = () => {
+// <<< Define props interface >>>
+interface MobileNavFooterProps {
+  triggerModalClose: () => void;
+}
+
+const MobileNavFooter: React.FC<MobileNavFooterProps> = ({ triggerModalClose }) => {
   const isMobile = useMediaQuery('(max-width: 768px)');
   const {
     isCurrentStepValid,
     nextStep,
     prevStep,
     session,
-    triggerSubmit
-  } = useSessionStore(state => ({
+    triggerSubmit,
+    sessionMetadata, // <<< Add sessionMetadata
+  } = useSessionStore((state) => ({
     isCurrentStepValid: state.isCurrentStepValid,
     nextStep: state.nextStep,
     prevStep: state.prevStep,
     session: state.session, // Needed for currentStep
-    triggerSubmit: state.triggerSubmit // <<< Get trigger action
+    triggerSubmit: state.triggerSubmit, // <<< Get submit trigger action
+    sessionMetadata: state.sessionMetadata, // <<< Get sessionMetadata
   }));
   const { closeOnboarding } = useModalStore(); // Get close action from modal store
 
@@ -28,11 +35,35 @@ const MobileNavFooter: React.FC = () => {
   const totalSteps = 8; // <<< Updated total steps
   const recipientInfoStep = 3; // Define the step number for recipient info
 
-  // Function to handle Save & Close, similar to OnboardingModal
-  const handleSaveAndClose = () => {
-    // Note: This assumes saveSession is implicitly called by button/store
-    // If not, add saveSession() call here.
-    closeOnboarding(); 
+  // Close handler passed to SaveAndCloseButton
+  // <<< Use the passed-in prop >>>
+  const handleSaveAndClose = triggerModalClose;
+
+  /**
+   * Handle Continue button click on mobile.
+   * If the current step contains a form element, submit it so that
+   * the step component's onSubmit handler can persist data and call goNext().
+   * If no form is present, just advance to the next step directly.
+   */
+  const handleContinue = () => {
+    if (!isCurrentStepValid) return; // Guard, button should already be disabled
+
+    // Try to find the first form inside the onboarding modal content
+    const activeForm = document.querySelector('form');
+
+    if (activeForm) {
+      // requestSubmit triggers native form submission which will invoke
+      // the React onSubmit handler defined in the component.
+      // It's supported by modern browsers (including Safari 16+). Fallback to submit() if not.
+      if (typeof (activeForm as HTMLFormElement).requestSubmit === 'function') {
+        (activeForm as HTMLFormElement).requestSubmit();
+      } else {
+        (activeForm as HTMLFormElement).dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+      }
+    } else {
+      // No form on this step, advance using the store action
+      nextStep();
+    }
   };
 
   // Don't render anything on desktop
@@ -57,20 +88,13 @@ const MobileNavFooter: React.FC = () => {
       "[-webkit-mask-image:linear-gradient(to_top,black_90%,transparent_100%)]" // Include -webkit prefix for broader compatibility
     )}>
       <div className="flex items-center justify-between gap-2 px-3 py-3 sm:px-4">
-        {/* <<< Conditionally Render Save & Finish Later Button >>> */}
-        {currentStep > recipientInfoStep ? (
-          <SaveAndCloseButton onClose={handleSaveAndClose} />
-        ) : (
-          // <<< Placeholder to maintain layout balance when button is hidden >>>
-          <div className="w-auto opacity-0 pointer-events-none">
-            {/* Render a dummy button or fixed-width element if exact spacing needed */} 
-            <Button variant="secondary" className="flex items-center gap-2">
-              <Save className="h-4 w-4" />
-              <span>Save & Finish Later</span>
-            </Button>
-          </div>
-        )}
-        
+        {/* Save & Finish Later Button (conditionally visible) */}
+        <div className="min-w-[168px]"> {/* Wrapper to prevent layout shift */}
+          {sessionMetadata.isActive && (
+            <SaveAndCloseButton onClose={handleSaveAndClose} />
+          )}
+        </div>
+
         {/* Back and Continue Buttons */}
         <div className="flex items-center gap-2">
           <Button
@@ -87,7 +111,7 @@ const MobileNavFooter: React.FC = () => {
           {currentStep < totalSteps ? (
             <Button
               variant="default"
-              onClick={nextStep}
+              onClick={handleContinue}
               disabled={!isCurrentStepValid}
               className="bg-legacy-green hover:bg-legacy-green/90 px-4 py-2 text-sm font-medium"
             >

@@ -1,95 +1,106 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { useSessionStore } from '@/lib/sessionStore';
+import {
+  MAIN_STAGES,
+  getStageForStep,
+  getStepsForStage,
+  STEP_TITLES,
+} from '@/constants/onboardingStages';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import { Check } from 'lucide-react';
 
-// Map ACTUAL steps to VISUAL step numbers
-const VISUAL_STEP_MAP: { [key: number]: number } = {
-  1: 1, 2: 2, 3: 3, 4: 3, 5: 3, 6: 4, 7: 5
-};
-
-// Define labels ONLY for the VISUAL steps
-const STEP_LABELS: { [key: number]: string } = {
-  1: 'Select Recipient', 2: 'Your Info', 3: 'Recipient Details',
-  4: 'Edition & Cards', 5: 'Review & Checkout'
-};
-
-// Renamed component
 const OnboardingStepperDesktop: React.FC = () => {
   const { session, setCurrentStep } = useSessionStore();
   const actualCurrentStep = session.currentStep;
   const lastCompletedStep = session.lastCompletedStep;
-  const visualCurrentStep = VISUAL_STEP_MAP[actualCurrentStep] || 1;
-  const visualSteps = Object.keys(STEP_LABELS).map(Number);
-  const totalVisualSteps = visualSteps.length;
-  const lastCompletedVisualStep = Math.max(
-    0,
-    ...Object.entries(VISUAL_STEP_MAP)
-      .filter(([actualStep]) => Number(actualStep) <= lastCompletedStep)
-      .map(([, visualStep]) => visualStep)
-  );
+  const currentStage = getStageForStep(actualCurrentStep);
 
-  const handleStepClick = (clickedVisualStep: number) => {
-    const targetActualStep = Number(
-      Object.keys(VISUAL_STEP_MAP).find(
-        (key) => VISUAL_STEP_MAP[Number(key)] === clickedVisualStep
-      )
-    );
-    if (targetActualStep <= lastCompletedStep + 1 && targetActualStep !== actualCurrentStep) {
-      setCurrentStep(targetActualStep);
-    } 
+  const handleStepClick = (step: number) => {
+    if (step <= lastCompletedStep + 1 && step !== actualCurrentStep) {
+      setCurrentStep(step);
+    }
+  };
+
+  const isStageCompleted = (stageNumber: number) => {
+    const stageSteps = getStepsForStage(stageNumber);
+    return stageSteps.every((step) => step <= lastCompletedStep);
   };
 
   return (
-    // Add max-w-xl to prevent excessive width
-    <div className="flex flex-col items-center w-full px-4 max-w-xl mx-auto">
-      {/* Remove w-full, add justify-center */}
-      <div className="flex items-start justify-center w-auto mb-1">
-        {visualSteps.map((visualStep, index) => {
-          const isCompleted = visualStep <= lastCompletedVisualStep;
-          const isActive = visualStep === visualCurrentStep;
-          const firstActualStepForVisual = Number(Object.keys(VISUAL_STEP_MAP).find(key => VISUAL_STEP_MAP[Number(key)] === visualStep)) || 99;
-          const isClickable = firstActualStepForVisual <= lastCompletedStep + 1;
+    <div className="flex items-center justify-center w-full gap-4 px-4 max-w-xl mx-auto">
+      {MAIN_STAGES.map(({ stage, label }) => {
+        const stageActive = stage === currentStage;
+        const stageCompleted = isStageCompleted(stage);
+        const firstStepOfStage = getStepsForStage(stage)[0];
+        const stageClickable = firstStepOfStage <= lastCompletedStep + 1;
 
-          return (
-            <React.Fragment key={visualStep}>
-              <div className="flex flex-col items-center text-center pt-1 flex-shrink min-w-0">
-                <button
-                  onClick={() => handleStepClick(visualStep)}
-                  disabled={!isClickable || isActive}
+        return (
+          <DropdownMenu key={stage}>
+            <DropdownMenuTrigger asChild>
+              <button
+                disabled={!stageClickable}
+                className={cn(
+                  'relative flex flex-col items-center transition-all duration-150',
+                  stageClickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                )}
+              >
+                <span
                   className={cn(
-                    "flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium transition-all duration-150 mb-1", // Using sm: size as default for desktop
-                    isActive
-                      ? "bg-legacy-green border-legacy-green text-white scale-110"
-                      : isCompleted
-                      ? "bg-legacy-green/10 border-legacy-green/50 text-legacy-green/80 hover:bg-legacy-green/30"
-                      : "bg-gray-100 border-gray-300 text-gray-400",
-                    isClickable && !isActive && "hover:border-legacy-green/70 cursor-pointer",
-                    !isClickable && "cursor-not-allowed"
-                  )}
-                  aria-label={`Step ${visualStep}: ${STEP_LABELS[visualStep]}`}
-                  aria-current={isActive ? 'step' : undefined}
-                >
-                  {visualStep}
-                </button>
-                <span 
-                  className={cn(
-                    "block text-xs leading-tight px-1", // Using sm: text size as default for desktop
-                    isActive ? 'text-legacy-green font-medium' : 'text-gray-500'
+                    'flex items-center justify-center w-8 h-8 rounded-full border-2 text-sm font-medium mb-1',
+                    stageActive
+                      ? 'bg-legacy-green text-white border-legacy-green scale-110'
+                      : stageCompleted
+                      ? 'bg-legacy-green/10 text-legacy-green border-legacy-green/50 hover:bg-legacy-green/20'
+                      : 'bg-gray-100 text-gray-400 border-gray-300'
                   )}
                 >
-                  {STEP_LABELS[visualStep]}
+                  {stage}
                 </span>
-              </div>
-              {index < totalVisualSteps - 1 && (
-                <div className={cn(
-                  "h-0.5 w-16 mt-4 mx-2", 
-                  isCompleted ? "bg-legacy-green/50" : "bg-gray-300"
-                )} />
-              )}
-            </React.Fragment>
-          );
-        })}
-      </div>
+                <span
+                  className={cn(
+                    'text-xs leading-tight',
+                    stageActive ? 'text-legacy-green font-medium' : 'text-gray-600'
+                  )}
+                >
+                  {label}
+                </span>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="bottom" align="center">
+              <DropdownMenuLabel>{label}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              {getStepsForStage(stage).map((stepNum) => {
+                const isCompleted = stepNum <= lastCompletedStep;
+                const isActive = stepNum === actualCurrentStep;
+                const isClickable = stepNum <= lastCompletedStep + 1;
+                return (
+                  <DropdownMenuItem
+                    key={stepNum}
+                    disabled={!isClickable}
+                    onSelect={() => handleStepClick(stepNum)}
+                    className={cn(
+                      'flex items-center gap-2 text-sm',
+                      isActive && 'font-semibold text-legacy-green',
+                      !isClickable && 'cursor-not-allowed opacity-60'
+                    )}
+                  >
+                    {isCompleted && <Check className="h-3 w-3 text-legacy-green" />}
+                    <span>{STEP_TITLES[stepNum].title}</span>
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      })}
     </div>
   );
 };
