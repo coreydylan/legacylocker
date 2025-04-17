@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, forwardRef, ForwardedRef } from 'react';
 
 interface CardBackBuilderProps {
   // Content
@@ -100,7 +100,9 @@ function getStoryMargin(headlineClass: string): number {
   }
 }
 
-export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
+// Use forwardRef
+export const CardBackBuilder = forwardRef<HTMLDivElement, CardBackBuilderProps>((
+  {
   // Content
   headline = '',
   subtitle = '',
@@ -118,7 +120,9 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
   badgeColor = '#ED9831',
   icons = [],
   badgeOn = true,
-}) => {
+  }, 
+  ref: ForwardedRef<HTMLDivElement> // Accept ref
+) => {
 
   const headlineClass = getHeadlineClass(headline);
   const subtitleMargin = getSubtitleMargin(headlineClass);
@@ -161,14 +165,15 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
 
   return (
     <div 
+      ref={ref} // Attach ref to the main container
       className="font-source-serif"
       style={{ 
         width: CANVAS.WIDTH,
         height: CANVAS.HEIGHT,
-        position: 'relative',
+        position: 'relative', // Important for off-screen positioning children
         backgroundColor: 'white',
       }}
-    >
+        >
       {/* Outer Frame */}
       <div
         style={{
@@ -196,7 +201,7 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         >
           {headline}
         </div>
-
+        
         {/* Subtitle */}
         <div
           className="card-subtitle-style"
@@ -211,7 +216,7 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         >
           {subtitle}
         </div>
-
+        
         {/* Story Copy Box */}
         <div
           style={{
@@ -298,8 +303,8 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-              }}
-            >
+            }}
+          >
               <div
                 className={`badge-text-base ${badgeTextClass}`}
                 style={{
@@ -379,4 +384,6 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
       </div>
     </div>
   );
-} 
+});
+
+CardBackBuilder.displayName = "CardBackBuilder"; // Add display name 

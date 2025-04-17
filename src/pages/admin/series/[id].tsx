@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/lib/supabaseClient';
 import { Button } from '@/components/ui/button';
@@ -39,9 +39,12 @@ import {
   Trash2, 
   Save, 
   Upload, 
-  X 
+  X, 
+  Download
 } from 'lucide-react';
 import { SamplePreview } from '@/components/admin/SamplePreview';
+import html2canvas from 'html2canvas';
+import { CardBackBuilder } from '@/components/CardBackBuilder';
 
 interface StorySeriesRow {
   id: string;
@@ -104,6 +107,8 @@ const SeriesDetailPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showExportRenderer, setShowExportRenderer] = useState(false);
   const [activeTab, setActiveTab] = useState<'samples' | 'edit'>('samples');
   
   // Simplified Form state
@@ -147,6 +152,10 @@ const SeriesDetailPage = () => {
     icons: [],
     badgeOn: true
   });
+  
+  // Refs
+  const previewRef = useRef<HTMLDivElement>(null);
+  const exportRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
     if (id) {
@@ -283,6 +292,8 @@ const SeriesDetailPage = () => {
   const handleOpenDialog = (sample?: StorySample) => {
     if (sample) {
       setSelectedSample(sample);
+      setImagePreview(sample.image_url || null);
+      setImageFile(null);
       setCardBackData({
         headline: sample.headline || '',
         subtitle: sample.subtitle || '',
@@ -471,6 +482,78 @@ const SeriesDetailPage = () => {
       });
     } finally {
       setIsSaving(false);
+    }
+  };
+  
+  // --- Updated Export Image Function --- 
+  const handleExportImage = async () => {
+    // Show the hidden renderer
+    setShowExportRenderer(true);
+    setIsExporting(true);
+    toast({ title: "Preparing image...", description: "Please wait." });
+
+    // Wait for the hidden element to render and ref to be set
+    // Using setTimeout is less ideal than useEffect, but simpler here.
+    // Increase delay if capture fails.
+    await new Promise(resolve => setTimeout(resolve, 100)); 
+
+    if (!exportRef.current) {
+      toast({
+        title: "Export Error",
+        description: "Failed to prepare export element.",
+        variant: "destructive",
+      });
+      setShowExportRenderer(false);
+      setIsExporting(false);
+      return;
+    }
+
+    const elementToCapture = exportRef.current;
+
+    try {
+      toast({ title: "Generating image..." }); 
+      
+      const canvas = await html2canvas(elementToCapture, {
+        scale: 1, 
+        useCORS: true, 
+        backgroundColor: null, 
+        logging: true,
+        width: elementToCapture.offsetWidth, 
+        height: elementToCapture.offsetHeight,
+        onclone: (documentClone) => {
+          // Find the element in the clone and ensure the font class is applied
+          // This helps if font styles aren't inherited correctly in the clone
+          const clonedElement = documentClone.querySelector('[style*="position: absolute"]'); // Or a more specific selector if needed
+          if (clonedElement) {
+             // Assuming the root element captured needs this class for font inheritance
+             clonedElement.classList.add('font-source-serif'); 
+          }
+          // You could add other style fixes here if needed
+        }
+      });
+
+      // Trigger download (same as before)
+      const dataUrl = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.href = dataUrl;
+      link.download = `card-back-${cardBackData.headline || 'export'}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      toast({ title: "Export Successful", description: "Image downloaded." });
+
+    } catch (error) {
+      console.error("Error exporting image:", error);
+      toast({
+        title: "Export Failed",
+        description: "Could not generate image. Check console for details.",
+        variant: "destructive",
+      });
+    } finally {
+      // Hide the hidden renderer and reset loading state
+      setShowExportRenderer(false);
+      setIsExporting(false);
     }
   };
   
@@ -818,6 +901,7 @@ const SeriesDetailPage = () => {
                   
                   <div className="flex flex-col justify-center items-center h-full">
                     <SamplePreview
+                      ref={previewRef}
                       imageUrl={imagePreview}
                       headline={cardBackData.headline}
                       subtitle={cardBackData.subtitle}
@@ -840,18 +924,33 @@ const SeriesDetailPage = () => {
                   </div>
                 </div>
                 
-                <DialogFooter>
-                  <Button variant="outline" onClick={handleCloseDialog}>
-                    Cancel
-                  </Button>
-                  <Button onClick={handleSave} disabled={isSaving || isUploading}>
-                    {isSaving ? (
+                <DialogFooter className="sm:justify-between">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleExportImage} 
+                    disabled={isExporting}
+                  >
+                    {isExporting ? (
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <Save className="h-4 w-4 mr-2" />
+                      <Download className="h-4 w-4 mr-2" />
                     )}
-                    {selectedSample ? 'Save Changes' : 'Create Sample'}
+                    Export Image
                   </Button>
+                  
+                  <div className="flex space-x-2">
+                    <Button variant="outline" onClick={handleCloseDialog}>
+                      Cancel
+                    </Button>
+                    <Button onClick={handleSave} disabled={isSaving || isUploading || isExporting}>
+                      {isSaving ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Save className="h-4 w-4 mr-2" />
+                      )}
+                      {selectedSample ? 'Save Changes' : 'Create Sample'}
+                    </Button>
+                  </div>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -980,6 +1079,22 @@ const SeriesDetailPage = () => {
           </Card>
         </TabsContent>
       </Tabs>
+      
+      {/* --- Hidden Renderer for Export --- */}
+      {showExportRenderer && (
+        <div 
+          style={{ 
+            position: 'absolute', 
+            left: '-9999px', // Position off-screen
+            top: '-9999px',
+            width: '1200px', // Ensure fixed size for layout calculations
+            height: '1800px'
+          }}
+        >
+          <CardBackBuilder ref={exportRef} {...cardBackData} />
+        </div>
+      )}
+      {/* --- End Hidden Renderer --- */}
     </div>
   );
 };
