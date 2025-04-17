@@ -286,3 +286,51 @@
 .dotted-underline:hover {
   color: #1f4e2f;
 }
+
+/* Apply Source Serif font to CardBackBuilder */
+.font-source-serif {
+  font-family: 'Source Serif 4 Variable', serif;
+}
+
+/* ADD New Dynamic Headline Classes */
+.headline-base {
+  font-family: 'Source Serif 4 Variable', serif;
+  font-style: italic;
+  font-weight: 700; /* bold */
+  text-transform: uppercase;
+  line-height: 1;
+  white-space: nowrap; /* Ensure single line */
+  overflow: hidden; /* Hide overflow */
+  text-overflow: ellipsis; /* Add ellipsis */
+}
+
+/* Updated 8 tiers */
+.headline-xl { font-size: 95px; letter-spacing: 24px; } /* 1-10 chars */
+.headline-lg { font-size: 87px; letter-spacing: 15px; } /* 11-14 chars */
+.headline-md { font-size: 79px; letter-spacing: 12px; } /* 15-17 chars */
+.headline-sm { font-size: 70px; letter-spacing: 8px; }  /* 18-19 chars */
+.headline-s  { font-size: 65px; letter-spacing: 6px; }  /* 20 chars (New) */
+.headline-xs { font-size: 60px; letter-spacing: 5px; }  /* 21 chars */
+.headline-xxs { font-size: 56px; letter-spacing: 4.5px; } /* 22 chars (New) */
+.headline-xxxs{ font-size: 52px; letter-spacing: 4.5px; } /* 23-24 chars */
+
+/* Subtitle Styling */
+.card-subtitle-style {
+  font-size: 35px;
+  text-transform: uppercase;
+  letter-spacing: .1em;
+  /* Line height matching container height for vertical centering */
+  line-height: 36px; /* Approx DIMENSIONS.SUBTITLE_HEIGHT */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-style: light;
+}
+
+/* --- Debugging Font Issue --- */
+/* .debug-font-test {
+  font-family: 'Source Serif 4 Variable', serif !important;
+} */

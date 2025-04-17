@@ -31,7 +31,7 @@ import CardBackBuilder from '@/components/CardBackBuilder';
   headline="The Day I Hit My First Home Run"
   subtitle="A BASEBALL MEMORY"
   storyBody="Your story text goes here..."
-  badgeText="HOME RUN"
+  badgeText="HOME RUN"gene
   icons={['/icons/baseball.svg', '/icons/trophy.svg']}
 />
 ```

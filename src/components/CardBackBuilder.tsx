@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 
 interface CardBackBuilderProps {
   // Content
@@ -55,6 +55,35 @@ const DIMENSIONS = {
   STORY_COPY_WIDTH: Math.round(FRAME.WIDTH * 0.75),
 };
 
+// Utility function for headline class (8 tiers)
+function getHeadlineClass(headline: string = '') {
+  const len = headline.length;
+  if (len === 0) return 'headline-xl'; // Default for empty
+  if (len <= 10) return 'headline-xl'; // 1-10
+  if (len <= 14) return 'headline-lg'; // 11-14
+  if (len <= 17) return 'headline-md'; // 15-17
+  if (len <= 19) return 'headline-sm'; // 18-19 
+  if (len === 20) return 'headline-s';  // 20 (New)
+  if (len === 21) return 'headline-xs'; // 21
+  if (len === 22) return 'headline-xxs';// 22 (New)
+  return 'headline-xxxs'; // 23-24 (Was xxs)
+}
+
+// Function to get subtitle margin based on headline class (inverted logic)
+function getSubtitleMargin(headlineClass: string): number {
+  switch (headlineClass) {
+    case 'headline-xl': return 35; // Largest margin for largest font
+    case 'headline-lg': return 35;
+    case 'headline-md': return 20;
+    case 'headline-sm': return 13;
+    case 'headline-s':  return 11;
+    case 'headline-xs': return 8;
+    case 'headline-xxs': return 6;
+    case 'headline-xxxs': return 0; // Smallest margin for smallest font
+    default: return 35; // Default to largest margin
+  }
+}
+
 export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
   // Content
   headline = '',
@@ -73,8 +102,13 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
   badgeColor = '#ED9831',
   icons = [],
 }) => {
+
+  const headlineClass = getHeadlineClass(headline);
+  const subtitleMargin = getSubtitleMargin(headlineClass);
+
   return (
     <div 
+      className="font-source-serif"
       style={{ 
         width: CANVAS.WIDTH,
         height: CANVAS.HEIGHT,
@@ -95,20 +129,16 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
       >
         {/* Headline */}
         <div
+          className={`headline-base ${headlineClass}`}
           style={{
             position: 'absolute',
-            top: 59,
-            left: '10%',
-            right: '10%',
-            height: 95,
+            top: DIMENSIONS.TOP_MARGIN,
+            left: '50%',
+            transform: 'translateX(-50%)',
+            maxWidth: '91%',
+            height: DIMENSIONS.HEADER_HEIGHT,
             color: frameColor,
-            fontFamily: 'Source Serif 4 Variable, serif',
-            fontSize: '64px',
-            fontWeight: 'bold',
-            fontStyle: 'italic',
-            lineHeight: '95px',
-            display: 'flex',
-            alignItems: 'center',
+            textAlign: 'center',
           }}
         >
           {headline}
@@ -116,21 +146,14 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
 
         {/* Subtitle */}
         <div
+          className="card-subtitle-style"
           style={{
             position: 'absolute',
-            top: 202,
+            top: DIMENSIONS.TOP_MARGIN + DIMENSIONS.HEADER_HEIGHT + subtitleMargin,
             left: '10%',
             right: '10%',
-            height: 36,
+            height: DIMENSIONS.SUBTITLE_HEIGHT,
             color: frameColor,
-            fontFamily: 'Source Serif 4 Variable, serif',
-            fontSize: '28px',
-            fontWeight: 338,
-            textTransform: 'uppercase',
-            letterSpacing: '0.05em',
-            lineHeight: '36px',
-            display: 'flex',
-            alignItems: 'center',
           }}
         >
           {subtitle}
@@ -140,13 +163,14 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: 282,
+            top: DIMENSIONS.TOP_MARGIN + DIMENSIONS.HEADER_HEIGHT + 
+                 DIMENSIONS.HEADER_TO_SUBTITLE_MARGIN + DIMENSIONS.SUBTITLE_HEIGHT + 
+                 DIMENSIONS.SUBTITLE_TO_STORY_MARGIN,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: 779,
-            height: 901,
+            width: DIMENSIONS.STORY_COPY_WIDTH,
+            height: DIMENSIONS.STORY_CONTAINER_HEIGHT,
             color: frameColor,
-            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '24px',
             fontWeight: 400,
             lineHeight: 1.6,
@@ -154,6 +178,7 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
             overflow: 'hidden',
             columnCount: 2,
             columnGap: '40px',
+            whiteSpace: 'normal'
           }}
         >
           {storyBody}
@@ -177,7 +202,6 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         >
           <div style={{ 
             color: frameColor,
-            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '24px',
             fontWeight: 300,
             textTransform: 'uppercase',
@@ -188,7 +212,6 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
           </div>
           <div style={{ 
             color: frameColor,
-            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '32px',
             fontWeight: 600,
             letterSpacing: '0.02em',
@@ -232,7 +255,6 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
-                fontFamily: 'Source Serif 4 Variable, serif',
                 fontSize: '24px',
                 fontWeight: 500,
                 textAlign: 'center',
@@ -266,7 +288,6 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
             <div
               style={{
                 color: cardDetailsBgColor,
-                fontFamily: 'Source Serif 4 Variable, serif',
                 fontSize: '20px',
                 fontWeight: 400,
                 letterSpacing: '0.02em',
