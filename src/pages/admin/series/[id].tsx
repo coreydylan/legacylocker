@@ -101,11 +101,6 @@ const SeriesDetailPage = () => {
   const [editionText, setEditionText] = useState('');
   const [badgeOffOrOn, setBadgeOffOrOn] = useState(false);
   
-  // Character counters
-  const headlineCharCount = headline.length;
-  const storyBodyCharCount = storyBody.length;
-  const footerNoteCharCount = footerNote.length;
-  
   // Dialog state
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSample, setEditingSample] = useState<StorySample | null>(null);
@@ -269,8 +264,8 @@ const SeriesDetailPage = () => {
   const handleOpenDialog = (sample?: StorySample) => {
     if (sample) {
       setEditingSample(sample);
-      setHeadline(sample.headline);
-      setStoryBody(sample.story_body);
+      setHeadline(sample.headline ?? '');
+      setStoryBody(sample.story_body ?? '');
       setFooterNote(sample.footer_note || '');
       setIsDefault(sample.is_default);
       setImagePreview(sample.image_url);
@@ -546,13 +541,9 @@ const SeriesDetailPage = () => {
                       <Input
                         id="headline"
                         placeholder="e.g. The First Game"
-                        maxLength={25}
                         value={headline}
                         onChange={(e) => setHeadline(e.target.value)}
                       />
-                      <div className="text-xs text-gray-500">
-                        {headlineCharCount}/25 characters
-                      </div>
                     </div>
 
                     <div className="grid gap-2">
@@ -561,13 +552,9 @@ const SeriesDetailPage = () => {
                         id="storyBody"
                         placeholder="Enter the story text..."
                         className="min-h-[200px]"
-                        maxLength={1700}
                         value={storyBody}
                         onChange={(e) => setStoryBody(e.target.value)}
                       />
-                      <div className="text-xs text-gray-500">
-                        {storyBodyCharCount}/1700 characters
-                      </div>
                     </div>
 
                     <div className="grid gap-2">
@@ -576,13 +563,9 @@ const SeriesDetailPage = () => {
                         id="footerNote"
                         placeholder="Enter a footer note..."
                         className="min-h-[80px]"
-                        maxLength={100}
                         value={footerNote}
                         onChange={(e) => setFooterNote(e.target.value)}
                       />
-                      <div className="text-xs text-gray-500">
-                        {footerNoteCharCount}/100 characters
-                      </div>
                     </div>
 
                     <div className="grid gap-2">
