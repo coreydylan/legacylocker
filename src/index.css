@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400;1,500;1,600;1,700;1,800;1,900&family=Source+Sans+Pro:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700;1,900&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200;0,300;0,400;0,500;0,600;0,700;0,800;1,200;1,300;1,400;1,500;1,600;1,700;1,800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;500;600;700;800&display=swap');
 @import url('./styles/font-pphattonweb/stylesheet.css');
 @import url('./styles/font-pangaia/stylesheet.css');
 
@@ -72,7 +73,7 @@
   }
 
   body {
-    @apply bg-legacy-cream text-legacy-dark font-sans;
+    @apply bg-legacy-cream text-legacy-dark font-manrope;
   }
 
   h1 {
@@ -94,4 +95,193 @@
 
 .card-shadow {
   box-shadow: 0 4px 20px rgba(44, 85, 48, 0.15);
+}
+
+/* Hero Section Animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes highlight {
+  0% {
+    opacity: 0;
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  100% {
+    opacity: 1;
+    transform: scaleX(1);
+    transform-origin: left;
+  }
+}
+
+@keyframes underlineIn {
+  0% {
+    border-bottom-width: 0;
+  }
+  100% {
+    border-bottom-width: 1px;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -150% 0;
+  }
+  100% {
+    background-position: 150% 0;
+  }
+}
+
+@keyframes slideInFromLeft {
+  0% {
+    transform: translateX(-100px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in-up-staggered-1 {
+  animation: fadeInUp 0.8s ease-out 1.2s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-staggered-2 {
+  animation: fadeInUp 0.8s ease-out 2.0s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-staggered-3 {
+  animation: fadeInUp 0.8s ease-out 2.8s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-staggered-4 {
+  animation: fadeInUp 0.8s ease-out 3.6s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-staggered-5 {
+  animation: fadeInUp 0.8s ease-out 4.4s forwards;
+  opacity: 0;
+}
+
+.animate-fade-in-up-staggered-6 {
+  animation: fadeInUp 0.8s ease-out 5.2s forwards;
+  opacity: 0;
+}
+
+.animate-underline-staggered-7 {
+  animation: underlineIn 0.6s ease-out 6.0s forwards;
+  border-bottom: 1px solid #2c5530;
+  border-bottom-style: solid;
+  border-bottom-color: #2c5530;
+  border-bottom-width: 0;
+}
+
+.animate-bold-staggered-1 {
+  animation: boldIn 0.6s ease-out 1.6s forwards;
+  font-weight: normal;
+}
+
+.animate-bold-staggered-2 {
+  animation: boldIn 0.6s ease-out 2.4s forwards;
+  font-weight: normal;
+}
+
+.animate-bold-staggered-3 {
+  animation: boldIn 0.6s ease-out 3.2s forwards;
+  font-weight: normal;
+}
+
+.animate-bold-staggered-4 {
+  animation: boldIn 0.6s ease-out 4.0s forwards;
+  font-weight: normal;
+}
+
+.animate-highlight {
+  animation: highlight 1.2s ease-out forwards;
+}
+
+.animate-highlight-delayed-1 {
+  animation: highlight 1.2s ease-out 0.3s forwards;
+  opacity: 0;
+}
+
+.animate-highlight-delayed-2 {
+  animation: highlight 1.2s ease-out 0.6s forwards;
+  opacity: 0;
+}
+
+.animate-highlight-delayed-3 {
+  animation: highlight 1.2s ease-out 0.9s forwards;
+  opacity: 0;
+}
+
+.animate-highlight-delayed-4 {
+  animation: highlight 1.2s ease-out 1.2s forwards;
+  opacity: 0;
+}
+
+.animate-slide-in-from-left {
+  animation: slideInFromLeft 0.8s ease-out forwards;
+}
+
+.animate-slide-in-from-left-delayed {
+  animation: slideInFromLeft 0.8s ease-out 0.4s forwards;
+  opacity: 0;
+}
+
+.magical-gifts {
+  position: relative;
+  background-color: #fff4d6; /* champagne glow highlight */
+  padding: 0 4px;
+  border-radius: 4px;
+  display: inline-block;
+  font-weight: bold;
+  background-clip: padding-box;
+  z-index: 1;
+}
+
+.magical-gifts::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(120deg,
+    transparent,
+    #ff9a9e,
+    #fad0c4,
+    #fbc2eb,
+    #a1c4fd,
+    transparent);
+  background-size: 200% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer 2s ease-in-out 1;
+  z-index: 2;
+}
+
+.dotted-underline {
+  border-bottom: 2px dotted currentColor;
+  background: none;
+  padding: 0 2px;
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.dotted-underline:hover {
+  color: #1f4e2f;
 }

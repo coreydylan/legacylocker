@@ -11,6 +11,10 @@ import FAQSection from '@/components/FAQSection';
 import ClosingCTASection from '@/components/ClosingCTASection';
 import Footer from '@/components/Footer';
 import { useToast } from '@/hooks/use-toast';
+import { NarrativeExplainerSection } from '@/components/NarrativeExplainerSection';
+import { SignatureEditionsSection } from '@/components/SignatureEditionsSection';
+import { CustomEditionsSection } from '@/components/CustomEditionsSection';
+import { ConciergeServiceSection } from '@/components/ConciergeServiceSection';
 
 const Index = () => {
   const location = useLocation();
@@ -22,12 +26,16 @@ const Index = () => {
       <Navbar />
       <main className="flex-grow pt-16">
         <HeroSection />
+        <NarrativeExplainerSection />
+        <SignatureEditionsSection />
+        <CustomEditionsSection />
         <BenefitsSection />
         <AudiencePortraits />
         <FeaturesSection />
         <StorySeriesSelector />
         <TestimonialsSection />
         <FAQSection />
+        <ConciergeServiceSection />
         <ClosingCTASection />
       </main>
       <Footer />

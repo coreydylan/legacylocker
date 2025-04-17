@@ -71,6 +71,7 @@ module.exports = {
         pphatton: ["PP Hatton", "serif"], // Added PP Hatton
         jakarta: ["Plus Jakarta Sans", "sans-serif"], // Added Jakarta Sans
         pangaia: ["PP Pangaia", "serif"], // Added PP Pangaia
+        manrope: ["Manrope", "sans-serif"], // Added Manrope
       },
       keyframes: {
         "accordion-down": {
