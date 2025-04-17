@@ -3,15 +3,15 @@ import { CardBackBuilder } from '@/components/CardBackBuilder';
 
 const CardBuilderDemo: React.FC = () => {
   const [cardData, setCardData] = useState({
-    customNote: 'Custom note example',
+    customNote: 'Custom note example for the card footer',
     cardNumber: 1,
     totalCards: 12,
     editionTitle: 'ATLANTA BASEBALL EDITION',
     giftFromCopy: 'A GIFT FROM LUKAS TO MOM',
-    headline: 'Your Story Headline',
-    subtitle: 'YOUR STORY SUBTITLE',
-    storyBody: 'Your story text goes here...',
-    badgeText: 'NEW',
+    headline: 'Your Story Headline Here',
+    subtitle: 'YOUR STORY SUBTITLE TEXT',
+    storyBody: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Etiam eu turpis molestie, dictum est a, mattis tellus. Sed dignissim, metus nec fringilla accumsan, risus sem sollicitudin lacus, ut interdum tellus elit sed risus. Maecenas eget condimentum velit, sit amet feugiat lectus. Class aptent taciti sociosqu ad litora torquent per conubia nostra, per inceptos himenaeos. Praesent auctor purus luctus enim egestas, ac scelerisque ante pulvinar. Donec ut rhoncus ex. Suspendisse ac rhoncus nisl, eu tempor urna. Curabitur vel bibendum lorem. Morbi convallis convallis diam sit amet lacinia. Aliquam in elementum tellus. Praesent auctor purus luctus enim egestas, ac scelerisque ante pulvinar. Donec ut rhoncus ex. Suspendisse ac rhoncus nisl, eu tempor urna. Curabitur vel bibendum lorem. Morbi convallis convallis diam sit amet lacinia. Aliquam in elementum tellus.',
+    badgeText: 'BASEBALL',
     footerOn: true,
     frameColor: '#2C5530',
     cardDetailsBgColor: '#F9F5EC',

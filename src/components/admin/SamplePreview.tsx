@@ -73,7 +73,7 @@ export function SamplePreview({
   };
 
   return (
-    <div className={cn("relative aspect-[2/3] w-full h-full", className)}>
+    <div className={cn("relative aspect-[2/3] w-full", className)}>
       {/* Front of card - only shown when not flipped */}
       {!flipped && (
         <Card className="absolute inset-0 overflow-hidden">
@@ -99,15 +99,12 @@ export function SamplePreview({
       {/* Back of card - only shown when flipped */}
       {flipped && (
         <Card className="absolute inset-0 overflow-hidden">
-          <div className="w-full h-full bg-white flex items-center justify-center">
+          <div className="w-full h-full flex items-center justify-center bg-white">
             <div style={{ 
               transform: `scale(${scale})`,
               transformOrigin: 'center center',
-              width: '100%',
-              height: '100%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
+              width: '1200px',
+              height: '1800px'
             }}>
               <CardBackBuilder
                 headline={headline}

@@ -73,6 +73,7 @@ interface StorySample {
   is_default: boolean;
   created_at: string;
   updated_at: string;
+  custom_note?: string;
 }
 
 interface SamplePreviewProps {
@@ -801,6 +802,7 @@ const SeriesDetailPage = () => {
                       cardDetailsBgColor={cardBackData.cardDetailsBgColor}
                       badgeColor={cardBackData.badgeColor}
                       icons={cardBackData.icons}
+                      displayMode="dialog"
                       className="w-full"
                     />
                   </div>
@@ -843,9 +845,15 @@ const SeriesDetailPage = () => {
                       subtitle={sample.subtitle}
                       storyBody={sample.story_body}
                       badgeText={sample.badge_text}
-                      cardNumber={sample.card_count}
+                      customNote={sample.custom_note || ''}
+                      cardNumber={sample.card_count || 1}
+                      totalCards={12}
                       editionTitle={sample.edition_text || 'Legacy Locker'}
+                      giftFromCopy="A Gift From"
+                      footerOn={true}
                       frameColor={sample.frame_color || '#2C5530'}
+                      cardDetailsBgColor="#F9F5EC"
+                      badgeColor="#ED9831"
                       icons={sample.icon ? [sample.icon] : []}
                       showFlipButton={true}
                       displayMode="thumbnail"

@@ -33,21 +33,26 @@ const FRAME = {
   HEIGHT: CANVAS.HEIGHT - (CANVAS.MARGIN * 2),
 };
 
-// Derived measurements
+// Derived measurements exactly per specifications
 const DIMENSIONS = {
-  CARD_DETAILS_HEIGHT: Math.round(FRAME.HEIGHT * 0.10), // 10% of frame height
-  FOOTER_HEIGHT: Math.round(FRAME.HEIGHT * 0.05), // 5% of frame height
-  BADGE_SIZE: Math.round(FRAME.HEIGHT * 0.16), // 16% of frame height
-  BADGE_INNER_SIZE: Math.round(FRAME.HEIGHT * 0.16 * 0.84), // 84% of badge size
-  BADGE_TEXT_WIDTH: Math.round(FRAME.WIDTH * 0.065), // 6.5% of frame width
-  BADGE_TEXT_HEIGHT: Math.round(FRAME.HEIGHT * 0.11), // 11% of frame height
-  BADGE_RIGHT_OFFSET: Math.round(FRAME.WIDTH * 0.04), // 4% of frame width from right
-  BADGE_BOTTOM_OFFSET: Math.round(FRAME.HEIGHT * 0.112), // 11.2% of frame height from bottom
-  STORY_COPY_WIDTH: Math.round(FRAME.WIDTH * 0.75), // 75% of frame width
-  STORY_COPY_HEIGHT: Math.round(FRAME.HEIGHT * 0.50), // 50% of frame height
-  HEADLINE_TOP: Math.round(FRAME.HEIGHT * 0.08), // 8% of frame height from top
-  SUBTITLE_TOP: Math.round(FRAME.HEIGHT * 0.18), // 18% of frame height from top
-  STORY_TOP: Math.round(FRAME.HEIGHT * 0.28), // 28% of frame height from top
+  // Vertical spacing and heights - using exact percentages from requirements
+  TOP_MARGIN: Math.round(FRAME.HEIGHT * 0.036), // 3.6% of frame height from top of frame to top of header
+  HEADER_HEIGHT: Math.round(FRAME.HEIGHT * 0.058), // 5.8% of frame height for header
+  HEADER_TO_SUBTITLE_MARGIN: Math.round(FRAME.HEIGHT * 0.029), // 2.9% of frame height between header and subtitle
+  SUBTITLE_HEIGHT: Math.round(FRAME.HEIGHT * 0.022), // 2.2% of frame height for subtitle
+  SUBTITLE_TO_STORY_MARGIN: Math.round(FRAME.HEIGHT * 0.027), // 2.7% of frame height between subtitle and story body
+  STORY_CONTAINER_HEIGHT: Math.round(FRAME.HEIGHT * 0.55), // 55% of frame height for story container
+  
+  // Other existing measurements
+  CARD_DETAILS_HEIGHT: Math.round(FRAME.HEIGHT * 0.10),
+  FOOTER_HEIGHT: Math.round(FRAME.HEIGHT * 0.05),
+  BADGE_SIZE: Math.round(FRAME.HEIGHT * 0.16),
+  BADGE_INNER_SIZE: Math.round(FRAME.HEIGHT * 0.16 * 0.84),
+  BADGE_TEXT_WIDTH: Math.round(FRAME.WIDTH * 0.065),
+  BADGE_TEXT_HEIGHT: Math.round(FRAME.HEIGHT * 0.11),
+  BADGE_RIGHT_OFFSET: Math.round(FRAME.WIDTH * 0.04),
+  BADGE_BOTTOM_OFFSET: Math.round(FRAME.HEIGHT * 0.112),
+  STORY_COPY_WIDTH: Math.round(FRAME.WIDTH * 0.75),
 };
 
 export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
@@ -74,7 +79,6 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         width: CANVAS.WIDTH,
         height: CANVAS.HEIGHT,
         position: 'relative',
-        fontFamily: 'Source Serif 4 Variable, serif',
         backgroundColor: 'white',
       }}
     >
@@ -93,15 +97,18 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: DIMENSIONS.HEADLINE_TOP,
+            top: 59,
             left: '10%',
             right: '10%',
+            height: 95,
             color: frameColor,
+            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '64px',
             fontWeight: 'bold',
             fontStyle: 'italic',
-            textAlign: 'left',
-            lineHeight: 1.2,
+            lineHeight: '95px',
+            display: 'flex',
+            alignItems: 'center',
           }}
         >
           {headline}
@@ -111,14 +118,19 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: DIMENSIONS.SUBTITLE_TOP,
+            top: 202,
             left: '10%',
             right: '10%',
+            height: 36,
             color: frameColor,
+            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '28px',
-            fontWeight: 400,
+            fontWeight: 338,
             textTransform: 'uppercase',
             letterSpacing: '0.05em',
+            lineHeight: '36px',
+            display: 'flex',
+            alignItems: 'center',
           }}
         >
           {subtitle}
@@ -128,13 +140,15 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         <div
           style={{
             position: 'absolute',
-            top: DIMENSIONS.STORY_TOP,
+            top: 282,
             left: '50%',
             transform: 'translateX(-50%)',
-            width: DIMENSIONS.STORY_COPY_WIDTH,
-            height: DIMENSIONS.STORY_COPY_HEIGHT,
+            width: 779,
+            height: 901,
             color: frameColor,
+            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '24px',
+            fontWeight: 400,
             lineHeight: 1.6,
             textAlign: 'left',
             overflow: 'hidden',
@@ -163,6 +177,7 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         >
           <div style={{ 
             color: frameColor,
+            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '24px',
             fontWeight: 300,
             textTransform: 'uppercase',
@@ -173,6 +188,7 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
           </div>
           <div style={{ 
             color: frameColor,
+            fontFamily: 'Source Serif 4 Variable, serif',
             fontSize: '32px',
             fontWeight: 600,
             letterSpacing: '0.02em',
@@ -185,8 +201,8 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
         <div
           style={{
             position: 'absolute',
-            right: `${FRAME.WIDTH * 0.04}px`, // 4% of frame width from right
-            bottom: `${FRAME.HEIGHT * 0.112 - (footerOn ? 0 : DIMENSIONS.FOOTER_HEIGHT)}px`, // 11.2% from bottom, moves down when footer is off
+            right: DIMENSIONS.BADGE_RIGHT_OFFSET,
+            bottom: DIMENSIONS.BADGE_BOTTOM_OFFSET + (footerOn ? 0 : -DIMENSIONS.FOOTER_HEIGHT),
             width: DIMENSIONS.BADGE_SIZE,
             height: DIMENSIONS.BADGE_SIZE,
             borderRadius: '50%',
@@ -216,6 +232,7 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
+                fontFamily: 'Source Serif 4 Variable, serif',
                 fontSize: '24px',
                 fontWeight: 500,
                 textAlign: 'center',
@@ -249,6 +266,7 @@ export const CardBackBuilder: React.FC<CardBackBuilderProps> = ({
             <div
               style={{
                 color: cardDetailsBgColor,
+                fontFamily: 'Source Serif 4 Variable, serif',
                 fontSize: '20px',
                 fontWeight: 400,
                 letterSpacing: '0.02em',
