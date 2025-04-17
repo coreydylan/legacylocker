@@ -747,7 +747,7 @@ const SeriesDetailPage = () => {
                       )}
                     </div>
                     <CardDescription className="line-clamp-2">
-                      {sample.story_body.substring(0, 100)}...
+                      {(sample.story_body ?? '').substring(0, 100)}...
                     </CardDescription>
                   </CardHeader>
                   <CardFooter className="flex justify-between pt-2">
