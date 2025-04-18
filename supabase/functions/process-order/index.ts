@@ -147,7 +147,20 @@ serve(async (req) => {
         const monthNum = monthNameToNumber(md.month);
         const year = md.shipDate ? new Date(md.shipDate).getFullYear() : new Date().getFullYear(); // Consider edge case year if shipDate is early next year
         monthlySettingsRows.push({
-          order_id: orderId, month: monthNum, year, enabled: md.enabled, ship_date: md.shipDate, title: null, story: null, footer_message: md.footerMessage || null, occasion: md.occasions || [], recipients: md.recipients || [], artwork_option: null, photo_url: null, story_locked: false, artwork_locked: false,
+          order_id: orderId,
+          month: monthNum,
+          year,
+          enabled: md.enabled,
+          ship_date: md.shipDate || null,
+          title: null,
+          story: null,
+          footer_message: md.footerMessage || null,
+          occasion: md.occasions || [],
+          recipients: md.recipients || [],
+          artwork_option: null,
+          photo_url: null,
+          story_locked: false,
+          artwork_locked: false,
         });
       }
     }
@@ -155,7 +168,20 @@ serve(async (req) => {
       for (const card of customData) {
         const monthNum = monthNameToNumber(card.month);
         monthlySettingsRows.push({
-          order_id: orderId, month: monthNum, year: card.year, enabled: card.enabled, ship_date: card.shipDate, title: card.title || null, story: card.story || null, footer_message: card.footerMessage || null, occasion: card.occasions || [], recipients: card.recipients || [], artwork_option: card.artworkOption || null, photo_url: card.photoUrl || null, story_locked: card.storyLocked ?? false, artwork_locked: card.artworkLocked ?? false,
+          order_id: orderId,
+          month: monthNum,
+          year: card.year,
+          enabled: card.enabled,
+          ship_date: card.shipDate || null,
+          title: card.title || null,
+          story: card.story || null,
+          footer_message: card.footerMessage || null,
+          occasion: card.occasions || [],
+          recipients: card.recipients || [],
+          artwork_option: card.artworkOption || null,
+          photo_url: card.photoUrl || null,
+          story_locked: card.storyLocked ?? false,
+          artwork_locked: card.artworkLocked ?? false,
         });
       }
     }
@@ -174,7 +200,18 @@ serve(async (req) => {
     // ... (Copy the logic for building cardData from processOrderLogic.ts, using schema-aligned fields) ...
      for (const row of monthlySettingsRows.filter(r => r.enabled)) {
       cardData.push({
-        order_id: orderId, month: row.month, ship_date: row.ship_date, story_input_raw: row.story || null, custom_footer_message: row.footer_message || null, occasion_type: Array.isArray(row.occasion) && row.occasion.length ? row.occasion[0] : null, artwork_method: row.artwork_option || null, uploaded_photo: row.photo_url || null, has_custom_footer: !!row.footer_message, is_fully_custom: selectedEdition.type !== 'signature', custom_edition_type: selectedEdition.type, production_status: 'not_started',
+        order_id: orderId,
+        month: row.month,
+        ship_date: row.ship_date || null,
+        story_input_raw: row.story || null,
+        custom_footer_message: row.footer_message || null,
+        occasion_type: Array.isArray(row.occasion) && row.occasion.length ? row.occasion[0] : null,
+        artwork_method: row.artwork_option || null,
+        uploaded_photo: row.photo_url || null,
+        has_custom_footer: !!row.footer_message,
+        is_fully_custom: selectedEdition.type !== 'signature',
+        custom_edition_type: selectedEdition.type,
+        production_status: 'not_started',
       });
     }
     if (cardData.length) {
