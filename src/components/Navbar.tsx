@@ -83,7 +83,7 @@ const Navbar = () => {
           <div className={`md:hidden mt-4 pb-4 rounded-lg shadow-lg ${
             scrolled 
               ? 'bg-legacy-cream/50 backdrop-blur-md backdrop-saturate-150' 
-              : 'bg-white'
+              : 'bg-white/90 backdrop-blur-sm'
           }`}>
             <div className="flex flex-col space-y-3">
               <a 

@@ -62,24 +62,27 @@ const HeroSection = () => {
   };
 
   return (
-    <section className="w-full py-20 md:py-32 bg-legacy-cream flex flex-col items-center justify-center relative overflow-hidden">
+    <section className="w-full min-h-screen md:h-auto md:py-32 flex flex-col items-center justify-center relative overflow-hidden">
       {/* Add the keyframes to the document */}
       <style>{shimmerKeyframes}</style>
       
-      {/* Background decorative elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden opacity-5 pointer-events-none">
-        <div className="absolute -top-24 -left-24 w-64 h-64 rounded-full border-8 border-legacy-green"></div>
-        <div className="absolute top-1/2 -right-24 w-48 h-48 rounded-full border-8 border-legacy-gold"></div>
+      {/* Background image */}
+      <div className="absolute inset-0 w-full h-full">
+        <img 
+          src="/styles/hero-window-with-two-cards.webp" 
+          alt="Hero Background" 
+          className="w-full h-full object-cover"
+        />
       </div>
       
-      <div className="container mx-auto px-6 flex flex-col md:flex-row items-center gap-10 relative z-10">
-        <div className="w-full md:w-1/2 text-left animate-slide-in-from-left">
+      <div className="container mx-auto px-6 flex flex-col h-screen md:h-auto relative z-10">
+        <div className="w-full text-left animate-slide-in-from-left mt-28 md:mt-0">
           {/* Hero headline */}
           <div>
-            <h1 className="text-[clamp(42px,6vw,72px)] leading-[1.1] font-bold mb-2 font-playfair text-legacy-green">
+            <h1 className="text-[28px] md:text-[72px] leading-[1.1] font-bold mb-2 font-playfair text-legacy-green">
               stories
             </h1>
-            <h1 className="text-[clamp(29px,4.2vw,50px)] leading-[1.1] font-normal mb-6 font-playfair text-legacy-green">
+            <h1 className="text-[22px] md:text-[50px] leading-[1.1] font-normal mb-6 font-playfair text-legacy-green">
               <span>make </span>
               <span 
                 className="relative inline-block"
@@ -109,29 +112,29 @@ const HeroSection = () => {
           </div>
           
           {/* Subtext */}
-          <div className="space-y-4 text-[clamp(16px,1.25vw,20px)] mb-8 text-[#444] leading-relaxed">
-            <p>
+          <div className="space-y-3 md:space-y-4 mb-6 md:mb-8 text-[#444] leading-relaxed">
+            <p className="text-[13px] md:text-[20px]">
               <span className="mr-2">🎨</span> we <span 
                 className="bold-animate"
                 style={{ fontWeight: 400 }}
                 data-delay="1.5"
               >illustrate</span> them beautifully
             </p>
-            <p>
+            <p className="text-[13px] md:text-[20px]">
               <span className="mr-2">✍️</span> <span 
                 className="bold-animate"
                 style={{ fontWeight: 400 }}
                 data-delay="2.3"
               >craft</span> them thoughtfully
             </p>
-            <p>
+            <p className="text-[13px] md:text-[20px]">
               <span className="mr-2">📦</span> <span 
                 className="bold-animate"
                 style={{ fontWeight: 400 }}
                 data-delay="3.1"
               >package</span> them perfectly
             </p>
-            <p>
+            <p className="text-[13px] md:text-[20px]">
               <span className="mr-2">📬</span> and <span 
                 className="bold-animate"
                 style={{ fontWeight: 400 }}
@@ -141,9 +144,9 @@ const HeroSection = () => {
           </div>
 
           {/* Callout section */}
-          <div className="mb-12">
-            <p className="text-xl font-bold text-legacy-green mb-4">the best part?</p>
-            <p className="text-[clamp(14px,1.1vw,18px)] text-[#444]">
+          <div className="mb-8 md:mb-12">
+            <p className="text-base md:text-xl font-bold text-legacy-green mb-2 md:mb-4">the best part?</p>
+            <p className="text-[11px] md:text-[18px] text-[#444]">
               <span className="font-bold text-legacy-green/90">you get the credit</span> for making their day —<br />
               again and again, <span 
                 className="bold-animate"
@@ -152,26 +155,17 @@ const HeroSection = () => {
               >for a whole year</span>
             </p>
           </div>
-          
-          <div className="flex justify-center md:justify-start animate-slide-in-from-left-delayed">
-            <Button 
-              className="bg-legacy-green hover:bg-legacy-green/90 text-white py-6 px-8 rounded text-lg"
-              onClick={handleScrollToStorySelector}
-            >
-              start a story
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-          </div>
         </div>
         
-        <div className="w-full md:w-1/2 mt-10 md:mt-0">
-          <div className="flex justify-center">
-            <img 
-              src="/lovable-uploads/004710e3-87a5-4295-8e50-1382f0a1a4d4.png" 
-              alt="Legacy Locker Card Sample" 
-              className="max-h-[600px] w-auto object-contain drop-shadow-xl transform rotate-3"
-            />
-          </div>
+        {/* Button container positioned at bottom on mobile */}
+        <div className="flex justify-start mt-auto md:mt-0 mb-12 md:mb-0 animate-slide-in-from-left-delayed">
+          <Button 
+            className="w-full md:w-auto py-4 md:py-6 px-6 md:px-8 text-base md:text-lg bg-legacy-green hover:bg-legacy-green/90 text-white rounded justify-center"
+            onClick={handleScrollToStorySelector}
+          >
+            start a story
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </Button>
         </div>
       </div>
     </section>
