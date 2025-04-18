@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useSessionStore, EditionType, isValidSession } from '@/lib/sessionStore';
 import { useToast } from '@/hooks/use-toast';
 // import { useModalStore } from '@/lib/modalStore'; // If managing confirmation modals centrally
+import { EditionType as EditionTypeRestore } from '@/lib/sessionStore_restore';
 
 // Helper to simulate tracking (replace with actual calls)
 const trackEvent = (eventName: string, properties?: Record<string, any>) => {
@@ -58,15 +59,20 @@ export function useSessionManager() {
     const currentSessionState = useSessionStore.getState();
     const purchaserEmail = currentSessionState.session.purchaser?.email;
     const selectedEdition = currentSessionState.session.selectedEdition;
+    const recipient = currentSessionState.session.recipient;
 
     console.log('[activateAndPersistSession] Start');
     
     if (currentSessionState.sessionMetadata.isActive) {
       console.warn('[activateAndPersistSession] Already active. Saving instead.');
-      // Call saveSessionData directly if already active
-      // await saveSessionData(); // This was incorrect, saveSessionData depends on this func
-      // Instead, should probably call saveSessionToDb directly or just return?
-      // Let's just return for now, assuming activation is the main goal here.
+      // Save the current session state
+      try {
+        await saveSessionToDb();
+        console.log('[activateAndPersistSession] Active session saved successfully');
+      } catch (err) {
+        console.error('[activateAndPersistSession] Failed to save active session:', err);
+        toast({ title: "Error Saving", description: "Failed to save your progress. Please try again.", variant: "destructive" });
+      }
       return; 
     }
 
@@ -101,20 +107,23 @@ export function useSessionManager() {
     } catch (err) {
       console.error('[activateAndPersistSession] Supabase save failed, aborting email send:', err);
       toast({ title: "Error Saving", description: "Failed to save your progress. Please try again.", variant: "destructive" });
-      // Should we reset the session ID and isActive status here?
-      // For now, just return to prevent email send.
       return; 
     }
 
     // Send Email only if save succeeded
-    const recipientFirstName = currentSessionState.session.recipient?.firstName || currentSessionState.session.recipient?.recipient1FirstName;
+    const recipientFirstName = recipient?.firstName || recipient?.recipient1FirstName;
     console.log(`[activateAndPersistSession] Attempting to send resume email to ${purchaserEmail} for session ${newSessionId}`);
 
     try {
       const response = await fetch('/api/send-resume-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: purchaserEmail, sessionId: newSessionId, recipientFirstName }),
+        body: JSON.stringify({ 
+          email: purchaserEmail, 
+          sessionId: newSessionId, 
+          recipientFirstName,
+          editionName: selectedEdition.naturalLanguageName || selectedEdition.label
+        }),
       });
 
       if (!response.ok) {
