@@ -8,13 +8,11 @@ import {
   STEP_TITLES,
 } from '@/constants/onboardingStages';
 import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from '@/components/ui/dropdown-menu';
+  HoverCard,
+  HoverCardTrigger,
+  HoverCardContent,
+} from '@/components/ui/hover-card';
+import { DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { Check } from 'lucide-react';
 
 const OnboardingStepperDesktop: React.FC = () => {
@@ -35,7 +33,7 @@ const OnboardingStepperDesktop: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center w-full gap-4 px-4 max-w-xl mx-auto">
+    <div className="flex items-center justify-between w-full gap-4 px-4 max-w-lg mx-auto">
       {MAIN_STAGES.map(({ stage, label }) => {
         const stageActive = stage === currentStage;
         const stageCompleted = isStageCompleted(stage);
@@ -43,13 +41,12 @@ const OnboardingStepperDesktop: React.FC = () => {
         const stageClickable = firstStepOfStage <= lastCompletedStep + 1;
 
         return (
-          <DropdownMenu key={stage}>
-            <DropdownMenuTrigger asChild>
+          <HoverCard key={stage} openDelay={100} closeDelay={100}>
+            <HoverCardTrigger asChild>
               <button
-                disabled={!stageClickable}
                 className={cn(
                   'relative flex flex-col items-center transition-all duration-150',
-                  stageClickable ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'
+                  stageClickable ? 'cursor-pointer' : 'cursor-default opacity-60'
                 )}
               >
                 <span
@@ -58,7 +55,7 @@ const OnboardingStepperDesktop: React.FC = () => {
                     stageActive
                       ? 'bg-legacy-green text-white border-legacy-green scale-110'
                       : stageCompleted
-                      ? 'bg-legacy-green/10 text-legacy-green border-legacy-green/50 hover:bg-legacy-green/20'
+                      ? 'bg-legacy-green/10 text-legacy-green border-legacy-green/50'
                       : 'bg-gray-100 text-gray-400 border-gray-300'
                   )}
                 >
@@ -73,32 +70,39 @@ const OnboardingStepperDesktop: React.FC = () => {
                   {label}
                 </span>
               </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="bottom" align="center">
-              <DropdownMenuLabel>{label}</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {getStepsForStage(stage).map((stepNum) => {
-                const isCompleted = stepNum <= lastCompletedStep;
-                const isActive = stepNum === actualCurrentStep;
-                const isClickable = stepNum <= lastCompletedStep + 1;
-                return (
-                  <DropdownMenuItem
-                    key={stepNum}
-                    disabled={!isClickable}
-                    onSelect={() => handleStepClick(stepNum)}
-                    className={cn(
-                      'flex items-center gap-2 text-sm',
-                      isActive && 'font-semibold text-legacy-green',
-                      !isClickable && 'cursor-not-allowed opacity-60'
-                    )}
-                  >
-                    {isCompleted && <Check className="h-3 w-3 text-legacy-green" />}
-                    <span>{STEP_TITLES[stepNum].title}</span>
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            </HoverCardTrigger>
+            <HoverCardContent 
+              side="bottom" 
+              align="center" 
+              className="w-auto p-2 bg-white border border-gray-200 rounded-lg shadow-xl z-[100]"
+            >
+              <div className="font-semibold px-2 py-1.5 text-sm">{label}</div>
+              <DropdownMenuSeparator className="my-1" />
+              <div className="space-y-1">
+                {getStepsForStage(stage).map((stepNum) => {
+                  const isCompleted = stepNum <= lastCompletedStep;
+                  const isActive = stepNum === actualCurrentStep;
+                  const isClickable = stepNum <= lastCompletedStep + 1;
+                  return (
+                    <button
+                      key={stepNum}
+                      disabled={!isClickable}
+                      onClick={() => handleStepClick(stepNum)}
+                      className={cn(
+                        'flex w-full items-center gap-2 text-sm px-2 py-1.5 rounded-sm outline-none transition-colors',
+                        'focus:bg-accent focus:text-accent-foreground data-[disabled]:pointer-events-none',
+                        isActive && 'font-semibold text-legacy-green',
+                        isClickable ? 'cursor-pointer hover:bg-legacy-green/10' : 'cursor-not-allowed opacity-60'
+                      )}
+                    >
+                      {isCompleted && <Check className="h-3 w-3 text-legacy-green" />}
+                      <span className="flex-1 text-left">{STEP_TITLES[stepNum].title}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </HoverCardContent>
+          </HoverCard>
         );
       })}
     </div>

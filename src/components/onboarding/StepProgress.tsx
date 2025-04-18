@@ -81,7 +81,7 @@ const StepProgress: React.FC = () => {
           return (
             <React.Fragment key={visualStep}>
               {/* Step Element (Circle + Label) - Allow shrinking, center text */}
-              <div className="flex flex-col items-center text-center pt-1 flex-shrink min-w-0">
+              <div className="flex flex-col items-center text-center pt-1 flex-shrink-0 w-[60px]">
                 <button
                   onClick={() => handleStepClick(visualStep)}
                   disabled={!isClickable || isActive}
@@ -118,8 +118,8 @@ const StepProgress: React.FC = () => {
               {/* Connector Line - Adjust margin */}
               {index < totalVisualSteps - 1 && (
                 <div className={cn(
-                  // Reduced horizontal margin, align better with items-start
-                  "h-0.5 flex-1 mt-4 mx-1 sm:mx-2", 
+                  // Adjusted margin and width for consistent spacing
+                  "h-0.5 flex-1 mt-4 mx-4", 
                   isCompleted ? "bg-legacy-green/50" : "bg-gray-300"
                 )} />
               )}

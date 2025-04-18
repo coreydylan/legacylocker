@@ -237,7 +237,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
               ) : (
                 <>
-                  <div className="flex-shrink-0 bg-white/40 border-b border-white/20 w-full backdrop-blur-sm">
+                  <div className="flex-shrink-0 bg-white/40 border-b border-white/20 w-full backdrop-blur-sm z-10">
                     {isMobile ? (
                       <OnboardingHeaderMobile
                         handleBack={handleBack}

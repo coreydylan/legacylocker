@@ -299,7 +299,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
           )}
         </div>
       ) : (
-        <CommandList className="max-h-[400px] overflow-y-auto p-2">
+        <CommandList className="flex-grow overflow-y-auto max-h-[calc(100%-50px)] bg-white/80 backdrop-blur-sm">
           {!selectedTheme && signatureThemes.length === 0 && customThemes.length === 0 && !representativeConciergeOption && (
             <CommandEmpty>No options available{filterType ? ` for ${filterType} editions` : ''}.</CommandEmpty>
           )}
