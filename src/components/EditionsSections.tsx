@@ -206,7 +206,7 @@ export const EditionsSections = () => {
                 <div className="pt-6">
                   <button
                     onClick={() => (window as any).handleStoryEditionSelection('custom')}
-                    className="inline-flex items-center gap-1 px-3 py-1 bg-legacy-gold/10 hover:bg-legacy-gold/15 text-legacy-gold font-medium rounded-sm transition-colors group text-[clamp(20px,2vw,26px)]"
+                    className="inline-flex items-center gap-1 px-3 py-1 bg-legacy-gold/20 hover:bg-legacy-gold/30 text-legacy-gold font-medium rounded-sm transition-colors group text-[clamp(20px,2vw,26px)]"
                   >
                     Start a Custom Edition
                     <span className="group-hover:translate-x-0.5 transition-transform">→</span>

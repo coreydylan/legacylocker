@@ -97,7 +97,7 @@ export const SignatureEditionsSection = () => {
             className="text-[clamp(20px,2vw,26px)] leading-relaxed"
           >
             <div className="text-[clamp(24px,2.4vw,32px)]">
-              <span className="font-bold bg-legacy-green/10 px-3 py-1 rounded-md">
+              <span className="font-bold bg-legacy-green/10 px-3 py-1 rounded-md text-legacy-green">
                 signature editions
               </span>
             </div>

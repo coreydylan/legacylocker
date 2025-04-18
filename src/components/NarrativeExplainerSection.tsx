@@ -135,37 +135,37 @@ export const NarrativeExplainerSection = ({ onThemeSelect }: NarrativeExplainerS
               </p>
 
               <div className="space-y-2 pl-4">
-                <p>
+                <div className="mb-4">
                   <button 
                     className="dotted-underline text-legacy-green" 
                     onClick={() => handleThemeSelect("Your Childhood")}
                   >
                     your childhood
-                  </button>{" "}
-                  <span className="text-[#666] italic text-[0.95em]">parents love this</span>
-                </p>
-                <p>
+                  </button>
+                  <div className="text-sm text-gray-500 tracking-wide mt-1">parents love this</div>
+                </div>
+                <div className="mb-4">
                   <button 
                     className="dotted-underline text-legacy-green" 
                     onClick={() => handleThemeSelect("Your Relationship")}
                   >
                     your relationship
-                  </button>{" "}
-                  <span className="text-[#666] italic text-[0.95em]">a favorite for partners</span>
-                </p>
-                <p>
-                  or{" "}
+                  </button>
+                  <div className="text-sm text-gray-500 tracking-wide mt-1">a favorite for partners</div>
+                </div>
+                <div className="mb-4">
+                  <span className="text-gray-600">or </span>
                   <button 
                     className="dotted-underline text-legacy-green" 
                     onClick={() => handleThemeSelect("Family History")}
                   >
                     your family's story
-                  </button>{" "}
-                  <span className="text-[#666] italic text-[0.95em]">our concierge team can even help you uncover your family's history</span>
-                </p>
+                  </button>
+                  <div className="text-sm text-gray-500 tracking-wide mt-1">our concierge team can even help you uncover your family's history</div>
+                </div>
               </div>
 
-              <div>
+              <div className="mt-8">
                 <a 
                   href="#custom-editions" 
                   className="inline-flex items-center gap-1 px-3 py-1 bg-legacy-green/10 hover:bg-legacy-green/15 text-legacy-green font-medium rounded-sm transition-colors group text-[clamp(20px,2vw,26px)]"

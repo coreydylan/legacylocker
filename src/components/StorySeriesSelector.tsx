@@ -208,7 +208,7 @@ const StorySeriesSelector = () => {
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-white p-0">
           <DialogHeader className="p-6 pb-4 border-b">
-            <DialogTitle className="text-xl font-playfair text-center">Select Your Story Series</DialogTitle>
+            <DialogTitle className="text-xl font-manrope text-center">Select Your Story Series</DialogTitle>
             <DialogDescription className="text-center text-muted-foreground">
               Browse our curated collection or search for specific themes and locations.
             </DialogDescription>
