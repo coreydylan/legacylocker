@@ -130,6 +130,7 @@ export const ConciergeEditionsSection = () => {
           </motion.div>
 
           {/* Preview Block */}
+          {/* Commented out temporarily
           <motion.div
             initial={{ opacity: 0, y: 30 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -155,6 +156,7 @@ export const ConciergeEditionsSection = () => {
               </div>
             )}
           </motion.div>
+          */}
         </div>
       </div>
     </section>

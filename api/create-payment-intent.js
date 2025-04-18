@@ -5,20 +5,34 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16',
 })
 
-export default async function handler(req, res) {
+// Add Edge Runtime configuration
+export const config = {
+  runtime: 'edge',
+}
+
+export default async function handler(req) {
+  // Only allow POST requests
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 
   try {
-    const { amount, sessionId } = req.body
+    // Parse the request body
+    const body = await req.json()
+    const { amount, sessionId } = body
 
     if (!sessionId) {
-      return res.status(400).json({ error: 'Missing sessionId' })
+      return new Response(JSON.stringify({ error: 'Missing sessionId' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
     }
 
     // TEMPORARY OVERRIDE: Always use 1 cent for testing
-    const testAmount = 1;
+    const testAmount = 1
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: testAmount,
@@ -29,9 +43,18 @@ export default async function handler(req, res) {
       },
     })
 
-    res.status(200).json({ clientSecret: paymentIntent.client_secret })
+    return new Response(JSON.stringify({ clientSecret: paymentIntent.client_secret }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    })
   } catch (error) {
     console.error('Error creating payment intent:', error)
-    res.status(500).json({ error: 'Internal Server Error', details: error.message })
+    return new Response(JSON.stringify({ 
+      error: 'Internal Server Error', 
+      details: error.message 
+    }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    })
   }
 }

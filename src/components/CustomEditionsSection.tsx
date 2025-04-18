@@ -7,9 +7,9 @@ import { useRegionalStories } from "@/hooks/useRegionalStories";
 
 // IDs of the specific story series we want to show for custom editions
 const FEATURED_CUSTOM_IDS = [
-  '05515e4b-0932-4c8a-9adc-373ccbaac1df', // San Diego baseball
-  'f5e2d04a-4926-4c79-ac53-035b22641a8c', // Jazz in New Orleans
-  '5faa9c88-820e-41bc-9579-2e6b50c98744'  // History of San Francisco
+  'eedf215e-81a5-47fe-bef9-82026cc098ba', // Custom story 1
+  '88d8eb4d-a3a6-4df6-a54c-6aba3d69ec2d', // Custom story 2
+  '51de9c32-3b5f-4685-bb95-62a36f90d1fd'  // Custom story 3
 ];
 
 interface StorySample {

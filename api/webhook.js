@@ -4,17 +4,28 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2023-10-16',
 });
 
-export default async function handler(req, res) {
+// Add Edge Runtime configuration
+export const config = {
+  runtime: 'edge',
+};
+
+export default async function handler(req) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    return new Response(JSON.stringify({ message: 'Method not allowed' }), {
+      status: 405,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 
-  const sig = req.headers['stripe-signature'];
+  const sig = req.headers.get('stripe-signature');
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   try {
+    // Get the raw body as text
+    const rawBody = await req.text();
+    
     const event = stripe.webhooks.constructEvent(
-      req.body,
+      rawBody,
       sig,
       endpointSecret
     );
@@ -31,9 +42,15 @@ export default async function handler(req, res) {
         console.log(`Unhandled event type ${event.type}`);
     }
 
-    res.status(200).json({ received: true });
+    return new Response(JSON.stringify({ received: true }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
   } catch (err) {
     console.error('Webhook Error:', err.message);
-    res.status(400).json({ message: `Webhook Error: ${err.message}` });
+    return new Response(JSON.stringify({ message: `Webhook Error: ${err.message}` }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 } 
