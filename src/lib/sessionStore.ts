@@ -638,7 +638,7 @@ const createNewSession = (): SessionData => {
 // Define isValidSession *before* useSessionStore as it's used in onRehydrateStorage
 export const isValidSession = (session: SessionData | null | undefined): session is SessionData => {
   if (!session) return false;
-  const maxSteps = 7; 
+  const maxSteps = 9; 
   
   // Basic checks (always required)
   if (!session.sessionId || typeof session.sessionId !== 'string') return false;
