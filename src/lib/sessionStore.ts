@@ -35,6 +35,8 @@ export interface CustomMonthData {
   enabled: boolean;
   footerMessage: string;
   shipDate: string;
+  occasions?: (string | 'birthday' | 'anniversary' | 'other')[];
+  recipients?: string[];
   notesLocked?: boolean; // <<< Add lock state for Notes/Footer
 }
 
@@ -585,6 +587,8 @@ const createNewSession = (): SessionData => {
     enabled: false,
     footerMessage: '',
     shipDate: '',
+    occasions: [],
+    recipients: [],
     notesLocked: false, // <<< Initialize Notes lock state
   }));
 
