@@ -1,6 +1,9 @@
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+// Use the server-side environment variable without VITE_ prefix
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+  apiVersion: '2023-10-16',
+})
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -29,6 +32,6 @@ export default async function handler(req, res) {
     res.status(200).json({ clientSecret: paymentIntent.client_secret })
   } catch (error) {
     console.error('Error creating payment intent:', error)
-    res.status(500).json({ error: 'Internal Server Error' })
+    res.status(500).json({ error: 'Internal Server Error', details: error.message })
   }
 }
