@@ -30,11 +30,12 @@ const getChronologicalMonths = (): ChronologicalMonth[] => {
 // --- End Helpers ---
 
 const CustomMonthAccordion: React.FC = () => {
-  const { customData, updateCustomMonth, isLoading, isHydrated } = useSessionStore(state => ({
+  const { customData, updateCustomMonth, isLoading, isHydrated, initializeCustomDataDates } = useSessionStore(state => ({
     customData: state.session.customData || [],
     updateCustomMonth: state.updateCustomMonth,
     isLoading: state.isLoading,
     isHydrated: state.isHydrated,
+    initializeCustomDataDates: state.initializeCustomDataDates,
   }));
 
   // State to manage which accordion item is open
@@ -103,6 +104,14 @@ const CustomMonthAccordion: React.FC = () => {
   //     // Ensure the accordion item is open or opens it
   //     setOpenAccordionValue(accordionValue);
   // };
+
+  // Ensure custom data dates are initialized once hydration is complete
+  useEffect(() => {
+    if (isHydrated) {
+      console.log("[CustomMonthAccordion]: Hydrated – initializing custom data dates...");
+      initializeCustomDataDates();
+    }
+  }, [isHydrated, initializeCustomDataDates]);
 
   if (isLoading || !isHydrated) {
     return (
