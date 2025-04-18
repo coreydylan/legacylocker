@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Search, ChevronRight } from "lucide-react";
 import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem, CommandList } from "@/components/ui/command";
 import { StoryOption } from '@/types/supabase';
@@ -27,6 +27,25 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
 }) => {
   const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Detect if the device is mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent));
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Control focus behavior
+  useEffect(() => {
+    if (isMobile && inputRef.current) {
+      inputRef.current.blur();
+    }
+  }, [isMobile]);
 
   // Debug: Log the props received by SearchableCommandMenu
   React.useEffect(() => {
@@ -147,6 +166,19 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
       }
   };
 
+  // Add color styling functions
+  const getEditionColor = (type: 'signature' | 'custom' | 'concierge') => {
+    switch (type) {
+      case 'signature':
+        return 'text-legacy-green bg-legacy-green/5';
+      case 'custom':
+        return 'text-legacy-gold bg-legacy-gold/5';
+      case 'concierge':
+        return 'text-orange-500 bg-orange-500/5';
+      default:
+        return '';
+    }
+  };
 
   // Render Breadcrumbs
   const renderBreadcrumbs = () => {
@@ -227,6 +259,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
     <Command className="rounded-lg border-0 shadow-none bg-white">
       <div className="p-4">
         <CommandInput
+          ref={inputRef}
           placeholder="Search themes, locations, or teams..."
           value={searchQuery}
           onValueChange={setSearchQuery}
@@ -258,7 +291,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                     className="p-3 rounded-md cursor-pointer hover:bg-legacy-green/10 border border-transparent hover:border-legacy-green/20"
                   >
                     <div className="font-medium">{displayPath}</div>
-                    <div className="text-xs text-muted-foreground mt-1">{editionTypeLabel}</div>
+                    <div className={`text-sm font-bold uppercase mt-1 px-4 py-0.5 rounded-full inline-block -ml-4 ${getEditionColor(option.type)}`}>{editionTypeLabel}</div>
                   </div>
                 );
               })}
@@ -314,7 +347,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
               <>
                    {/* Signature Themes */} 
                    {(!filterType || filterType === 'signature') && signatureThemes.length > 0 && (
-                       <CommandGroup heading="Signature Editions" className="mb-3">
+                       <CommandGroup heading={<span className={`text-sm font-bold uppercase px-4 py-0.5 rounded-full -ml-4 ${getEditionColor('signature')}`}>Signature Editions</span>} className="mb-3">
                            {signatureThemes.map((theme) => {
                                const hasSubs = themeHasSubjects(theme);
                                return (
@@ -335,7 +368,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                    
                    {/* Custom Themes */} 
                    {(!filterType || filterType === 'custom') && customThemes.length > 0 && (
-                        <CommandGroup heading="Custom Editions" className="mb-3">
+                        <CommandGroup heading={<span className={`text-sm font-bold uppercase px-4 py-0.5 rounded-full -ml-4 ${getEditionColor('custom')}`}>Custom Editions</span>} className="mb-3">
                             {customThemes.map((theme) => {
                                 const hasSubs = themeHasSubjects(theme);
                                 return (
@@ -356,7 +389,7 @@ const SearchableCommandMenu: React.FC<SearchableCommandMenuProps> = ({
                     
                    {/* Concierge Link Item */} 
                    {(!filterType || filterType === 'concierge') && (
-                        <CommandGroup heading="Concierge Edition" className="mb-3">
+                        <CommandGroup heading={<span className={`text-sm font-bold uppercase px-4 py-0.5 rounded-full -ml-4 ${getEditionColor('concierge')}`}>Concierge Edition</span>} className="mb-3">
                             <CommandItem 
                                 key="concierge-start-link" 
                                 onSelect={handleConciergeSelect}

@@ -206,24 +206,26 @@ const StorySeriesSelector = () => {
       </AlertDialog>
 
       <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto bg-white p-0">
-          <DialogHeader className="p-6 pb-4 border-b">
-            <DialogTitle className="text-xl font-manrope text-center">Select Your Story Series</DialogTitle>
-            <DialogDescription className="text-center text-muted-foreground">
+        <DialogContent className="sm:max-w-[600px] h-[90vh] sm:h-[50vh] overflow-y-auto bg-white p-0 flex flex-col">
+          <DialogHeader className="p-6 pb-4 border-b text-left">
+            <DialogTitle className="text-xl font-manrope">select your story series</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
               Browse our curated collection or search for specific themes and locations.
             </DialogDescription>
           </DialogHeader>
           {loading && <div className="p-6 text-center">Loading...</div>}
           {error && <div className="p-6 text-center text-red-600">{error}</div>}
           {!loading && !error && (
-            <SearchableCommandMenu
-              searchQuery={searchQuery}
-              setSearchQuery={setSearchQuery}
-              allOptions={allStoryOptions}
-              filteredSearchResults={safeFilteredOptions}
-              handleStorySeriesSelection={handleStorySeriesSelection}
-              filterType={filterType}
-            />
+            <div className="flex-grow">
+              <SearchableCommandMenu
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                allOptions={allStoryOptions}
+                filteredSearchResults={safeFilteredOptions}
+                handleStorySeriesSelection={handleStorySeriesSelection}
+                filterType={filterType}
+              />
+            </div>
           )}
         </DialogContent>
       </Dialog>
