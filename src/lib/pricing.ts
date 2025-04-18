@@ -24,6 +24,11 @@ export function calculateSessionPrice(session: Session): number | null {
     return null; // Or throw an error, depending on desired behavior
   }
 
+  // TEMPORARY OVERRIDE: Always return 0.01 for testing
+  return 0.01;
+
+  // Original pricing logic (commented out for now)
+  /*
   const editionType = session.selectedEdition.type;
 
   switch (editionType) {
@@ -41,6 +46,7 @@ export function calculateSessionPrice(session: Session): number | null {
       console.warn(`Unknown edition type encountered: ${editionType}`);
       return null; // Or handle as an error
   }
+  */
 
   // Future logic placeholder:
   // let finalPrice = basePrice;

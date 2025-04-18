@@ -61,13 +61,17 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="absolute left-4 text-gray-500 hover:text-gray-700 flex-shrink-0 mt-0.5"
+          className="absolute left-4 z-40 text-gray-500 hover:text-gray-700 flex-shrink-0 mt-0.5"
           aria-label="Close onboarding"
         >
           <X className="h-5 w-5" />
         </Button>
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center w-full max-w-[90%] sm:max-w-none">
-          <OnboardingStepper />
+        {/* Container ignores pointer events so it doesn't block clicks on the close button */}
+        <div className="pointer-events-none absolute left-1/2 -translate-x-1/2 flex items-center w-full max-w-[90%] sm:max-w-none">
+          {/* Stepper itself re‑enables pointer events for interactivity */}
+          <div className="pointer-events-auto w-full">
+            <OnboardingStepper />
+          </div>
         </div>
       </div>
     </div>

@@ -190,7 +190,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} modal>
+      <Dialog open={isOpen} onOpenChange={handleModalCloseTrigger} modal>
         <DialogPortal>
           {/* Restore DialogOverlay */}
           <DialogOverlay className="bg-black/30 backdrop-blur-[2px]" />

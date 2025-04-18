@@ -51,7 +51,7 @@ const OnboardingHeaderMobile: React.FC<OnboardingHeaderMobileProps> = ({
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="absolute left-4 text-gray-500 hover:text-gray-700 flex-shrink-0"
+          className="absolute left-4 z-40 text-gray-500 hover:text-gray-700 flex-shrink-0"
           aria-label="Close onboarding"
         >
           <X className="h-5 w-5" />
