@@ -125,9 +125,6 @@ const ReviewCheckout: React.FC = () => {
       await processOrder(useSessionStore.getState().session as SessionData);
       console.log('[ReviewCheckout] Order data written, proceeding to payment');
 
-      // Mark session as completed (order processed)
-      setSessionStatus('completed');
-
       // 2. Continue existing payment flow
       const paymentForm = document.getElementById('payment-form') as HTMLFormElement | null;
       if (paymentForm) {
@@ -283,7 +280,10 @@ const ReviewCheckout: React.FC = () => {
             )}
             {clientSecret && stripeElementsOptions && !paymentError && !isLoadingPaymentIntent && (
               <Elements options={stripeElementsOptions} stripe={stripePromise}>
-                <CheckoutForm isExternallySubmitting={isSubmitting} /> 
+                <CheckoutForm 
+                  isExternallySubmitting={isSubmitting} 
+                  onSuccessfulPayment={() => setSessionStatus('completed')} 
+                /> 
               </Elements>
             )}
           </div>
