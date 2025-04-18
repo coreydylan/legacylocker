@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { Menu, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Logo from './Logo';
+import { useStorySelector } from '@/hooks/useStorySelector';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const { openStorySelector } = useStorySelector();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -41,29 +43,34 @@ const Navbar = () => {
               href="#how-it-works" 
               className="text-legacy-dark hover:text-legacy-green transition-colors"
             >
-              How It Works
+              how it works
             </a>
             <a 
-              href="#story-series" 
+              href="#signature-editions" 
               className="text-legacy-dark hover:text-legacy-green transition-colors"
             >
-              Gift Ideas
+              editions
             </a>
             <a 
-              href="#pricing" 
+              href="#story-selector" 
               className="text-legacy-dark hover:text-legacy-green transition-colors"
             >
-              Pricing
-            </a>
-            <a 
-              href="#about" 
-              className="text-legacy-dark hover:text-legacy-green transition-colors"
-            >
-              About
+              pricing
             </a>
             
-            <Button className="bg-legacy-green hover:bg-legacy-green/90 text-white ml-2">
-              Get Started
+            <Button 
+              className="bg-legacy-green hover:bg-legacy-green/90 text-white ml-2"
+              onClick={() => {
+                // Use global function to open selector without filters if available
+                const openSelector = (window as any).openStorySelectorDialog;
+                if (typeof openSelector === 'function') {
+                  openSelector();
+                } else {
+                  openStorySelector();
+                }
+              }}
+            >
+              start a story
             </Button>
           </div>
           
@@ -91,35 +98,36 @@ const Navbar = () => {
                 className="text-legacy-dark hover:text-legacy-green transition-colors py-2 px-3 rounded hover:bg-legacy-cream"
                 onClick={() => setIsMenuOpen(false)}
               >
-                How It Works
+                how it works
               </a>
               <a 
-                href="#story-series" 
+                href="#signature-editions" 
                 className="text-legacy-dark hover:text-legacy-green transition-colors py-2 px-3 rounded hover:bg-legacy-cream"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Gift Ideas
+                editions
               </a>
               <a 
-                href="#pricing" 
+                href="#story-selector" 
                 className="text-legacy-dark hover:text-legacy-green transition-colors py-2 px-3 rounded hover:bg-legacy-cream"
                 onClick={() => setIsMenuOpen(false)}
               >
-                Pricing
-              </a>
-              <a 
-                href="#about" 
-                className="text-legacy-dark hover:text-legacy-green transition-colors py-2 px-3 rounded hover:bg-legacy-cream"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                About
+                pricing
               </a>
               
               <Button 
                 className="bg-legacy-green hover:bg-legacy-green/90 text-white w-full mt-2" 
-                onClick={() => setIsMenuOpen(false)}
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  const openSelector = (window as any).openStorySelectorDialog;
+                  if (typeof openSelector === 'function') {
+                    openSelector();
+                  } else {
+                    openStorySelector();
+                  }
+                }}
               >
-                Get Started
+                start a story
               </Button>
             </div>
           </div>

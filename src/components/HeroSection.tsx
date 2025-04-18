@@ -46,18 +46,10 @@ const HeroSection = () => {
     });
   }, []);
 
-  const handleScrollToStorySelector = () => {
-    const storySelector = document.getElementById('story-selector');
-    if (storySelector) {
-      storySelector.scrollIntoView({ behavior: 'smooth' });
-      
-      // Open the story selector dialog after scrolling
-      setTimeout(() => {
-        const selectorButton = storySelector.querySelector('button[role="combobox"]');
-        if (selectorButton && selectorButton instanceof HTMLElement) {
-          selectorButton.click();
-        }
-      }, 800); // Add a delay to ensure scrolling completes before opening dialog
+  const handleScrollToNarrativeSection = () => {
+    const narrativeSection = document.getElementById('how-it-works');
+    if (narrativeSection) {
+      narrativeSection.scrollIntoView({ behavior: 'smooth' });
     }
   };
 
@@ -161,9 +153,9 @@ const HeroSection = () => {
         <div className="flex justify-start mt-auto md:mt-0 mb-12 md:mb-0 animate-slide-in-from-left-delayed">
           <Button 
             className="w-full md:w-auto py-4 md:py-6 px-6 md:px-8 text-base md:text-lg bg-legacy-green hover:bg-legacy-green/90 text-white rounded justify-center"
-            onClick={handleScrollToStorySelector}
+            onClick={handleScrollToNarrativeSection}
           >
-            start a story
+            tell me more
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>

@@ -123,11 +123,19 @@ const StorySeriesSelector = () => {
     setDialogOpen(true);
   };
 
-  // Expose the function globally
+  // New function to open dialog without any filter
+  const openStorySelectorDialog = () => {
+    setFilterType(null);
+    setDialogOpen(true);
+  };
+
+  // Expose the functions globally
   useEffect(() => {
     (window as any).handleStoryEditionSelection = handleEditionSelection;
+    (window as any).openStorySelectorDialog = openStorySelectorDialog;
     return () => {
       delete (window as any).handleStoryEditionSelection;
+      delete (window as any).openStorySelectorDialog;
     };
   }, []);
 
