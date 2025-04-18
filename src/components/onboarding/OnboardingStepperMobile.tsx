@@ -26,10 +26,10 @@ const OnboardingStepperMobile: React.FC = () => {
   const triggerLabel = `Step ${actualCurrentStep} of ${TOTAL_STEPS} • ${STEP_TITLES[actualCurrentStep].title}`;
 
   return (
-    <div className="w-full px-2 flex justify-center">
+    <div className="w-full px-0 flex justify-center">
       <Select.Root value={String(actualCurrentStep)} onValueChange={handleStepChange}>
         <Select.Trigger
-          className="flex items-center justify-center text-xs font-medium text-legacy-green bg-transparent border-none p-0 h-auto focus:outline-none focus:ring-0"
+          className="flex items-center justify-center text-sm sm:text-xs font-medium text-legacy-green bg-transparent border-none p-0 h-auto w-full max-w-[320px] sm:max-w-none focus:outline-none focus:ring-0"
           aria-label="Select Step"
         >
           <Select.Value>{triggerLabel}</Select.Value>
@@ -53,7 +53,7 @@ const OnboardingStepperMobile: React.FC = () => {
               {MAIN_STAGES.map(({ stage, label }) => {
                 return (
                   <Select.Group key={stage}>
-                    <Select.Label className="px-2 py-1 text-xs font-semibold text-gray-500">
+                    <Select.Label className="px-2 py-1 text-sm sm:text-xs font-semibold text-gray-500">
                       {label}
                     </Select.Label>
                     {getStepsForStage(stage).map((stepNum) => {
@@ -67,7 +67,7 @@ const OnboardingStepperMobile: React.FC = () => {
                           value={String(stepNum)}
                           disabled={!isClickable}
                           className={cn(
-                            'relative flex items-center px-8 py-2 rounded-sm text-xs leading-none select-none',
+                            'relative flex items-center px-8 py-2 rounded-sm text-sm sm:text-xs leading-none select-none',
                             'data-[disabled]:text-gray-400 data-[disabled]:pointer-events-none',
                             'data-[highlighted]:outline-none data-[highlighted]:bg-legacy-green/10 data-[highlighted]:text-legacy-green',
                             isActive ? 'font-semibold text-legacy-green' : 'font-normal text-gray-700',

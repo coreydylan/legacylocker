@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogTitle, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { Dialog, DialogContent as BaseDialogContent, DialogTitle, DialogPortal, DialogOverlay } from "@/components/ui/dialog";
 import OnboardingHeader from '@/components/onboarding/OnboardingHeader';
+import OnboardingHeaderMobile from '@/components/onboarding/OnboardingHeaderMobile';
 import OnboardingFlow from '@/components/onboarding/OnboardingFlow';
 import SaveProgressModal from '@/components/onboarding/SaveProgressModal';
 import { SeriesType } from '@/types/onboarding';
@@ -25,6 +27,21 @@ interface OnboardingModalProps {
   selectedSeries: SeriesType | null;
   resumeToken?: string;
 }
+
+// Custom DialogContent without close button
+const DialogContent = React.forwardRef<
+  React.ElementRef<typeof DialogPrimitive.Content>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
+>(({ className, children, ...props }, ref) => (
+  <DialogPrimitive.Content
+    ref={ref}
+    className={className}
+    {...props}
+  >
+    {children}
+  </DialogPrimitive.Content>
+));
+DialogContent.displayName = "DialogContent";
 
 const OnboardingModal: React.FC<OnboardingModalProps> = ({ 
   isOpen, 
@@ -169,7 +186,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
       <Dialog open={isOpen} onOpenChange={handleModalCloseTrigger} modal>
         <DialogPortal>
           <DialogOverlay className="bg-black/30 backdrop-blur-[2px]" />
-          <DialogContent
+          <DialogPrimitive.Content
             style={isMobile ? { top: 0, left: 0, transform: 'none' } : undefined}
             className={cn(
               // Use responsive variants to provide an optimized experience.
@@ -204,7 +221,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
                     "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
                   ].join(" ")
-            )}>
+            )}
+          >
             <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white/30 pointer-events-none" />
             <SafeAreaWrapper>
               <VisuallyHidden>
@@ -220,10 +238,17 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
               ) : (
                 <>
                   <div className="flex-shrink-0 bg-white/40 border-b border-white/20 w-full backdrop-blur-sm">
-                    <OnboardingHeader
-                      handleBack={handleBack}
-                      onClose={() => handleModalCloseTrigger(false)}
-                    />
+                    {isMobile ? (
+                      <OnboardingHeaderMobile
+                        handleBack={handleBack}
+                        onClose={() => handleModalCloseTrigger(false)}
+                      />
+                    ) : (
+                      <OnboardingHeader
+                        handleBack={handleBack}
+                        onClose={() => handleModalCloseTrigger(false)}
+                      />
+                    )}
                   </div>
                   
                   <div className={cn(
@@ -242,7 +267,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 <SaveAndCloseButton onClose={() => handleModalCloseTrigger(false)} />
               </div>
             )}
-          </DialogContent>
+          </DialogPrimitive.Content>
         </DialogPortal>
       </Dialog>
 
