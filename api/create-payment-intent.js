@@ -10,15 +10,19 @@ export default async function handler(req, res) {
   try {
     const { amount, sessionId } = req.body
 
-    if (!amount || !sessionId) {
-      return res.status(400).json({ error: 'Missing amount or sessionId' })
+    if (!sessionId) {
+      return res.status(400).json({ error: 'Missing sessionId' })
     }
 
+    // TEMPORARY OVERRIDE: Always use 1 cent for testing
+    const testAmount = 1;
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount,
+      amount: testAmount,
       currency: 'usd',
       metadata: {
         sessionId,
+        isTestPayment: 'true'
       },
     })
 
