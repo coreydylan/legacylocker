@@ -106,9 +106,17 @@ const CustomMonthAccordion: React.FC = () => {
 
   if (isLoading || !isHydrated) {
     return (
-      <div className="space-y-4 max-w-3xl mx-auto">
+      <div className="max-w-3xl mx-auto space-y-4">
         {Array.from({ length: 12 }).map((_, index) => (
-          <Skeleton key={index} className="h-[70px] rounded-lg" /> // Skeleton for collapsed state
+          <div 
+            key={index} 
+            className="bg-legacy-green/5 rounded-xl p-6 flex items-center justify-between animate-pulse"
+          >
+            <div className="text-2xl font-medium text-legacy-green/20">
+              {orderedMonths[index]?.month} {orderedMonths[index]?.year}
+            </div>
+            <div className="w-12 h-6 bg-legacy-green/10 rounded-full"></div>
+          </div>
         ))}
       </div>
     );
@@ -116,7 +124,21 @@ const CustomMonthAccordion: React.FC = () => {
 
   if (customDataMap.size !== 12 && isHydrated) {
     console.error("[CustomMonthAccordion]: Custom data size mismatch after hydration.");
-    return <p className="text-center text-red-600">Error loading customization data.</p>;
+    return (
+      <div className="max-w-3xl mx-auto space-y-4">
+        {Array.from({ length: 12 }).map((_, index) => (
+          <div 
+            key={index} 
+            className="bg-legacy-green/5 rounded-xl p-6 flex items-center justify-between animate-pulse"
+          >
+            <div className="text-2xl font-medium text-legacy-green/20">
+              {orderedMonths[index]?.month} {orderedMonths[index]?.year}
+            </div>
+            <div className="w-12 h-6 bg-legacy-green/10 rounded-full"></div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
   return (

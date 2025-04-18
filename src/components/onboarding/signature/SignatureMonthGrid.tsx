@@ -77,24 +77,21 @@ const SignatureMonthGrid: React.FC = () => {
     ]);
 
   if (isLoading || !isHydrated) {
-    // More detailed skeleton loader
     return (
-      <div className="grid grid-cols-1 gap-4 max-w-2xl mx-auto">
-        {Array.from({ length: 12 }).map((_, index) => (
-          <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-sm">
-            {/* Skeleton for Header (Month/Year) */}
-            <Skeleton className="h-5 w-1/3 rounded" />
-            <div className="flex justify-between items-start space-x-4">
-              {/* Skeleton for content area (e.g., notes placeholder) */}
-              <div className="space-y-2 flex-grow">
-                <Skeleton className="h-4 w-full rounded" />
-                <Skeleton className="h-4 w-5/6 rounded" />
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="grid grid-cols-1 gap-4">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <div 
+              key={index} 
+              className="bg-legacy-green/5 rounded-xl p-6 flex items-center justify-between animate-pulse"
+            >
+              <div className="text-2xl font-medium text-legacy-green/20">
+                {orderedMonths[index]?.month} {orderedMonths[index]?.year}
               </div>
-              {/* Skeleton for potential icon/toggle */}
-              <Skeleton className="h-8 w-8 rounded-md flex-shrink-0" />
+              <div className="w-12 h-6 bg-legacy-green/10 rounded-full"></div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     );
   }
@@ -110,7 +107,23 @@ const SignatureMonthGrid: React.FC = () => {
 
   if (signatureDataMap.size !== 12 && isHydrated) {
     console.error("['SignatureMonthGrid']: Error: signatureData map size is not 12 after hydration.");
-    return <p className="text-center text-red-600">Error loading month customization data. Please try refreshing.</p>;
+    return (
+      <div className="max-w-2xl mx-auto space-y-6">
+        <div className="grid grid-cols-1 gap-4">
+          {Array.from({ length: 12 }).map((_, index) => (
+            <div 
+              key={index} 
+              className="bg-legacy-green/5 rounded-xl p-6 flex items-center justify-between animate-pulse"
+            >
+              <div className="text-2xl font-medium text-legacy-green/20">
+                {orderedMonths[index]?.month} {orderedMonths[index]?.year}
+              </div>
+              <div className="w-12 h-6 bg-legacy-green/10 rounded-full"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   }
 
   const handleContinue = () => {
