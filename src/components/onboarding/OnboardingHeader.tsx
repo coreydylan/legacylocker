@@ -17,6 +17,10 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
   const { session, nextStep } = useSessionStore();
   const selectedEdition = session.selectedEdition;
   const currentStep = session.currentStep;
+  const recipient = session.recipient;
+
+  // Define the recipient info step number
+  const RECIPIENT_INFO_STEP = 3;
 
   // TODO: Define total steps dynamically later if needed
   const totalSteps = 7; // Assuming 7 steps for now
@@ -28,9 +32,19 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
     <div className="sticky top-0 z-10 bg-legacy-green/5 backdrop-blur-sm min-h-[80px] sm:min-h-[120px]">
       {selectedEdition && (
         <div className="max-w-xl mx-auto flex gap-2 mb-4 sm:mb-6 pt-2 sm:pt-3 px-4">
-          {/* Tag 1: General Edition Type */}
+          {/* Tag 1: General Edition Type - Now potentially dynamic */}
           <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")}>
-            {selectedEdition.type === 'concierge' ? 'Concierge Edition' : `${selectedEdition.type} Edition`}
+            {
+              // Dynamic text for Signature after Recipient Info step
+              selectedEdition.type === 'signature' && 
+              currentStep > RECIPIENT_INFO_STEP && 
+              (recipient?.firstName || recipient?.recipient1FirstName) 
+                ? `SIGNATURE EDITION FOR ${recipient.firstName || recipient.recipient1FirstName}`
+                // Standard text
+                : selectedEdition.type === 'concierge' 
+                  ? 'Concierge Edition' 
+                  : `${selectedEdition.type} Edition`
+            }
           </div>
           {/* Tag 2: Display naturalLanguageName or fallback to label */}
           {selectedEdition.type !== 'concierge' && (

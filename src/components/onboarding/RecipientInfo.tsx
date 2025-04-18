@@ -329,7 +329,7 @@ const RecipientInfo: React.FC = () => {
               <div className="flex items-start gap-3">
                 <CalendarIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                 <div>
-                  <h4 className="font-medium mb-1">Why special dates matter</h4>
+                  <h4 className="font-medium font-manrope mb-1">Why special dates matter</h4>
                   <p className="text-sm text-muted-foreground">
                     When you provide important dates like birthdays or anniversaries, we can ensure special cards arrive at just the right time to celebrate these milestones.
                   </p>
@@ -538,7 +538,7 @@ const RecipientInfo: React.FC = () => {
                 <div className="flex items-start gap-3">
                   <CalendarIcon className="h-5 w-5 text-muted-foreground mt-0.5" />
                   <div>
-                    <h4 className="font-medium mb-1">Why special dates matter</h4>
+                    <h4 className="font-medium font-manrope mb-1">Why special dates matter</h4>
                     <p className="text-sm text-muted-foreground">
                       When you provide important dates like birthdays or anniversaries, we can ensure special cards arrive at just the right time to celebrate these milestones.
                     </p>

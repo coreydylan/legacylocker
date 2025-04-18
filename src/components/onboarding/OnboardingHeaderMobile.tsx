@@ -16,6 +16,10 @@ const OnboardingHeaderMobile: React.FC<OnboardingHeaderMobileProps> = ({
 }) => {
   const { session } = useSessionStore();
   const selectedEdition = session.selectedEdition;
+  const currentStep = session.currentStep;
+  const recipient = session.recipient;
+
+  const RECIPIENT_INFO_STEP = 3;
 
   const badgeClasses = "px-2 py-0.5 bg-legacy-green/10 text-legacy-green rounded-md whitespace-nowrap";
 
@@ -24,7 +28,15 @@ const OnboardingHeaderMobile: React.FC<OnboardingHeaderMobileProps> = ({
       {selectedEdition && (
         <div className="max-w-xl mx-auto flex gap-2 mb-4 pt-2 px-4">
           <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")}>
-            {selectedEdition.type === 'concierge' ? 'Concierge Edition' : `${selectedEdition.type} Edition`}
+            {
+              selectedEdition.type === 'signature' && 
+              currentStep > RECIPIENT_INFO_STEP && 
+              (recipient?.firstName || recipient?.recipient1FirstName) 
+                ? `SIGNATURE EDITION FOR ${recipient.firstName || recipient.recipient1FirstName}`
+                : selectedEdition.type === 'concierge' 
+                  ? 'Concierge Edition' 
+                  : `${selectedEdition.type} Edition`
+            }
           </div>
           {selectedEdition.type !== 'concierge' && (
              <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")} title={selectedEdition.label || ''}>
