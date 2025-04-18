@@ -44,7 +44,7 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
             if (!isHydrated) {
                 setHydrated(true);
             }
-        }, 5000); // 5 second timeout
+        }, 1500); // 1.5 second timeout to ensure snappier hydration fallback
 
         setLoadingTimeout(timeout);
 

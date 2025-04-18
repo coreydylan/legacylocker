@@ -993,32 +993,17 @@ export const useSessionStore = create<SessionStore>()(
           }));
       },
 
-      // <<< NEW ACTION: Save session state to Supabase >>>
+      // <<< NEW ACTION: Save session state via Edge Function >>>
       saveSessionToDb: async () => {
         const { session, sessionMetadata } = get();
         const sessionId = sessionMetadata.sessionId;
 
         if (!sessionId) {
-          console.warn('[saveSessionToDb] No session ID found, skipping save.');
-          return; // Do not save if there is no session ID
+          console.warn('[saveSessionToDb] No session ID found, cannot invoke function.');
+          throw new Error('No session ID available to save.'); // Throw error to indicate failure
         }
 
-        console.log(`[saveSessionToDb] Debug Report for Session: ${sessionId}`);
-
-        // <<< START RLS DEBUG LOGGING >>>
-        try {
-          const { data: authSessionData, error: authError } = await supabase.auth.getSession();
-          if (authError) {
-            console.error('[saveSessionToDb] Error getting Supabase auth session:', authError);
-          } else if (authSessionData?.session) {
-            console.log(`[saveSessionToDb] Auth check: User ID: ${authSessionData.session.user.id}, Email: ${authSessionData.session.user.email}`);
-          } else {
-            console.log('[saveSessionToDb] Auth check: No active Supabase user session found.');
-          }
-        } catch (authCatchError) {
-          console.error('[saveSessionToDb] Exception during auth check:', authCatchError);
-        }
-        // <<< END RLS DEBUG LOGGING >>>
+        console.log(`[saveSessionToDb] Preparing payload for Edge Function for session: ${sessionId}`);
 
         // Prepare the session data payload
         const sessionDataToSave = cloneDeep(session);
@@ -1028,65 +1013,48 @@ export const useSessionStore = create<SessionStore>()(
         expiresAt.setDate(expiresAt.getDate() + 30); // 30-day expiration
         const expiresAtISO = expiresAt.toISOString();
 
-        // <<< 2. Construct and Log Payload (Truncated) >>>
+        // Construct the payload for the Edge Function
         const payload = {
             id: sessionId, 
-            session_data: sessionDataToSave, // Keep the full object here
+            session_data: sessionDataToSave, 
             email: session.purchaser?.email, 
             updated_at: session.updatedAt || new Date().toISOString(),
             expires_at: expiresAtISO 
         };
-        
-        try {
-            // Simple truncation for logging
-            const truncatedPayload = JSON.stringify(payload, (key, value) => {
-                 if (typeof value === 'string' && value.length > 500) {
-                    return value.substring(0, 500) + '...[truncated]';
-                 }
-                 if (key === 'customData' || key === 'signatureData') {
-                     const jsonStr = JSON.stringify(value);
-                     if (jsonStr.length > 500) {
-                         return jsonStr.substring(0, 500) + '...[truncated]';
-                     }
-                 }
-                 return value;
-            }, 2); 
 
-            console.log('[saveSessionToDb] Payload for Supabase upsert:', truncatedPayload);
-        } catch (logError) {
-            console.error('[saveSessionToDb] Error stringifying payload for logging:', logError);
-            console.log('[saveSessionToDb] Raw Payload (might be large): ', payload);
-        }
-        
-        // <<< 3. Detailed Try/Catch for Upsert >>>
-        console.log(`[saveSessionToDb] Attempting upsert for session ${payload.id}...`); 
+        console.log(`[saveSessionToDb] Invoking 'save-session' Edge Function...`);
         try {
-            // Use the full payload object for the actual upsert
-            const { error } = await supabase
-                .from('sessions')
-                .upsert(payload); // Use the constructed payload
+          const { data, error } = await supabase.functions.invoke(
+            'save-session', 
+            { body: payload } 
+          );
 
-            if (error) {
-                console.error("[saveSessionToDb] Supabase upsert error object:", {
-                    code: error.code,
-                    message: error.message,
-                    details: error.details,
-                    hint: error.hint,
-                });
-                throw new Error(`Supabase upsert failed: ${error.message}`); 
-            } else {
-                console.log(`[saveSessionToDb] Session ${payload.id} upsert successful.`); 
-                set(state => ({
-                    sessionMetadata: { ...state.sessionMetadata, lastSaved: new Date() }
-                }));
-            }
+          if (error) {
+            console.error('[saveSessionToDb] Edge Function invocation error:', error);
+            throw new Error(`Edge Function invocation failed: ${error.message}`);
+          }
+
+          if (data?.error) {
+             console.error('[saveSessionToDb] Edge Function returned an error:', data.error);
+             throw new Error(`Edge Function execution failed: ${data.error}`);
+          }
+          
+          if (!data?.success) {
+             console.error('[saveSessionToDb] Edge Function did not return success:', data);
+             throw new Error('Edge Function execution did not indicate success.');
+          }
+
+          console.log(`[saveSessionToDb] Edge Function invoked successfully for session ${sessionId}.`);
+          // Update lastSaved timestamp in local state on successful save
+          set(state => ({
+              sessionMetadata: { ...state.sessionMetadata, lastSaved: new Date() }
+          }));
+
         } catch (err) {
-            console.error("[saveSessionToDb] Error during Supabase upsert call:", err);
-            console.groupEnd(); 
-            throw err; // Re-throw caught error
+            console.error("[saveSessionToDb] Error invoking Edge Function:", err);
+            // Re-throw the error so calling functions (like autosave) know it failed
+            throw err; 
         }
-        
-        console.groupEnd();
       },
 
       // <<< NEW ACTION: Load session state from Supabase >>>
@@ -1178,29 +1146,27 @@ export const useSessionStore = create<SessionStore>()(
           submitTriggerCount: state.submitTriggerCount
         }),
       // <<< Improved onRehydrateStorage: Ensures hydration completes properly >>>
-      onRehydrateStorage: () => (state, error) => {
+      onRehydrateStorage: () => (_finalState, _finalError) => {
         console.log("[onRehydrateStorage] Starting hydration process...");
         
-        if (error) {
-          console.error("[onRehydrateStorage] Hydration error for persisted metadata:", error);
+        if (_finalError) {
+          console.error("[onRehydrateStorage] Hydration error for persisted metadata:", _finalError);
           // Reset only the persisted parts if error occurs
-          if (state) {
-              state.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
-              state.submitTriggerCount = 0;
+          if (_finalState) {
+              _finalState.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
+              _finalState.submitTriggerCount = 0;
           }
-        } else if (state) {
-            console.log("[onRehydrateStorage] Metadata hydration successful.", state.sessionMetadata);
+        } else if (_finalState) {
+            console.log("[onRehydrateStorage] Metadata hydration successful.", _finalState.sessionMetadata);
         }
 
-        return (finalState, finalError) => {
-          if (finalState) {
-             console.log("[onRehydrateStorage] Setting final hydration state...");
-             // Always mark as hydrated after this process
-             finalState.isHydrated = true;
-             // Set loading state based on whether we have a session ID
-             finalState.isLoading = false; // Always set to false after hydration
-             console.log("[onRehydrateStorage] Post-hydration: isHydrated set to", finalState.isHydrated, "isLoading set to", finalState.isLoading);
+        return (_finalState, _finalError) => {
+          console.log("[onRehydrateStorage] Setting final hydration state (mutate state)...");
+          if (_finalState) {
+            _finalState.isHydrated = true;
+            _finalState.isLoading = false;
           }
+          console.log("[onRehydrateStorage] Post-hydration: isHydrated set to true, isLoading set to false");
         };
       },
     }
