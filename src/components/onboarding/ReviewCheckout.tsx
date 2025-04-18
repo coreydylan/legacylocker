@@ -111,32 +111,34 @@ const ReviewCheckout: React.FC = () => {
     setCurrentStep(step);
   };
 
-  const handlePlaceOrder = async () => {
-    if (!isPayable || isLoadingPaymentIntent || isSubmitting || !clientSecret) {
-        console.warn('Place order conditions not met.');
-        return;
+  // Handler called once Stripe confirms payment succeeded
+  const handlePaymentSuccess = async () => {
+    try {
+      await processOrder(useSessionStore.getState().session as SessionData);
+      console.log('[ReviewCheckout] processOrder completed after successful payment');
+      setSessionStatus('completed');
+    } catch (err) {
+      console.error('[ReviewCheckout] processOrder failed after payment success:', err);
+      setPaymentError('Your payment went through but we could not finalize the order. Please contact support.');
     }
-    
+  };
+
+  const handlePlaceOrder = () => {
+    if (!isPayable || isLoadingPaymentIntent || isSubmitting || !clientSecret) {
+      console.warn('Place order conditions not met.');
+      return;
+    }
+
     setIsSubmitting(true);
     setSessionStatus('processing');
 
-    try {
-      // 1. Persist order data to Supabase
-      await processOrder(useSessionStore.getState().session as SessionData);
-      console.log('[ReviewCheckout] Order data written, proceeding to payment');
-
-      // 2. Continue existing payment flow
-      const paymentForm = document.getElementById('payment-form') as HTMLFormElement | null;
-      if (paymentForm) {
-        paymentForm.requestSubmit();
-      } else {
-        console.error('Payment form not found!');
-        setPaymentError('Could not initiate payment. Please refresh.');
-        setIsSubmitting(false);
-      }
-    } catch (err) {
-      console.error('[ReviewCheckout] processOrder failed:', err);
-      setPaymentError('Failed to process order. Please try again.');
+    // Trigger Stripe form submit – CheckoutForm will handle payment
+    const paymentForm = document.getElementById('payment-form') as HTMLFormElement | null;
+    if (paymentForm) {
+      paymentForm.requestSubmit();
+    } else {
+      console.error('Payment form not found!');
+      setPaymentError('Could not initiate payment. Please refresh.');
       setIsSubmitting(false);
     }
   };
@@ -282,7 +284,7 @@ const ReviewCheckout: React.FC = () => {
               <Elements options={stripeElementsOptions} stripe={stripePromise}>
                 <CheckoutForm 
                   isExternallySubmitting={isSubmitting} 
-                  onSuccessfulPayment={() => setSessionStatus('completed')} 
+                  onSuccessfulPayment={handlePaymentSuccess} 
                 /> 
               </Elements>
             )}
