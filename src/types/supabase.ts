@@ -33,6 +33,7 @@ export interface StorySeriesRow {
 export interface StoryOption {
   id: string;
   label: string; // display_title
+  naturalLanguageName?: string;
   type: 'signature' | 'custom' | 'concierge';
   categoryDisplay: string; // theme
   subcategoryDisplay?: string; // subject

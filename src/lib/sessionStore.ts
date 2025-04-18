@@ -45,7 +45,8 @@ export interface SessionData {
   selectedEdition: {
     id: string;
     label: string;
-    description: string;
+    naturalLanguageName?: string;
+    description?: string;
     type: 'signature' | 'custom' | 'concierge';
     isHighlighted?: boolean;
   } | null;
@@ -175,13 +176,19 @@ interface Purchaser {
 }
 
 // Add type safety for edition types
-export type EditionType = 'signature' | 'custom' | 'concierge';
+export type EditionType = {
+  id: string;
+  label: string;
+  naturalLanguageName?: string; 
+  description?: string; // <<< Add description field
+  type: 'signature' | 'custom' | 'concierge';
+};
 
-// Update SessionMetadata to use EditionType
+// Update SessionMetadata to use EditionType string literal union
 interface SessionMetadata {
   sessionId: string | null;
   isActive: boolean;
-  editionType: EditionType | null;
+  editionType: 'signature' | 'custom' | 'concierge' | null; // <<< Change this type
   lastSaved: Date | null;
 }
 
@@ -218,7 +225,7 @@ interface SessionStore {
   updateValidationStatus: (isValid: boolean) => void; // <<< Add validation action
   triggerSubmit: () => void; // <<< Add submit trigger action
   // Added sessionMetadata actions
-  startSession: (editionType: EditionType) => void;
+  startSession: (edition: EditionType) => void;
   endSession: () => void;
   saveSession: () => void;
   initializeCustomDataDates: () => void; // <<< Add action interface
@@ -949,26 +956,36 @@ export const useSessionStore = create<SessionStore>()(
         set(state => ({ submitTriggerCount: state.submitTriggerCount + 1 }));
       },
 
-      startSession: (editionType: EditionType) => {
-          const newId = uuidv4();
-          set((state) => ({
-              sessionMetadata: {
-                  ...state.sessionMetadata,
-                  sessionId: newId,
-                  isActive: true,
-                  editionType,
-                  lastSaved: new Date(),
-              },
-              session: {
-                  ...state.session,
-                  selectedEdition: state.session.selectedEdition ? {
-                      ...state.session.selectedEdition,
-                      type: editionType,
-                  } : null,
-              },
-              isCurrentStepValid: false // <<< Reset validation on start
-          }));
-      },
+      startSession: (edition) => set((state) => {
+        const now = new Date();
+        console.log("['sessionStore']: startSession called with edition:", edition);
+        const newSessionId = state.sessionMetadata.sessionId || uuidv4();
+        return {
+          session: {
+            ...state.session,
+            sessionId: newSessionId, // Ensure sessionId is set
+            selectedEdition: edition, // Store the entire edition object
+            updatedAt: now.toISOString(),
+            createdAt: state.session.createdAt || now.toISOString(),
+            // Reset dependent fields when starting/changing edition
+            recipientType: null, // Reset recipient type
+            purchaser: { fullName: '', email: '', phone: '' },
+            recipient: { type: 'individual' }, // Reset recipient with default type
+            cards: {},
+            signatureData: [],
+            customData: [],
+            currentStep: 1, // Always start at step 1 (Recipient Selection)
+            lastCompletedStep: 0,
+          },
+          sessionMetadata: {
+            ...state.sessionMetadata,
+            sessionId: newSessionId,
+            isActive: true,
+            editionType: edition.type, // Set editionType based on the passed object
+            lastSaved: null, // Reset lastSaved on new session start
+          }
+        };
+      }),
       endSession: () => {
           set((state) => ({
               sessionMetadata: {

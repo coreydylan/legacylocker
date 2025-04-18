@@ -117,8 +117,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
-      console.log('[OnboardingModal] Modal close triggered. Evaluating session state...');
-
+      console.log('[OnboardingModal] Modal close triggered. Bypassing save logic for debug.');
+      // --- TEMPORARILY BYPASS ALL LOGIC ---
+      /*
       (async () => {
         try {
           // 1) Active session → always save before closing
@@ -128,7 +129,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
             });
             await sessionManager.saveSessionData();
             console.log('[OnboardingModal] Active session saved successfully.');
-            onClose();
+            onClose(); // Original call was here
             return;
           }
 
@@ -162,13 +163,19 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
             storeResetSession();
           }
 
-          onClose();
+          // Original onClose call was here
+          // onClose(); 
         } catch (err) {
           console.error('[OnboardingModal] Error during close handling:', err);
-          // Even if saving fails, we still close the modal to avoid trapping the user
-          onClose();
+          // Original onClose call was here
+          // onClose(); 
         }
       })();
+      */
+      // --- END BYPASS ---
+
+      // Call onClose directly for debugging
+      onClose(); 
     }
   };
 
@@ -183,8 +190,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleModalCloseTrigger} modal>
+      <Dialog open={isOpen} modal>
         <DialogPortal>
+          {/* Restore DialogOverlay */}
           <DialogOverlay className="bg-black/30 backdrop-blur-[2px]" />
           <DialogPrimitive.Content
             style={isMobile ? { top: 0, left: 0, transform: 'none' } : undefined}
@@ -237,7 +245,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 </div>
               ) : (
                 <>
-                  <div className="flex-shrink-0 bg-white/40 border-b border-white/20 w-full backdrop-blur-sm z-10">
+                  <div className="flex-shrink-0 bg-white/40 border-b border-white/20 w-full backdrop-blur-sm z-30">
                     {isMobile ? (
                       <OnboardingHeaderMobile
                         handleBack={handleBack}
@@ -251,6 +259,8 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     )}
                   </div>
                   
+                  {/* Restore Content Flow Div */}
+                  
                   <div className={cn(
                     "flex-1 overflow-y-auto min-h-0",
                     "pb-24 md:pb-0",
@@ -258,6 +268,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                   )}>
                     <OnboardingFlow />
                   </div>
+                   
                 </>
               )}
             </SafeAreaWrapper>

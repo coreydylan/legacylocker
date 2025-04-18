@@ -40,7 +40,7 @@ export function useSessionManager() {
 
   // --- Core Session Lifecycle Functions ---
 
-  const initializeNewLocalSession = useCallback((edition: { id: string; label: string; type: EditionType }) => {
+  const initializeNewLocalSession = useCallback((edition: EditionType) => {
     const { sessionMetadata: currentMeta } = useSessionStore.getState();
     if (currentMeta.isActive && currentMeta.sessionId) {
       console.warn('[SessionManager] initializeNewLocalSession called but active session already exists. Aborting to prevent overwrite.', currentMeta);
@@ -48,16 +48,16 @@ export function useSessionManager() {
     }
 
     console.log('[SessionManager] Initializing new local session:', edition);
-    updateSession('selectedEdition', edition);
-    updateSession('editionFlow.type', edition.type);
-    updateSession('currentStep', 1);
-    updateSession('lastCompletedStep', 0);
-  }, [updateSession]);
+    startSession(edition);
+
+    console.log('[SessionManager] Called startSession action.');
+
+  }, [startSession]);
 
   const activateAndPersistSession = useCallback(async () => {
     const currentSessionState = useSessionStore.getState();
     const purchaserEmail = currentSessionState.session.purchaser?.email;
-    const editionType = currentSessionState.session.selectedEdition?.type;
+    const selectedEdition = currentSessionState.session.selectedEdition;
 
     console.log('[activateAndPersistSession] Start');
     
@@ -76,14 +76,14 @@ export function useSessionManager() {
       return;
     }
 
-    if (!editionType) {
-      console.error('[activateAndPersistSession] Missing edition type. Aborting.');
-      toast({ title: "Error", description: "Cannot save session, edition type is missing.", variant: "destructive" });
+    if (!selectedEdition) {
+      console.error('[activateAndPersistSession] Missing selectedEdition. Aborting.');
+      toast({ title: "Error", description: "Cannot save session, edition details are missing.", variant: "destructive" });
       return;
     }
 
     // Start session (assigns ID)
-    startSession(editionType);
+    startSession(selectedEdition);
     const newSessionId = useSessionStore.getState().sessionMetadata.sessionId;
     console.log('[activateAndPersistSession] New session ID assigned:', newSessionId);
 

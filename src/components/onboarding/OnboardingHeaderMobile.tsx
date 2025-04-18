@@ -17,41 +17,18 @@ const OnboardingHeaderMobile: React.FC<OnboardingHeaderMobileProps> = ({
   const { session } = useSessionStore();
   const selectedEdition = session.selectedEdition;
 
-  const badgeClasses = "px-2 py-0.5 bg-legacy-green/10 text-legacy-green rounded-md text-xs font-medium whitespace-nowrap";
-
-  const formatEditionLabel = (edition: typeof selectedEdition): string => {
-    if (!edition) return 'N/A';
-    const { type, label } = edition;
-    if (type === 'concierge') return '';
-    if (!label) return 'N/A';
-    
-    const parts = label.split(' – ');
-    const category = parts[0]?.trim();
-    const subcategory = parts[1]?.trim(); 
-    const location = parts.length === 3 ? parts[2]?.trim() : undefined; 
-
-    if (category === 'Sports' && location && subcategory) {
-      return `${location} ${subcategory}`;
-    }
-    if (category === 'Music' && location && subcategory) {
-      return `${location} ${subcategory}`;
-    }
-    if (category === 'Local History' && location) { 
-      return `${location} Local History`; 
-    }
-    return label;
-  };
+  const badgeClasses = "px-2 py-0.5 bg-legacy-green/10 text-legacy-green rounded-md whitespace-nowrap";
 
   return (
-    <div className="sticky top-0 z-10 bg-legacy-green/5 backdrop-blur-sm min-h-[80px]">
+    <div className="sticky top-0 z-90 bg-legacy-green/5 backdrop-blur-sm min-h-[80px]">
       {selectedEdition && (
         <div className="max-w-xl mx-auto flex gap-2 mb-4 pt-2 px-4">
-          <div className={cn(badgeClasses, "flex-1 text-center truncate")}>
-            {selectedEdition.type === 'concierge' ? 'Concierge Edition' : `${selectedEdition.type.charAt(0).toUpperCase() + selectedEdition.type.slice(1)} Edition`}
+          <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")}>
+            {selectedEdition.type === 'concierge' ? 'Concierge Edition' : `${selectedEdition.type} Edition`}
           </div>
           {selectedEdition.type !== 'concierge' && (
-             <div className={cn(badgeClasses, "flex-1 text-center truncate")} title={selectedEdition.label || ''}>
-              {formatEditionLabel(selectedEdition)}
+             <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")} title={selectedEdition.label || ''}>
+              {selectedEdition.naturalLanguageName || selectedEdition.label || ''}
             </div>
           )}
         </div>

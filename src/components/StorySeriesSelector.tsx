@@ -19,6 +19,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useSessionStore } from '@/lib/sessionStore';
+import { EditionType as SessionEditionType } from '@/lib/sessionStore';
 import { useSessionManager } from '@/hooks/useSessionManager';
 import OnboardingModal from './OnboardingModal';
 import StorySeriesPricing from './story-selector/StorySeriesPricing';
@@ -84,6 +85,7 @@ const StorySeriesSelector = () => {
       return {
         id: row.id,
         label: row.display_title,
+        naturalLanguageName: row.natural_language_name,
         type: type,
         categoryDisplay: row.theme ?? 'Other',
         subcategoryDisplay: row.subject ?? undefined,
@@ -150,11 +152,22 @@ const StorySeriesSelector = () => {
   };
 
   const proceedWithSelection = (series: SeriesType | StoryOption) => {
-    initializeNewLocalSession({
+    // Type guard to ensure we have the necessary field from StoryOption if possible
+    const naturalLanguageName = 'naturalLanguageName' in series ? series.naturalLanguageName : undefined;
+    // Add description field if available (assuming StoryOption might have it)
+    const description = 'description' in series ? series.description : undefined;
+    
+    // Construct the object matching EditionType
+    const editionToInitialize: SessionEditionType = {
       id: series.id,
       label: series.label,
+      naturalLanguageName: naturalLanguageName,
+      description: description, // Add description
       type: series.type
-    });
+    };
+    
+    initializeNewLocalSession(editionToInitialize); // Pass the fully typed object
+
     setSelectedSeriesForModal(series);
     setDialogOpen(false);
     setOnboardingModalOpen(true);
