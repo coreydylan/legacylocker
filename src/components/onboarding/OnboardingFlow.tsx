@@ -18,6 +18,7 @@ import { SessionData, isValidSession } from '@/lib/sessionStore'; // Import Sess
 // <<< Import new/renamed step components (will be created next) >>>
 import WelcomeCardStep from './WelcomeCardStep';
 import MonthlyCustomizationStep from './MonthlyCustomizationStep';
+import OrderConfirmation from './OrderConfirmation'; // <<< Import new confirmation component
 import { useToast } from '@/components/ui/use-toast';
 import { Button } from '@/components/ui/button';
 
@@ -31,7 +32,8 @@ const STEPS = {
   ENVELOPE_ADDRESSEE: 5,
   WELCOME_CARD: 6, // Renamed from EDITION_DETAILS
   MONTHLY_CUSTOMIZATION: 7, // New step for grid/notes
-  REVIEW_CHECKOUT: 8 // Incremented
+  REVIEW_CHECKOUT: 8, // Incremented
+  ORDER_CONFIRMATION: 9 // <<< Add Confirmation Step
 } as const;
 
 interface OnboardingFlowProps {
@@ -100,6 +102,8 @@ const isStepDataValid = (session: SessionData | null | undefined, step: number):
       }
       const prevStepValid2 = isStepDataValid(session, STEPS.MONTHLY_CUSTOMIZATION).isValid;
       return { isValid: prevStepValid2 }; 
+    case STEPS.ORDER_CONFIRMATION:
+      return { isValid: true };
     default:
       return { isValid: false };
   }
@@ -330,6 +334,7 @@ const OnboardingFlow: React.FC<OnboardingFlowProps> = ({
             );
         }
       case STEPS.REVIEW_CHECKOUT: return <ReviewCheckout />;
+      case STEPS.ORDER_CONFIRMATION: return <OrderConfirmation />;
       default:
         console.log(`OnboardingFlow: No matching component for step ${step}, rendering null`);
         return null;

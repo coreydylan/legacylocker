@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
@@ -64,7 +65,11 @@ serve(async (req) => {
       const existingEmail = existingSession.email;
       const newEmail = email;
 
-      if (existingEmail && newEmail && existingEmail !== newEmail) {
+      // Compare emails in a case‑insensitive manner to avoid false mismatches
+      const existingEmailLower = existingEmail ? existingEmail.toLowerCase() : null;
+      const newEmailLower = newEmail ? newEmail.toLowerCase() : null;
+
+      if (existingEmailLower && newEmailLower && existingEmailLower !== newEmailLower) {
           console.warn(`Potential session hijack attempt: Session ${id} exists with email ${existingEmail}, but request provides ${newEmail}.`);
           // Optionally: Allow update if existingEmail was null/undefined? Depends on desired logic.
           // For now, strict check: If existing email exists, new one must match.

@@ -635,7 +635,7 @@ const createNewSession = (): SessionData => {
   };
 };
 
-// Define isValidSession *before* useSessionStore as it's used in onRehydrate
+// Define isValidSession *before* useSessionStore as it's used in onRehydrateStorage
 export const isValidSession = (session: SessionData | null | undefined): session is SessionData => {
   if (!session) return false;
   const maxSteps = 7; 
@@ -855,36 +855,53 @@ export const useSessionStore = create<SessionStore>()(
           const monthlyEventDetails = await calculateMonthlyEventDetails(recipient, purchaser, recipientType, chronologicalMonths);
 
            set(state => {
-               // Map the calculated details directly to the customData structure
-               const updatedCustomData = state.session.customData.map(customMonthData => {
-                   // Find the *exact* detail matching this month AND year
-                   const relevantDetail = monthlyEventDetails.find(detail =>
-                       detail.month === customMonthData.month && detail.year === customMonthData.year
-                   );
+               let baseCustomData = state.session.customData;
 
-                   if (relevantDetail) {
-                       // Update the fields using the calculated values
-                       return {
-                           ...customMonthData,
-                           enabled: relevantDetail.calculatedEnabled, 
-                           shipDate: relevantDetail.calculatedShipDate, 
-                           footerMessage: relevantDetail.calculatedFooterMessage,
-                       };
-                   }
-                   return customMonthData;
+               // 1) If customData does not yet have 12 entries, create a baseline first
+               if (baseCustomData.length !== 12) {
+                 baseCustomData = chronologicalMonths.map(({ month, year }) => ({
+                   month,
+                   year,
+                   title: '',
+                   useExactTitle: false,
+                   story: '',
+                   useExactStory: false,
+                   artworkOption: null,
+                   photoUrl: undefined,
+                   enabled: false,
+                   footerMessage: '',
+                   shipDate: ''
+                 }));
+               }
+
+               // 2) Merge calculated details into baseline
+               const updatedCustomData = baseCustomData.map(customMonthData => {
+                 const relevantDetail = monthlyEventDetails.find(detail =>
+                   detail.month === customMonthData.month && detail.year === customMonthData.year
+                 );
+
+                 if (relevantDetail) {
+                   return {
+                     ...customMonthData,
+                     enabled: relevantDetail.calculatedEnabled,
+                     shipDate: relevantDetail.calculatedShipDate,
+                     footerMessage: relevantDetail.calculatedFooterMessage,
+                   };
+                 }
+                 return customMonthData;
                });
 
                console.log("['initializeCustomDataDates']: Final customData:", updatedCustomData);
                if (JSON.stringify(state.session.customData) !== JSON.stringify(updatedCustomData)) {
                  return {
-                     session: {
-                         ...state.session,
-                         customData: updatedCustomData,
-                         updatedAt: new Date().toISOString()
-                     }
+                   session: {
+                     ...state.session,
+                     customData: updatedCustomData,
+                     updatedAt: new Date().toISOString(),
+                   },
                  };
                }
-               return {}; 
+               return {};
            });
       },
 

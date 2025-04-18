@@ -116,6 +116,8 @@ const ReviewCheckout: React.FC = () => {
     try {
       await processOrder(useSessionStore.getState().session as SessionData);
       console.log('[ReviewCheckout] processOrder completed after successful payment');
+      // Navigate to the next step (confirmation screen)
+      useSessionStore.getState().nextStep(); 
       setSessionStatus('completed');
     } catch (err) {
       console.error('[ReviewCheckout] processOrder failed after payment success:', err);
