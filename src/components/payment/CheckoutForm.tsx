@@ -96,6 +96,12 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
             setMessage("An unexpected error occurred. Please try again.");
         }
         console.error("Stripe confirmation error:", error);
+        console.error("Stripe error details:", { 
+            type: error.type, 
+            message: error.message, 
+            code: error.code, 
+            // payment_intent: error.payment_intent // Include if helpful 
+        });
         // If triggered externally, we might need a way to signal failure back up?
     } else {
       // If no error but paymentIntent not succeeded yet, we can show processing message
