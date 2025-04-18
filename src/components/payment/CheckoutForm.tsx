@@ -73,19 +73,22 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
     setIsLoading(true);
     setMessage(null); // Clear previous messages
 
-    const { error } = await stripe.confirmPayment({
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        // Make sure to change this to your payment completion page
-        return_url: `${window.location.origin}/checkout/success`, // Use window.location.origin for dynamic base URL
+        // Redirect back to the SAME url to keep the user inside the modal.
+        return_url: window.location.href,
       },
-      // We can disable the redirect here if we want to handle the result 
-      // directly within this component without leaving the page, but for 
-      // most flows (like 3D Secure), redirection is necessary.
-      // redirect: 'if_required' 
+      // Only redirect when required for additional auth (e.g., 3‑D Secure)
+      redirect: 'if_required',
     });
 
-    // This point is only reached if there is an immediate error or if redirect: 'if_required' is used
+    // If no immediate error and paymentIntent available, check status
+    if (!error && paymentIntent?.status === 'succeeded') {
+      onSuccessfulPayment?.();
+    }
+
+    // Handle immediate error scenarios
     if (error) {
         if (error.type === "card_error" || error.type === "validation_error") {
             setMessage(error.message || "An error occurred with your payment details.");
@@ -95,10 +98,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
         console.error("Stripe confirmation error:", error);
         // If triggered externally, we might need a way to signal failure back up?
     } else {
-      // Success without redirection (only if redirect: 'if_required' was used and no redirect needed)
-      // Or this could be a processing state
-      setMessage("Processing payment...");
-      // Potentially call onSuccessfulPayment if applicable here
+      // If no error but paymentIntent not succeeded yet, we can show processing message
+      setMessage('Processing payment...');
     }
 
     // Reset internal loading state regardless of external trigger
