@@ -51,7 +51,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   resumeToken 
 }) => {
   const sessionManager = useSessionManager();
-  const { sessionStatus } = sessionManager;
+  const { sessionStatus, setSessionStatus } = sessionManager;
 
   const { 
     session, 
@@ -64,6 +64,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
     saveSession,
     saveSessionToDb,
     resetSession: storeResetSession,
+    submitTriggerCount,
+    submitSession,
+    setSessionComplete,
   } = useSessionStore((state) => ({
     session: state.session,
     sessionMetadata: state.sessionMetadata,
@@ -75,6 +78,9 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
     saveSession: state.saveSession,
     saveSessionToDb: state.saveSessionToDb,
     resetSession: state.resetSession,
+    submitTriggerCount: state.submitTriggerCount,
+    submitSession: state.submitSession,
+    setSessionComplete: state.setSessionComplete,
   }));
 
   const { closeOnboarding } = useModalStore();
@@ -116,6 +122,36 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
       });
     }
   }, [isHydrated, isLoading, selectedSeries, session.selectedEdition]);
+
+  // --- Effect to handle submission triggered by MobileNavFooter ---
+  useEffect(() => {
+    if (submitTriggerCount > 0) {
+      console.log('[OnboardingModal] Submit triggered by count:', submitTriggerCount);
+      
+      setSessionStatus('processing'); 
+
+      (async () => {
+        try {
+          const success = await submitSession();
+          if (success) {
+            console.log('[OnboardingModal] Session submission successful.');
+            setSessionStatus('completed'); 
+            setSessionComplete(true);
+            toast({ title: "Order Placed!", description: "Your order has been successfully submitted." });
+          } else {
+            console.error('[OnboardingModal] Session submission failed.');
+            setSessionStatus('idle');
+            toast({ title: "Submission Failed", description: "There was an error placing your order. Please try again.", variant: "destructive" });
+          }
+        } catch (error) {
+          console.error('[OnboardingModal] Error during session submission:', error);
+          setSessionStatus('idle');
+          toast({ title: "Error", description: "An unexpected error occurred during submission.", variant: "destructive" });
+        }
+      })();
+    }
+  }, [submitTriggerCount, submitSession, setSessionStatus, setSessionComplete, toast]);
+  // --- End Submission Effect ---
 
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
