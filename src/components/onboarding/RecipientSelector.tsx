@@ -79,7 +79,7 @@ const RecipientSelector: React.FC = () => {
   return (
     <div className="max-w-3xl mx-auto py-12">
       <div className="text-center mb-10">
-        <h1 className="text-3xl font-semibold text-legacy-green mb-4">
+        <h1 className="text-3xl font-manrope font-semibold text-legacy-green mb-4">
           Who is this gift for?
         </h1>
         <p className="text-lg text-gray-600">
@@ -112,7 +112,7 @@ const RecipientSelector: React.FC = () => {
                 {option.icon}
               </div>
 
-              <h3 className="text-xl font-medium mb-2">{option.label}</h3>
+              <h3 className="text-xl font-manrope font-medium mb-2">{option.label}</h3>
 
               <p className="text-gray-600 flex-grow mb-4">
                 {option.description}

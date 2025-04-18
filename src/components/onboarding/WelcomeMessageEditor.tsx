@@ -57,7 +57,10 @@ const WelcomeMessageEditor: React.FC = () => {
         value={welcomeMessage}
         onChange={handleChange}
         placeholder="Craft a short welcome message for your recipient. This optional card will be included with their very first monthly delivery."
-        className="min-h-[120px]"
+        className={cn(
+          "min-h-[120px] bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+          "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        )}
         maxLength={characterLimit}
       />
     </div>

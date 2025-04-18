@@ -206,8 +206,8 @@ const ShippingInfoCard: React.FC = () => {
   console.log("ShippingInfoCard: Reached return statement");
   return (
     <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
-      <div className="mb-6 md:mb-10 text-left md:text-center">
-        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
+      <div className="mb-6 md:mb-10 text-left">
+        <h1 className="text-xl md:text-3xl font-manrope font-semibold text-legacy-green mb-3 md:mb-4">
           Where should we send their cards?
         </h1>
         <p className="text-sm md:text-lg text-gray-600 px-4 sm:px-0">
@@ -223,7 +223,7 @@ const ShippingInfoCard: React.FC = () => {
         className="space-y-6 md:space-y-8"
       >
         <div>
-          <h2 className="text-xl font-medium text-legacy-dark mb-4 border-b pb-2">Shipping Info</h2>
+          <h2 className="text-xl font-manrope font-medium text-legacy-dark mb-4 border-b pb-2">Shipping Info</h2>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="shippingName" className="text-legacy-green font-medium">
@@ -236,8 +236,9 @@ const ShippingInfoCard: React.FC = () => {
                 value={watch('shippingName')}
                 onChange={handleShippingNameChange}
                 className={cn(
-                  "h-12 w-full",
-                  errors.shippingName ? "border-red-500 focus-visible:ring-red-500" : ""
+                  "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                  "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                  errors.shippingName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
                 )}
                 aria-invalid={!!errors.shippingName}
                 aria-describedby={errors.shippingName ? "shippingName-error" : undefined}
@@ -260,6 +261,14 @@ const ShippingInfoCard: React.FC = () => {
                     onChange={handleAddressInputChange}
                     onSelect={handleAddressSelect}
                     placeholder="Start typing the recipient's address..."
+                    className=""
+                    inputClassName={cn(
+                      "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
+                      "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                      (errors.shippingAddress?.street || errors.shippingAddress?.city || errors.shippingAddress?.state || errors.shippingAddress?.postalCode || errors.shippingAddress?.country) 
+                        ? "ring-2 ring-red-500 focus-visible:ring-red-500" 
+                        : ""
+                    )}
                     error={errors.shippingAddress?.street?.message || 
                            errors.shippingAddress?.city?.message || 
                            errors.shippingAddress?.state?.message || 

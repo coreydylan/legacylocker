@@ -58,7 +58,12 @@ function DateInput({
   return (
     <AriaDateInput
       className={composeRenderProps(className, (className) =>
-        cn(fieldGroupVariants({ variant }), "rounded-lg border border-gray-200 px-4 py-3 focus-within:ring-1 focus-within:ring-neutral-300", className)
+        cn(
+          fieldGroupVariants({ variant }), 
+          "rounded-lg bg-transparent px-4 py-3",
+          "focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
+          className
+        )
       )}
       {...props}
     >

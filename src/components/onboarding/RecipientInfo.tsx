@@ -200,8 +200,8 @@ const RecipientInfo: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
-      <div className="mb-6 md:mb-10 text-left md:text-center">
-        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
+      <div className="mb-6 md:mb-10 text-left">
+        <h1 className="text-xl md:text-3xl font-manrope font-semibold text-legacy-green mb-3 md:mb-4">
           {recipientType === 'individual' 
             ? "Recipient Information" 
             : "Couple Information"}
@@ -231,8 +231,9 @@ const RecipientInfo: React.FC = () => {
                   id="firstName"
                   {...register('firstName')}
                   className={cn(
-                    "h-12 w-full",
-                    isIndividualErrors(errors) && errors.firstName ? "border-red-500 focus-visible:ring-red-500" : ""
+                    "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    isIndividualErrors(errors) && errors.firstName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
                   )}
                 />
                 {isIndividualErrors(errors) && errors.firstName && 
@@ -247,8 +248,9 @@ const RecipientInfo: React.FC = () => {
                   id="lastName"
                   {...register('lastName')}
                   className={cn(
-                    "h-12 w-full",
-                    isIndividualErrors(errors) && errors.lastName ? "border-red-500 focus-visible:ring-red-500" : ""
+                    "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    isIndividualErrors(errors) && errors.lastName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
                   )}
                 />
                 {isIndividualErrors(errors) && errors.lastName && 
@@ -272,8 +274,9 @@ const RecipientInfo: React.FC = () => {
                     <SelectTrigger 
                       id="relationship" 
                       className={cn(
-                        "h-12 w-full",
-                        errors.relationship ? "border-red-500 focus-visible:ring-red-500" : ""
+                        "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                        "focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                        errors.relationship ? "ring-2 ring-red-500 focus:ring-red-500" : ""
                       )}
                       tabIndex={0}
                       onKeyDown={(e) => {
@@ -306,13 +309,19 @@ const RecipientInfo: React.FC = () => {
               <Controller
                 name="birthday"
                 control={control}
-                render={({ field }) => (
-                  <JollyDateField
-                    value={parseDateToCalendarDate(field.value)}
-                    onChange={(date) => field.onChange(dateToISOString(date))}
-                    className="h-12 w-full"
-                  />
-                )}
+                render={({ field }) => {
+                  const birthdayErrorClass = isIndividualErrors(errors) && errors.birthday ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
+                  return (
+                    <JollyDateField
+                      value={parseDateToCalendarDate(field.value)}
+                      onChange={(date) => field.onChange(dateToISOString(date))}
+                      className={cn(
+                        "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
+                        birthdayErrorClass
+                      )}
+                    />
+                  );
+                }}
               />
             </div>
             
@@ -342,8 +351,9 @@ const RecipientInfo: React.FC = () => {
                       id="recipient1FirstName"
                       {...register('recipient1FirstName')}
                       className={cn(
-                        "h-12 w-full",
-                        isCoupleErrors(errors) && errors.recipient1FirstName ? "border-red-500 focus-visible:ring-red-500" : ""
+                        "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        isCoupleErrors(errors) && errors.recipient1FirstName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
                       )}
                     />
                     {isCoupleErrors(errors) && errors.recipient1FirstName && 
@@ -358,8 +368,9 @@ const RecipientInfo: React.FC = () => {
                       id="recipient1LastName"
                       {...register('recipient1LastName')}
                       className={cn(
-                        "h-12 w-full",
-                        isCoupleErrors(errors) && errors.recipient1LastName ? "border-red-500 focus-visible:ring-red-500" : ""
+                        "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        isCoupleErrors(errors) && errors.recipient1LastName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
                       )}
                     />
                     {isCoupleErrors(errors) && errors.recipient1LastName && 
@@ -374,13 +385,19 @@ const RecipientInfo: React.FC = () => {
                   <Controller
                     name="recipient1Birthday"
                     control={control}
-                    render={({ field }) => (
-                      <JollyDateField
-                        value={parseDateToCalendarDate(field.value)}
-                        onChange={(date) => field.onChange(dateToISOString(date))}
-                        className="h-12 w-full"
-                      />
-                    )}
+                    render={({ field }) => {
+                      const r1BirthdayErrorClass = isCoupleErrors(errors) && errors.recipient1Birthday ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
+                      return (
+                        <JollyDateField
+                          value={parseDateToCalendarDate(field.value)}
+                          onChange={(date) => field.onChange(dateToISOString(date))}
+                          className={cn(
+                            "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
+                            r1BirthdayErrorClass
+                          )}
+                        />
+                      );
+                    }}
                   />
                 </div>
               </div>
@@ -398,8 +415,9 @@ const RecipientInfo: React.FC = () => {
                       id="recipient2FirstName"
                       {...register('recipient2FirstName')}
                       className={cn(
-                        "h-12 w-full",
-                        isCoupleErrors(errors) && errors.recipient2FirstName ? "border-red-500 focus-visible:ring-red-500" : ""
+                        "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        isCoupleErrors(errors) && errors.recipient2FirstName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
                       )}
                     />
                     {isCoupleErrors(errors) && errors.recipient2FirstName && 
@@ -414,8 +432,9 @@ const RecipientInfo: React.FC = () => {
                       id="recipient2LastName"
                       {...register('recipient2LastName')}
                       className={cn(
-                        "h-12 w-full",
-                        isCoupleErrors(errors) && errors.recipient2LastName ? "border-red-500 focus-visible:ring-red-500" : ""
+                        "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                        "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                        isCoupleErrors(errors) && errors.recipient2LastName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
                       )}
                     />
                     {isCoupleErrors(errors) && errors.recipient2LastName && 
@@ -430,13 +449,19 @@ const RecipientInfo: React.FC = () => {
                   <Controller
                     name="recipient2Birthday"
                     control={control}
-                    render={({ field }) => (
-                      <JollyDateField
-                        value={parseDateToCalendarDate(field.value)}
-                        onChange={(date) => field.onChange(dateToISOString(date))}
-                        className="h-12 w-full"
-                      />
-                    )}
+                    render={({ field }) => {
+                      const r2BirthdayErrorClass = isCoupleErrors(errors) && errors.recipient2Birthday ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
+                      return (
+                        <JollyDateField
+                          value={parseDateToCalendarDate(field.value)}
+                          onChange={(date) => field.onChange(dateToISOString(date))}
+                          className={cn(
+                            "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
+                            r2BirthdayErrorClass
+                          )}
+                        />
+                      );
+                    }}
                   />
                 </div>
               </div>
@@ -458,8 +483,9 @@ const RecipientInfo: React.FC = () => {
                       <SelectTrigger 
                         id="relationship" 
                         className={cn(
-                          "h-12 w-full",
-                          errors.relationship ? "border-red-500 focus-visible:ring-red-500" : ""
+                          "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                          "focus:ring-2 focus:ring-ring focus:ring-offset-2",
+                          errors.relationship ? "ring-2 ring-red-500 focus:ring-red-500" : ""
                         )}
                         tabIndex={0}
                         onKeyDown={(e) => {
@@ -492,13 +518,19 @@ const RecipientInfo: React.FC = () => {
                 <Controller
                   name="anniversary"
                   control={control}
-                  render={({ field }) => (
-                    <JollyDateField
-                      value={parseDateToCalendarDate(field.value)}
-                      onChange={(date) => field.onChange(dateToISOString(date))}
-                      className="h-12 w-full"
-                    />
-                  )}
+                  render={({ field }) => {
+                    const anniversaryErrorClass = isCoupleErrors(errors) && errors.anniversary ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
+                    return (
+                      <JollyDateField
+                        value={parseDateToCalendarDate(field.value)}
+                        onChange={(date) => field.onChange(dateToISOString(date))}
+                        className={cn(
+                          "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
+                          anniversaryErrorClass
+                        )}
+                      />
+                    );
+                  }}
                 />
               </div>
               

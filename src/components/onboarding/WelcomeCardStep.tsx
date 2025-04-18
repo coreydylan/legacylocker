@@ -44,7 +44,7 @@ const WelcomeCardStep: React.FC = () => {
         {/* <div className="flex justify-between items-start gap-4"> */} 
           {/* <<< Text Content takes full width >>> */}
           <div className="space-y-2 pr-12"> {/* Add right padding to prevent text overlap with switch */}
-            <h3 className="text-lg font-medium text-legacy-green">Welcome Card</h3>
+            <h3 className="text-lg font-manrope font-medium text-legacy-green">Welcome Card</h3>
             <p className="text-sm text-legacy-green/90 leading-relaxed"> 
               With the very first delivery, we can include an optional welcome card featuring a note from you (at no extra cost). It's a chance to share why you picked this gift, what you hope it brings them, or anything else that feels worth saying before the journey begins. Think of it as your opening message—a personal prelude to the year ahead.
             </p>
@@ -69,7 +69,7 @@ const WelcomeCardStep: React.FC = () => {
 
       {/* <<< Add Desktop Navigation Buttons >>> */}
       {!isMobile && (
-        <div className="flex justify-between items-center pt-6 border-t max-w-2xl mx-auto">
+        <div className="flex justify-between items-center pt-6 max-w-2xl mx-auto">
           <Button
             type="button"
             variant="outline"

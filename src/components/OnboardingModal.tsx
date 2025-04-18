@@ -205,7 +205,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                 : [
                     // --- DESKTOP ---
                     "fixed left-[50%] top-[50%] z-50",
-                    "h-[85vh] w-[85vw] max-w-[1000px]",
+                    "h-[85vh] w-[85vw] max-w-3xl",
                     "translate-x-[-50%] translate-y-[-50%]",
                     "flex flex-col",
                     "bg-white/90",

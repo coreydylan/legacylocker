@@ -168,9 +168,15 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
               <PopoverTrigger asChild>
                 <Button
                   variant={"outline"}
-                  className={`w-full justify-start text-left font-normal ${!shipDate ? "text-muted-foreground" : ""}`}
+                  className={cn(
+                    "w-full justify-start text-left font-normal h-10 px-3 py-2",
+                    "bg-legacy-green/5 border-0 rounded-md",
+                    "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+                    "text-legacy-gray-darker",
+                    !shipDate && "text-legacy-gray-darker/60"
+                  )}
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  <CalendarIcon className="mr-2 h-4 w-4 text-legacy-gray-darker/80" />
                   {displayDate}
                 </Button>
               </PopoverTrigger>
@@ -201,7 +207,10 @@ const SignatureMonthCard: React.FC<SignatureMonthCardProps> = ({
               value={footerMessage}
               onChange={handleFooterChange}
               placeholder="e.g., Happy Birthday! Love, The Smiths"
-              className="min-h-[60px]"
+              className={cn(
+                "min-h-[60px] bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+                "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              )}
               maxLength={characterLimit}
             />
           </div>

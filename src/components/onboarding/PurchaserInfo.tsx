@@ -95,7 +95,7 @@ const PurchaserInfo: React.FC = () => {
       className="max-w-md mx-auto px-4 md:px-0 py-4 md:py-8"
     >
       <div className="mb-6 md:mb-8 md:text-left">
-        <h2 className="text-xl md:text-3xl font-semibold text-legacy-dark mb-2">Your Information</h2>
+        <h2 className="text-xl md:text-3xl font-manrope font-semibold text-legacy-dark mb-2">Your Information</h2>
         <p className="text-sm md:text-lg text-muted-foreground">
           Please provide your contact information so we can keep you updated on your order.
         </p>
@@ -105,9 +105,9 @@ const PurchaserInfo: React.FC = () => {
         <div className="space-y-2">
           <Label htmlFor="fullName">Full Name</Label>
           <div className={cn(
-            "flex items-center h-12 w-full rounded-md border border-input bg-background pl-3 pr-3",
+            "flex items-center h-12 w-full rounded-md bg-legacy-green/5 pl-3 pr-3",
             "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
-            errors.fullName && "border-red-500 focus-within:ring-red-500"
+            errors.fullName && "ring-2 ring-red-500 focus-within:ring-red-500"
           )}>
             <User className="h-4 w-4 text-muted-foreground mr-2 shrink-0" />
             <input
@@ -128,7 +128,7 @@ const PurchaserInfo: React.FC = () => {
         <div className="space-y-2">
           <Label htmlFor="email">Email Address</Label>
           <div className={cn(
-            "flex items-center h-12 w-full rounded-md border border-input bg-background pl-3 pr-3",
+            "flex items-center h-12 w-full rounded-md bg-legacy-green/5 pl-3 pr-3",
             "focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2",
             errors.email && "border-red-500 focus-within:ring-red-500"
           )}>

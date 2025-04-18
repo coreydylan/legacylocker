@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SessionData, Recipient, Purchaser } from '@/lib/sessionManager';
 import { CheckCircle, Edit2, ShoppingCart, ChevronLeft, Home, Mail as MailIcon, Loader2, AlertCircle, Lock } from 'lucide-react';
 import { useSessionStore } from '@/lib/sessionStore';
 import { formatShipToName } from '@/lib/utils/formatShipToName';
 import { calculateSessionPrice } from '@/lib/pricing';
+import { cn } from '@/lib/utils';
 
 // Stripe Imports
 import { loadStripe } from '@stripe/stripe-js';
@@ -161,9 +161,9 @@ const ReviewCheckout: React.FC = () => {
   } : undefined;
   
   return (
-    <div className="max-w-4xl mx-auto py-4 md:py-8 px-4 md:px-0">
-      <div className="mb-6 md:mb-8 text-left md:text-center">
-        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
+    <div className="max-w-2xl mx-auto py-4 md:py-8 px-4 md:px-0 space-y-6">
+      <div className="mb-6 md:mb-8 text-left">
+        <h1 className="text-xl md:text-3xl font-manrope font-semibold text-legacy-green mb-3 md:mb-4">
           Review & Complete Your Order
         </h1>
         <p className="text-sm md:text-lg text-gray-600">
@@ -171,111 +171,98 @@ const ReviewCheckout: React.FC = () => {
         </p>
       </div>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8 md:mb-12">
-         <Card>
-           <CardHeader className="bg-legacy-cream/30">
-             <div className="flex justify-between items-center">
-               <CardTitle className="text-xl">
-                 {recipientType === 'myself' ? 'Your Information' : 'Recipient'}
-               </CardTitle>
-               <Button 
-                 variant="ghost" size="sm" className="text-legacy-green"
-                 onClick={() => handleEdit(recipientType === 'myself' ? STEPS.PURCHASER_INFO : STEPS.RECIPIENT_INFO)} 
-               >
-                 <Edit2 className="h-4 w-4 mr-2" /> Edit
-               </Button>
-             </div>
-           </CardHeader>
-           <CardContent className="pt-6">
-             <dl className="space-y-4">
-                 {recipientType === 'myself' && (
-                    <>
-                      <div><dt>Name</dt><dd>{purchaser.fullName || 'Not provided'}</dd></div>
-                      <div><dt>Email</dt><dd>{purchaser.email || 'Not provided'}</dd></div>
-                    </>
-                  )}
-                  {recipientType !== 'myself' && (
-                    <>
-                      <div><dt>Gift Type</dt><dd>{recipientType === 'individual' ? 'For an Individual' : 'For a Couple'}</dd></div>
-                      <div><dt>Recipient Name</dt><dd>{recipient.type === 'individual' ? `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || 'Not specified' : `${recipient.recipient1FirstName || ''} ${recipient.recipient1LastName || ''} & ${recipient.recipient2FirstName || ''} ${recipient.recipient2LastName || ''}`.trim() || 'Not specified'}</dd></div>
-                      <div><dt>Relationship</dt><dd>{recipient.relationship || 'Not specified'}</dd></div>
-                    </>
-                  )}
-                  <div>
-                    <dt className="flex items-center"><Home className="h-4 w-4 mr-2 text-gray-400"/> Shipping Address</dt>
-                    <dd className="pl-6">{formatAddress()}</dd>
-                  </div>
-                  <div>
-                     <dt className="flex items-center"><MailIcon className="h-4 w-4 mr-2 text-gray-400"/> Name on Envelope</dt>
-                    <dd className="pl-6">{envelopeName || 'Not specified'}</dd>
-                  </div>
-             </dl>
-           </CardContent>
-         </Card>
-         
-         {recipientType !== 'myself' && (
-             <Card>
-                <CardHeader className="bg-legacy-cream/30">
-                 <div className="flex justify-between items-center">
-                   <CardTitle className="text-xl">Your Information</CardTitle>
-                   <Button variant="ghost" size="sm" className="text-legacy-green" onClick={() => handleEdit(STEPS.PURCHASER_INFO)}>
-                     <Edit2 className="h-4 w-4 mr-2" /> Edit
-                   </Button>
-                 </div>
-               </CardHeader>
-               <CardContent className="pt-6">
-                  <dl className="space-y-4">
-                   <div><dt>Name</dt><dd>{purchaser.fullName || 'Not provided'}</dd></div>
-                   <div><dt>Email</dt><dd>{purchaser.email || 'Not provided'}</dd></div>
-                  </dl>
-                </CardContent>
-             </Card>
-         )}
+      <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
+        <div className="flex justify-between items-center pb-3 border-b border-legacy-green/10">
+          <h2 className="text-xl font-manrope text-legacy-green">
+            {recipientType === 'myself' ? 'Your Information' : 'Recipient'}
+          </h2>
+          <Button 
+            variant="ghost" size="sm" className="text-legacy-green h-auto p-1"
+            onClick={() => handleEdit(recipientType === 'myself' ? STEPS.PURCHASER_INFO : STEPS.RECIPIENT_INFO)} 
+          >
+            <Edit2 className="h-4 w-4 mr-1.5" /> Edit
+          </Button>
+        </div>
+        <dl className="space-y-3 text-sm text-gray-700">
+            {recipientType === 'myself' && (
+              <>
+                <div><dt className="font-medium text-gray-500">Name</dt><dd>{purchaser.fullName || 'Not provided'}</dd></div>
+                <div><dt className="font-medium text-gray-500">Email</dt><dd>{purchaser.email || 'Not provided'}</dd></div>
+              </>
+            )}
+            {recipientType !== 'myself' && (
+              <>
+                <div><dt className="font-medium text-gray-500">Gift Type</dt><dd>{recipientType === 'individual' ? 'For an Individual' : 'For a Couple'}</dd></div>
+                <div><dt className="font-medium text-gray-500">Recipient Name</dt><dd>{recipient.type === 'individual' ? `${recipient.firstName || ''} ${recipient.lastName || ''}`.trim() || 'Not specified' : `${recipient.recipient1FirstName || ''} ${recipient.recipient1LastName || ''} & ${recipient.recipient2FirstName || ''} ${recipient.recipient2LastName || ''}`.trim() || 'Not specified'}</dd></div>
+                <div><dt className="font-medium text-gray-500">Relationship</dt><dd>{recipient.relationship || 'Not specified'}</dd></div>
+              </>
+            )}
+            <div>
+              <dt className="flex items-center font-medium text-gray-500"><Home className="h-4 w-4 mr-2 text-gray-400"/> Shipping Address</dt>
+              <dd className="pl-6">{formatAddress()}</dd>
+            </div>
+            <div>
+               <dt className="flex items-center font-medium text-gray-500"><MailIcon className="h-4 w-4 mr-2 text-gray-400"/> Name on Envelope</dt>
+              <dd className="pl-6">{envelopeName || 'Not specified'}</dd>
+            </div>
+        </dl>
       </div>
+       
+      {recipientType !== 'myself' && (
+          <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
+            <div className="flex justify-between items-center pb-3 border-b border-legacy-green/10">
+              <h2 className="text-xl font-manrope text-legacy-green">Your Information</h2>
+              <Button variant="ghost" size="sm" className="text-legacy-green h-auto p-1" onClick={() => handleEdit(STEPS.PURCHASER_INFO)}>
+                <Edit2 className="h-4 w-4 mr-1.5" /> Edit
+              </Button>
+            </div>
+            <dl className="space-y-3 text-sm text-gray-700">
+             <div><dt className="font-medium text-gray-500">Name</dt><dd>{purchaser.fullName || 'Not provided'}</dd></div>
+             <div><dt className="font-medium text-gray-500">Email</dt><dd>{purchaser.email || 'Not provided'}</dd></div>
+            </dl>
+          </div>
+      )}
       
-      <Card className="mb-8">
-          <CardHeader className="bg-legacy-cream/30">
-           <div className="flex justify-between items-center">
-             <CardTitle className="text-xl">Personalized Cards</CardTitle>
-             <Button variant="ghost" size="sm" className="text-legacy-green" onClick={() => handleEdit(STEPS.EDITION_DETAILS)}>
-               <Edit2 className="h-4 w-4 mr-2" /> Edit Cards
-             </Button>
-           </div>
-         </CardHeader>
-         <CardContent className="pt-6">
-           <div className="flex items-center justify-between mb-4">
-             <span>Completed Cards</span>
-             <span className="font-medium text-legacy-green">{completedCards} of 12</span>
-           </div>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-4">
-             {Object.entries(cards).map(([month, card]: [string, any]) => (
-               <div key={month} className={`border rounded-md p-3 text-center ${card?.title && card?.story ? 'border-green-200 bg-green-50' : 'border-gray-200'}`}> 
-                 <div className="text-xs uppercase font-medium text-gray-500 mb-1">{MONTH_NAMES[month as keyof typeof MONTH_NAMES] || month}</div>
-                 <div className="text-sm font-medium truncate" title={card?.title}>{card?.title || 'Untitled'}</div>
-                 <div className="h-5 flex items-center justify-center mt-1">{card?.title && card?.story && <CheckCircle className="h-4 w-4 text-green-500" />}</div>
-               </div>
-             ))}
-           </div>
-         </CardContent>
-      </Card>
+      {/* Comment out Personalized Cards section */}
+      {/* 
+      <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
+          <div className="flex justify-between items-center pb-3 border-b border-legacy-green/10">
+            <h2 className="text-xl font-manrope text-legacy-green">Personalized Cards</h2>
+            <Button variant="ghost" size="sm" className="text-legacy-green h-auto p-1" onClick={() => handleEdit(STEPS.EDITION_DETAILS)}>
+              <Edit2 className="h-4 w-4 mr-1.5" /> Edit Cards
+            </Button>
+          </div>
+         <div className="flex items-center justify-between mb-4 text-sm">
+           <span>Completed Cards</span>
+           <span className="font-medium text-legacy-green">{completedCards} of 12</span>
+         </div>
+          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
+           {Object.entries(cards).map(([month, card]: [string, any]) => (
+             <div key={month} className={`border rounded-md p-2 text-center text-xs ${card?.title && card?.story ? 'border-legacy-green/30 bg-white' : 'border-gray-200 bg-gray-50'}`}> 
+               <div className="font-medium text-gray-500 mb-0.5">{MONTH_NAMES[month as keyof typeof MONTH_NAMES]?.substring(0,3) || month}</div>
+               <div className="font-semibold truncate text-gray-700" title={card?.title}>{card?.title || '---'}</div>
+               <div className="h-4 flex items-center justify-center mt-1">{card?.title && card?.story && <CheckCircle className="h-3 w-3 text-legacy-green" />}</div>
+             </div>
+           ))}
+         </div>
+      </div>
+      */}
       
       {isPayable && (
-          <div className="mb-8 p-6 border rounded-lg bg-white shadow-sm">
-             <h2 className="text-xl font-semibold text-gray-800 mb-4">Payment Details</h2>
+          <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
+             <h2 className="text-xl font-manrope text-legacy-green mb-4 pb-3 border-b border-legacy-green/10">Payment Details</h2>
             {isLoadingPaymentIntent && (
               <div className="flex items-center justify-center p-8 text-gray-600">
                 <Loader2 className="mr-3 h-6 w-6 animate-spin text-legacy-green" />
                 <span>Initializing secure payment form...</span>
               </div>
             )}
-
             {paymentError && !isLoadingPaymentIntent && (
               <div className="flex items-center p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg border border-red-200">
                  <AlertCircle className="h-5 w-5 mr-3 text-red-500" />
                  <span>Error: {paymentError}</span>
               </div>
             )}
-            
             {clientSecret && stripeElementsOptions && !paymentError && !isLoadingPaymentIntent && (
               <Elements options={stripeElementsOptions} stripe={stripePromise}>
                 <CheckoutForm isExternallySubmitting={isSubmitting} /> 
@@ -284,7 +271,7 @@ const ReviewCheckout: React.FC = () => {
           </div>
       )}
       
-      <div className="bg-legacy-cream/50 p-6 rounded-lg shadow-sm mb-8">
+      <div className="bg-legacy-green/10 p-4 md:p-6 rounded-lg">
          <div className="flex justify-between items-center">
            <span className="text-lg font-semibold text-gray-700">Total Price</span>
            <span className="text-xl font-bold text-legacy-green">
@@ -296,12 +283,12 @@ const ReviewCheckout: React.FC = () => {
        </div>
       
       {!isMobile && (
-      <div className="flex justify-between items-center pt-6 border-t">
+      <div className="flex justify-between items-center pt-6 border-legacy-green/10">
          <Button
             type="button"
             variant="outline"
             onClick={handleBack} 
-            className="text-legacy-dark/60 hover:text-legacy-green border-legacy-cream"
+            className="text-legacy-dark/60 hover:text-legacy-green border-gray-200"
             disabled={isSubmitting}
           >
             <ChevronLeft className="h-4 w-4 mr-2" />
@@ -323,7 +310,6 @@ const ReviewCheckout: React.FC = () => {
               {isSubmitting ? 'Processing Order...' : 'Place Order Now'}
             </Button>
           )}
-
           {isConcierge && (
             <div className="text-right">
                 <Button 

@@ -110,8 +110,8 @@ const EnvelopeAddresseeCard: React.FC = () => {
 
   return (
     <div className="max-w-xl mx-auto py-4 md:py-8 px-4 md:px-0">
-      <div className="mb-6 md:mb-10 text-left md:text-center">
-        <h1 className="text-xl md:text-3xl font-semibold text-legacy-green mb-3 md:mb-4">
+      <div className="mb-6 md:mb-10 text-left">
+        <h1 className="text-xl md:text-3xl font-manrope font-semibold text-legacy-green mb-3 md:mb-4">
           How should we address the envelope?
         </h1>
         <p className="text-sm md:text-lg text-gray-600 px-4 sm:px-0">
@@ -137,8 +137,9 @@ const EnvelopeAddresseeCard: React.FC = () => {
             value={watch('cardAddresseeName')}
             onChange={handleAddresseeNameChange}
             className={cn(
-              "h-12 w-full",
-              errors.cardAddresseeName ? "border-red-500 focus-visible:ring-red-500" : ""
+              "h-12 w-full bg-legacy-green/5 border-0 rounded-md px-3 py-2",
+              "focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+              errors.cardAddresseeName ? "ring-2 ring-red-500 focus-visible:ring-red-500" : ""
             )}
             aria-invalid={!!errors.cardAddresseeName}
             aria-describedby={errors.cardAddresseeName ? "cardAddresseeName-error" : undefined}
