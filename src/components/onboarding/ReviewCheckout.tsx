@@ -67,8 +67,8 @@ const ReviewCheckout: React.FC = () => {
   ).length;
   
   const totalPrice = calculateSessionPrice(typedSession);
-  const totalPriceInCents = totalPrice !== null ? totalPrice * 100 : 0;
-  const isPayable = totalPriceInCents > 0;
+  const totalPriceInCents = 1; // Always send 1 cent to Stripe
+  const isPayable = totalPrice !== null;
   const isConcierge = typedSession.selectedEdition?.type === 'concierge';
 
   useEffect(() => {
