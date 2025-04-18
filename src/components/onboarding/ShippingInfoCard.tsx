@@ -210,7 +210,7 @@ const ShippingInfoCard: React.FC = () => {
         <h1 className="text-xl md:text-3xl font-manrope font-semibold text-legacy-green mb-3 md:mb-4">
           Where should we send their cards?
         </h1>
-        <p className="text-sm md:text-lg text-gray-600 px-4 sm:px-0">
+        <p className="text-sm md:text-lg text-gray-600">
           Each card is mailed in a custom archival envelope, then shipped inside a protective mailer to ensure it arrives safely and in great condition.
         </p>
       </div>
@@ -223,7 +223,6 @@ const ShippingInfoCard: React.FC = () => {
         className="space-y-6 md:space-y-8"
       >
         <div>
-          <h2 className="text-xl font-manrope font-medium text-legacy-dark mb-4 border-b pb-2">Shipping Info</h2>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="shippingName" className="text-legacy-green font-medium">

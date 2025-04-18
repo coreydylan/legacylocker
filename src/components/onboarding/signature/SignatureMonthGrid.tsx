@@ -77,10 +77,23 @@ const SignatureMonthGrid: React.FC = () => {
     ]);
 
   if (isLoading || !isHydrated) {
+    // More detailed skeleton loader
     return (
-      <div className="grid grid-cols-1 gap-4">
+      <div className="grid grid-cols-1 gap-4 max-w-2xl mx-auto">
         {Array.from({ length: 12 }).map((_, index) => (
-          <Skeleton key={index} className="h-[180px] rounded-lg" />
+          <div key={index} className="border border-gray-200 rounded-lg p-4 space-y-3 bg-white shadow-sm">
+            {/* Skeleton for Header (Month/Year) */}
+            <Skeleton className="h-5 w-1/3 rounded" />
+            <div className="flex justify-between items-start space-x-4">
+              {/* Skeleton for content area (e.g., notes placeholder) */}
+              <div className="space-y-2 flex-grow">
+                <Skeleton className="h-4 w-full rounded" />
+                <Skeleton className="h-4 w-5/6 rounded" />
+              </div>
+              {/* Skeleton for potential icon/toggle */}
+              <Skeleton className="h-8 w-8 rounded-md flex-shrink-0" />
+            </div>
+          </div>
         ))}
       </div>
     );

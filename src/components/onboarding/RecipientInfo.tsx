@@ -206,7 +206,7 @@ const RecipientInfo: React.FC = () => {
             ? "Recipient Information" 
             : "Couple Information"}
         </h1>
-        <p className="text-sm md:text-lg text-gray-600 px-4 sm:px-0">
+        <p className="text-sm md:text-lg text-gray-600">
           {recipientType === 'individual'
             ? "Tell us about the person you're gifting to"
             : "Tell us about the couple you're gifting to"}
@@ -312,14 +312,14 @@ const RecipientInfo: React.FC = () => {
                 render={({ field }) => {
                   const birthdayErrorClass = isIndividualErrors(errors) && errors.birthday ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
                   return (
-                    <JollyDateField
-                      value={parseDateToCalendarDate(field.value)}
-                      onChange={(date) => field.onChange(dateToISOString(date))}
+                  <JollyDateField
+                    value={parseDateToCalendarDate(field.value)}
+                    onChange={(date) => field.onChange(dateToISOString(date))}
                       className={cn(
                         "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
                         birthdayErrorClass
                       )}
-                    />
+                  />
                   );
                 }}
               />
@@ -388,14 +388,14 @@ const RecipientInfo: React.FC = () => {
                     render={({ field }) => {
                       const r1BirthdayErrorClass = isCoupleErrors(errors) && errors.recipient1Birthday ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
                       return (
-                        <JollyDateField
-                          value={parseDateToCalendarDate(field.value)}
-                          onChange={(date) => field.onChange(dateToISOString(date))}
+                      <JollyDateField
+                        value={parseDateToCalendarDate(field.value)}
+                        onChange={(date) => field.onChange(dateToISOString(date))}
                           className={cn(
                             "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
                             r1BirthdayErrorClass
                           )}
-                        />
+                      />
                       );
                     }}
                   />
@@ -452,14 +452,14 @@ const RecipientInfo: React.FC = () => {
                     render={({ field }) => {
                       const r2BirthdayErrorClass = isCoupleErrors(errors) && errors.recipient2Birthday ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
                       return (
-                        <JollyDateField
-                          value={parseDateToCalendarDate(field.value)}
-                          onChange={(date) => field.onChange(dateToISOString(date))}
+                      <JollyDateField
+                        value={parseDateToCalendarDate(field.value)}
+                        onChange={(date) => field.onChange(dateToISOString(date))}
                           className={cn(
                             "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
                             r2BirthdayErrorClass
                           )}
-                        />
+                      />
                       );
                     }}
                   />
@@ -521,14 +521,14 @@ const RecipientInfo: React.FC = () => {
                   render={({ field }) => {
                     const anniversaryErrorClass = isCoupleErrors(errors) && errors.anniversary ? "ring-2 ring-red-500 focus-visible:ring-red-500" : "";
                     return (
-                      <JollyDateField
-                        value={parseDateToCalendarDate(field.value)}
-                        onChange={(date) => field.onChange(dateToISOString(date))}
+                    <JollyDateField
+                      value={parseDateToCalendarDate(field.value)}
+                      onChange={(date) => field.onChange(dateToISOString(date))}
                         className={cn(
                           "h-12 w-full bg-legacy-green/5 border-0 rounded-md",
                           anniversaryErrorClass
                         )}
-                      />
+                    />
                     );
                   }}
                 />

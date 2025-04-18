@@ -87,7 +87,7 @@ const RecipientSelector: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-xl mx-auto">
+      <div className="grid grid-cols-2 md:grid-cols-2 gap-6 md:gap-8 max-w-xl mx-auto">
         {options.map((option) => (
           <motion.div
             key={option.id}
@@ -96,7 +96,7 @@ const RecipientSelector: React.FC = () => {
           >
             <Card
               className={`
-                cursor-pointer h-full p-6 flex flex-col items-center text-center border-2 transition-colors duration-150
+                cursor-pointer h-full p-4 flex flex-col items-center text-center border-2 transition-colors duration-150
                 ${session.recipientType === option.id
                   ? 'border-legacy-green bg-legacy-green/5 ring-2 ring-legacy-green/10'
                   : 'border-gray-200 hover:border-legacy-green/50 hover:bg-legacy-green/5'}
@@ -104,7 +104,7 @@ const RecipientSelector: React.FC = () => {
               onClick={() => handleSelect(option.id)}
             >
               <div className={`
-                rounded-full p-4 mb-4 transition-colors duration-150
+                rounded-full p-3 mb-3 transition-colors duration-150
                 ${session.recipientType === option.id
                   ? 'bg-legacy-green text-white'
                   : 'bg-legacy-cream text-legacy-green/80'}
@@ -112,9 +112,9 @@ const RecipientSelector: React.FC = () => {
                 {option.icon}
               </div>
 
-              <h3 className="text-xl font-manrope font-medium mb-2">{option.label}</h3>
+              <h3 className="text-lg font-manrope font-medium mb-1">{option.label}</h3>
 
-              <p className="text-gray-600 flex-grow mb-4">
+              <p className="text-sm text-gray-600 flex-grow mb-2">
                 {option.description}
               </p>
             </Card>

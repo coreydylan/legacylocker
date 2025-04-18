@@ -18,16 +18,16 @@ const OnboardingHeaderMobile: React.FC<OnboardingHeaderMobileProps> = ({
   const selectedEdition = session.selectedEdition;
   const currentStep = session.currentStep;
   const recipient = session.recipient;
-
+    
   const RECIPIENT_INFO_STEP = 3;
 
   const badgeClasses = "px-2 py-0.5 bg-legacy-green/10 text-legacy-green rounded-md whitespace-nowrap";
 
   return (
-    <div className="sticky top-0 z-90 bg-legacy-green/5 backdrop-blur-sm min-h-[80px]">
+    <div className="sticky top-0 z-30 bg-legacy-green/5 backdrop-blur-sm min-h-[80px]">
       {selectedEdition && (
-        <div className="max-w-xl mx-auto flex gap-2 mb-4 pt-2 px-4">
-          <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")}>
+        <div className="max-w-xl mx-auto flex flex-col items-center gap-1 mb-4 pt-2 px-4">
+          <div className={cn(badgeClasses, "w-full text-center truncate text-sm uppercase font-semibold")}>
             {
               selectedEdition.type === 'signature' && 
               currentStep > RECIPIENT_INFO_STEP && 
@@ -39,7 +39,7 @@ const OnboardingHeaderMobile: React.FC<OnboardingHeaderMobileProps> = ({
             }
           </div>
           {selectedEdition.type !== 'concierge' && (
-             <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")} title={selectedEdition.label || ''}>
+             <div className={cn(badgeClasses, "w-full text-center truncate text-sm uppercase font-semibold")} title={selectedEdition.label || ''}>
               {selectedEdition.naturalLanguageName || selectedEdition.label || ''}
             </div>
           )}
@@ -51,12 +51,12 @@ const OnboardingHeaderMobile: React.FC<OnboardingHeaderMobileProps> = ({
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="absolute left-4 text-gray-500 hover:text-gray-700 flex-shrink-0 mt-0.5"
+          className="absolute left-4 text-gray-500 hover:text-gray-700 flex-shrink-0"
           aria-label="Close onboarding"
         >
           <X className="h-5 w-5" />
         </Button>
-        <div className="absolute left-1/2 -translate-x-1/2 flex items-center w-full max-w-[90%]">
+        <div className="absolute left-1/2 -translate-x-1/2 flex items-center w-full max-w-[90%] pb-3">
           <OnboardingStepper />
         </div>
       </div>

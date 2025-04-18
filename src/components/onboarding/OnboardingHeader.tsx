@@ -29,10 +29,10 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
   const badgeClasses = "px-2 py-0.5 bg-legacy-green/10 text-legacy-green rounded-md whitespace-nowrap";
 
   return (
-    <div className="sticky top-0 z-10 bg-legacy-green/5 backdrop-blur-sm min-h-[80px] sm:min-h-[120px]">
+    <div className="sticky top-0 z-30 bg-legacy-green/5 backdrop-blur-sm min-h-[80px] sm:min-h-[120px]">
       {selectedEdition && (
-        <div className="max-w-xl mx-auto flex gap-2 mb-4 sm:mb-6 pt-2 sm:pt-3 px-4">
-          {/* Tag 1: General Edition Type - Now potentially dynamic */}
+        <div className="max-w-xl mx-auto flex flex-row items-center gap-2 mb-4 sm:mb-6 pt-2 sm:pt-3 px-4">
+          {/* Tag 1: Restore flex-1, remove w-full */}
           <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")}>
             {
               // Dynamic text for Signature after Recipient Info step
@@ -46,7 +46,7 @@ const OnboardingHeader: React.FC<OnboardingHeaderProps> = ({
                   : `${selectedEdition.type} Edition`
             }
           </div>
-          {/* Tag 2: Display naturalLanguageName or fallback to label */}
+          {/* Tag 2: Restore flex-1, remove w-full */}
           {selectedEdition.type !== 'concierge' && (
              <div className={cn(badgeClasses, "flex-1 text-center truncate text-sm uppercase font-semibold")} title={selectedEdition.label || ''}>
               {/* Use naturalLanguageName, fallback to label */}

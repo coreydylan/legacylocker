@@ -197,38 +197,32 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
           <DialogPrimitive.Content
             style={isMobile ? { top: 0, left: 0, transform: 'none' } : undefined}
             className={cn(
-              // Use responsive variants to provide an optimized experience.
-              // On mobile (<=768px) we want the modal to be full‑screen and feel like a native page.
-              // On desktop we preserve the centered dialog with shadows, rounded corners, etc.
+              // Base styles applied to both
+              "fixed z-50 flex flex-col p-0 overflow-hidden",
+
+              // Conditional styles
               isMobile
-                ? [
-                    // --- MOBILE ---
-                    "fixed inset-0 z-50",                    // Cover the entire viewport
-                    "w-[100vw] h-[100dvh] max-w-none",       // True full‑screen including dynamic viewport height on mobile browsers
-                    "flex flex-col",                          // Vertical layout
-                    "bg-white",                               // Solid background (overlay is hidden beneath)
-                    "p-0 overflow-hidden",                    // Remove default padding & clip overflowing children
-                    "border-none rounded-none shadow-none"    // Seamless edge‑to‑edge look
-                  ].join(" ")
-                : [
-                    // --- DESKTOP ---
-                    "fixed left-[50%] top-[50%] z-50",
-                    "h-[85vh] w-[85vw] max-w-3xl",
-                    "translate-x-[-50%] translate-y-[-50%]",
-                    "flex flex-col",
-                    "bg-white/90",
-                    "border border-white/20",
-                    "shadow-2xl",
-                    "rounded-xl overflow-hidden",
-                    "p-0",
-                    "min-h-[600px]",
-                    // Radix UI animation utility classes
+                ? [ // Mobile specifics
+                    "inset-0 w-[100vw] h-[100dvh] max-w-none", // Fullscreen sizing
+                    "bg-white",                               // Solid background
+                    "border-none rounded-none shadow-none"    // Edge-to-edge appearance
+                  ]
+                : [ // Desktop specifics
+                    "left-[50%] top-[50%]",                  // Centering position
+                    "h-[85vh] w-[85vw] max-w-3xl",           // Specific size
+                    "translate-x-[-50%] translate-y-[-50%]", // Centering transform
+                    "bg-white/90",                            // Semi-transparent background
+                    "border border-white/20",                 // Border
+                    "shadow-2xl",                             // Shadow
+                    "rounded-xl",                             // Rounded corners
+                    "min-h-[600px]",                          // Min height
+                    // Radix animations (Desktop only)
                     "data-[state=open]:animate-in data-[state=closed]:animate-out",
                     "data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
                     "data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95",
                     "data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%]",
                     "data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%]"
-                  ].join(" ")
+                  ]
             )}
           >
             <div className="absolute inset-0 bg-gradient-to-b from-white/50 to-white/30 pointer-events-none" />
