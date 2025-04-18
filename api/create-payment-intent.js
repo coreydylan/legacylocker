@@ -31,8 +31,8 @@ export default async function handler(req) {
       })
     }
 
-    // TEMPORARY OVERRIDE: Always use 1 cent for testing
-    const testAmount = 1
+    // TEMPORARY OVERRIDE: Use 50 cents for testing (minimum allowed by Stripe)
+    const testAmount = 50
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: testAmount,
