@@ -28,26 +28,25 @@ export const processOrder = async (session: SessionData) => {
     const reviewRequired = selectedEdition.type !== 'signature';
     const readyForProduction = selectedEdition.type === 'signature';
     const orderPayload = {
-      session_id: _sessionId,
       purchaser_name: purchaser?.fullName || null,
       purchaser_email: purchaser?.email || null,
       purchaser_phone: purchaser?.phone || null,
       custom_welcome_message: recipientInfo?.welcomeMessage || null,
       include_welcome_card: recipientInfo?.includeWelcomeCard ?? false,
-      selected_edition_id: selectedEdition.id,
-      // Flags / metadata
-      order_status: 'submitted',
-      review_required: reviewRequired,
-      ready_for_production: readyForProduction,
-      // Shipping (flattened)
+      story_series_id: selectedEdition.id,
+      who_is_it_for: session.recipientType || null,
+      custom_edition_type: selectedEdition.type || null,
+      recipient_1_name: recipientInfo?.firstName || recipientInfo?.recipient1FirstName || null,
+      recipient_1_birthday: recipientInfo?.birthday || recipientInfo?.recipient1Birthday || null,
+      recipient_2_name: recipientInfo?.recipient2FirstName || null,
+      recipient_2_birthday: recipientInfo?.recipient2Birthday || null,
+      recipient_anniversary: recipientInfo?.anniversary || null,
       shipping_address: shipping?.address1 || recipientInfo?.shippingAddress?.full || null,
-      shipping_address2: shipping?.address2 || null,
       shipping_city: shipping?.city || recipientInfo?.shippingAddress?.city || null,
       shipping_state: shipping?.state || recipientInfo?.shippingAddress?.state || null,
       shipping_zip: shipping?.zipCode || recipientInfo?.shippingAddress?.postalCode || null,
       shipping_country: shipping?.country || recipientInfo?.shippingAddress?.country || null,
-      // Order‑level notes (gift occasion etc.)
-      gift_occasion: recipientInfo?.relationship || null, // Fallback placeholder until explicit field exists
+      gift_occasion: recipientInfo?.relationship || null,
       order_date: new Date().toISOString(),
     } as const;
 
@@ -182,13 +181,12 @@ export const processOrder = async (session: SessionData) => {
         order_id: orderId,
         month: row.month,
         ship_date: row.ship_date,
-        story_seed: row.story || null,
+        story_input_raw: row.story || null,
         custom_footer_message: row.footer_message || null,
         occasion_type: Array.isArray(row.occasion) && row.occasion.length ? row.occasion[0] : null,
         artwork_method: row.artwork_option || null,
         uploaded_photo: row.photo_url || null,
         has_custom_footer: !!row.footer_message,
-        ai_story_required: selectedEdition.type === 'signature',
         is_fully_custom: selectedEdition.type !== 'signature',
         custom_edition_type: selectedEdition.type,
         production_status: 'not_started',
