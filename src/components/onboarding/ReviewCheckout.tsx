@@ -7,6 +7,7 @@ import { useSessionStore } from '@/lib/sessionStore';
 import { formatShipToName } from '@/lib/utils/formatShipToName';
 import { calculateSessionPrice } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
+import { processOrder } from '@/lib/processOrderLogic';
 
 // Stripe Imports
 import { loadStripe } from '@stripe/stripe-js';
@@ -108,21 +109,32 @@ const ReviewCheckout: React.FC = () => {
     setCurrentStep(step);
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!isPayable || isLoadingPaymentIntent || isSubmitting || !clientSecret) {
         console.warn('Place order conditions not met.');
         return;
     }
     
     setIsSubmitting(true);
-    
-    const paymentForm = document.getElementById('payment-form') as HTMLFormElement | null;
-    if (paymentForm) {
-        paymentForm.requestSubmit(); 
-    } else {
+
+    try {
+      // 1. Persist order data to Supabase
+      await processOrder(useSessionStore.getState().session as SessionData);
+      console.log('[ReviewCheckout] Order data written, proceeding to payment');
+
+      // 2. Continue existing payment flow
+      const paymentForm = document.getElementById('payment-form') as HTMLFormElement | null;
+      if (paymentForm) {
+        paymentForm.requestSubmit();
+      } else {
         console.error('Payment form not found!');
         setPaymentError('Could not initiate payment. Please refresh.');
         setIsSubmitting(false);
+      }
+    } catch (err) {
+      console.error('[ReviewCheckout] processOrder failed:', err);
+      setPaymentError('Failed to process order. Please try again.');
+      setIsSubmitting(false);
     }
   };
 
