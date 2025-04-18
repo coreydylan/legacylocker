@@ -41,6 +41,12 @@ export function useSessionManager() {
   // --- Core Session Lifecycle Functions ---
 
   const initializeNewLocalSession = useCallback((edition: { id: string; label: string; type: EditionType }) => {
+    const { sessionMetadata: currentMeta } = useSessionStore.getState();
+    if (currentMeta.isActive && currentMeta.sessionId) {
+      console.warn('[SessionManager] initializeNewLocalSession called but active session already exists. Aborting to prevent overwrite.', currentMeta);
+      return;
+    }
+
     console.log('[SessionManager] Initializing new local session:', edition);
     updateSession('selectedEdition', edition);
     updateSession('editionFlow.type', edition.type);
@@ -212,23 +218,77 @@ export function useSessionManager() {
 
   // --- UI Interaction / Lifecycle Functions ---
 
-  const handleModalClose = useCallback(() => {
-    console.log('[SessionManager] Handling modal close...');
-    const { isActive, sessionId } = useSessionStore.getState().sessionMetadata;
-    const purchaserEmail = useSessionStore.getState().session.purchaser?.email;
+  const handleModalClose = useCallback(async () => {
+    console.log('[SessionManager] handleModalClose invoked – evaluating session state...');
 
-    if (isActive && sessionId) {
-      console.log('[SessionManager] Modal closed with active session.');
-      if (purchaserEmail) {
-         toast({ title: "Progress Saved", description: `We sent a magic link to ${purchaserEmail} to resume.` });
-      } else {
-         toast({ title: "Progress Saved", description: "You can resume your session later." });
+    const {
+      session: currentSession,
+      sessionMetadata: currentMeta,
+      startSession,
+      saveSession,
+      saveSessionToDb,
+      resetSession: resetFromStore,
+    } = useSessionStore.getState();
+
+    // 1) If session is active, save and exit
+    if (currentMeta.isActive && currentMeta.sessionId) {
+      console.log('[SessionManager] Active session detected. Saving before close.', { sessionId: currentMeta.sessionId });
+      try {
+        await saveSessionToDb();
+        console.log('[SessionManager] Active session saved.');
+      } catch (e) {
+        console.error('[SessionManager] Failed to save active session during close:', e);
       }
-    } else {
-      console.log('[SessionManager] Modal closed with inactive session. Resetting.');
-      storeResetSession(); // Reset without toast
+
+      const purchaserEmail = currentSession.purchaser?.email;
+      if (purchaserEmail) {
+        toast({ title: 'Progress Saved', description: `We sent a magic link to ${purchaserEmail} to resume.` });
+      } else {
+        toast({ title: 'Progress Saved', description: 'You can resume your session later.' });
+      }
+
+      return; // Done
     }
-  }, [toast, storeResetSession]);
+
+    // 2) Inactive session but with meaningful data – prompt to save
+    const hasMeaningfulData = !!(
+      currentSession.selectedEdition ||
+      currentSession.purchaser?.email ||
+      currentSession.recipient?.firstName ||
+      currentSession.recipient?.lastName ||
+      currentSession.recipient?.relationship
+    );
+
+    if (!currentMeta.sessionId && hasMeaningfulData) {
+      console.log('[SessionManager] Unsaved progress detected on inactive session. Prompting user...');
+      const confirmSave = window.confirm('You have unsaved progress. Would you like to save it before closing?');
+
+      if (confirmSave) {
+        const editionType: EditionType = (currentSession.selectedEdition?.type || 'signature') as EditionType;
+        console.log('[SessionManager] User agreed to save. Activating & saving with edition', editionType);
+        startSession(editionType);
+        saveSession();
+        try {
+          await saveSessionToDb();
+          console.log('[SessionManager] Inactive session activated & saved successfully.');
+        } catch (e) {
+          console.error('[SessionManager] Failed to save newly activated session:', e);
+          toast({ title: 'Save Failed', description: 'We could not save your progress. Please try again.', variant: 'destructive' });
+        }
+      } else {
+        console.log('[SessionManager] User declined to save. Clearing session.');
+        resetFromStore();
+      }
+
+      return;
+    }
+
+    // 3) Truly empty session – reset silently
+    if (!currentMeta.sessionId && !hasMeaningfulData) {
+      console.log('[SessionManager] No meaningful data. Performing silent reset.');
+      resetFromStore();
+    }
+  }, [toast]);
 
   const isStartOverConfirmationRequired = useCallback((): boolean => {
     const { isActive, sessionId } = useSessionStore.getState().sessionMetadata;
@@ -252,4 +312,4 @@ export function useSessionManager() {
     handleModalClose,
     isStartOverConfirmationRequired,
   };
-} 
+}

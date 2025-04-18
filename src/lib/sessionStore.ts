@@ -1175,3 +1175,20 @@ export const useSessionStore = create<SessionStore>()(
 
 // Export the function (if needed elsewhere, but it's internal to the store action)
 // export { initializeSignatureData }; 
+
+// Helper: Pretty-print current session snapshot (for debugging)
+export const logSessionSnapshot = (label: string = 'Session Snapshot') => {
+  const { session, sessionMetadata, isHydrated, isLoading } = useSessionStore.getState?.() ?? {};
+  // Avoid circular refs by deep cloning and truncating huge blobs where needed
+  const safeSession = cloneDeep(session);
+  if (safeSession && safeSession.customData?.length) {
+    // prevent massive outputs by only showing first 2 months
+    safeSession.customData = safeSession.customData.slice(0, 2);
+  }
+  console.log(`[${label}]`, {
+    meta: sessionMetadata,
+    hydrated: isHydrated,
+    loading: isLoading,
+    session: safeSession,
+  });
+}; 

@@ -15,6 +15,7 @@ import { cn } from '@/lib/utils';
 import useMediaQuery from '@/hooks/useMediaQuery';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import SaveAndCloseButton from './onboarding/SaveAndCloseButton';
+import { EditionType } from '@/lib/sessionStore';
 
 export type { FormData } from '@/types/onboarding';
 
@@ -99,29 +100,58 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
-      // If session is not activated and has data, show confirmation
-      if (!sessionMetadata.sessionId && session.selectedEdition) {
-        const hasData = session.purchaser?.email || 
-                       session.recipient?.firstName || 
-                       session.recipient?.lastName ||
-                       session.recipient?.relationship;
-        
-        if (hasData) {
-          if (window.confirm('You have unsaved progress. Would you like to save it before closing?')) {
-            // User wants to save - activate and save
-            startSession('signature');
-            saveSession();
-            saveSessionToDb();
+      console.log('[OnboardingModal] Modal close triggered. Evaluating session state...');
+
+      (async () => {
+        try {
+          // 1) Active session → always save before closing
+          if (sessionMetadata.isActive && sessionMetadata.sessionId) {
+            console.log('[OnboardingModal] Active session detected. Saving latest progress before close.', {
+              sessionId: sessionMetadata.sessionId,
+            });
+            await sessionManager.saveSessionData();
+            console.log('[OnboardingModal] Active session saved successfully.');
+            onClose();
+            return;
           }
+
+          // 2) Inactive session but with meaningful data → prompt to save
+          const hasMeaningfulData = !!(
+            session.selectedEdition ||
+            session.purchaser?.email ||
+            session.recipient?.firstName ||
+            session.recipient?.lastName ||
+            session.recipient?.relationship
+          );
+
+          if (!sessionMetadata.sessionId && hasMeaningfulData) {
+            console.log('[OnboardingModal] Unsaved data detected in inactive session. Prompting user to save.');
+            const confirmSave = window.confirm('You have unsaved progress. Would you like to save it before closing?');
+
+            if (confirmSave) {
+              const editionType: EditionType = (session.selectedEdition?.type || 'signature') as EditionType;
+              console.log('[OnboardingModal] User opted to save. Activating session with edition:', editionType);
+              startSession(editionType);
+              saveSession();
+              await saveSessionToDb();
+              console.log('[OnboardingModal] Session activated & saved successfully.');
+            } else {
+              console.log('[OnboardingModal] User declined to save progress. Performing soft reset.');
+              storeResetSession();
+            }
+          } else if (!sessionMetadata.sessionId && !hasMeaningfulData) {
+            // 3) Truly empty / abandoned session → safe to reset
+            console.log('[OnboardingModal] No meaningful data found. Resetting session.');
+            storeResetSession();
+          }
+
+          onClose();
+        } catch (err) {
+          console.error('[OnboardingModal] Error during close handling:', err);
+          // Even if saving fails, we still close the modal to avoid trapping the user
+          onClose();
         }
-      }
-      
-      // Only reset if session is not active and has no data
-      if (!sessionMetadata.sessionId && !session.selectedEdition) {
-        storeResetSession();
-      }
-      
-      onClose();
+      })();
     }
   };
 

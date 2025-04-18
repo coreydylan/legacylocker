@@ -38,9 +38,7 @@ serve(async (req) => {
       // Supabase API URL - env var exported by default.
       Deno.env.get('SUPABASE_URL') ?? '',
       // Supabase Service Role Key - env var exported by default.
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
-      // Create client with options:     
-      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     const { id, session_data, email, updated_at, expires_at } = payload;
