@@ -1,13 +1,17 @@
 'use client';
 
 import { useSessionStore } from '@/lib/sessionStore';
-import { useLocation } from 'react-router-dom';
-import React, { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import React, { useEffect, useState, useRef } from 'react';
 import { useSessionManager } from '@/hooks/useSessionManager';
 import { Button } from "@/components/ui/button";
 
 export default function SessionLoader({ children }: { children: React.ReactNode }) {
     const location = useLocation();
+    const navigate = useNavigate();
+    const loadAttempted = useRef(false);
+    const [isInvalidSession, setIsInvalidSession] = useState(false);
+    
     const {
         loadSessionFromUrlParam,
         loadError,
@@ -26,41 +30,27 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
         setHydrated: state.setHydrated,
     }));
 
-    // Add a timeout to prevent infinite loading
     const [loadingTimeout, setLoadingTimeout] = useState<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
-        console.log('[SessionLoader] Component mounted with state:', {
-            isLoading,
-            isHydrated,
-            hasSessionId: !!session.sessionId,
-            hasSelectedEdition: !!session.selectedEdition,
-            locationSearch: location.search
-        });
-
-        // Set a timeout to force hydration if loading takes too long
-        const timeout = setTimeout(() => {
-            console.log('[SessionLoader] Loading timeout reached, forcing hydration');
-            if (!isHydrated) {
-                setHydrated(true);
-            }
-        }, 1500); // 1.5 second timeout to ensure snappier hydration fallback
-
-        setLoadingTimeout(timeout);
-
-        return () => {
-            if (timeout) {
-                clearTimeout(timeout);
-            }
-        };
-    }, []);
-
-    useEffect(() => {
         const loadSession = async () => {
+            if (loadAttempted.current) {
+                return;
+            }
+            
             console.log('[SessionLoader] Starting session load from URL param');
+            loadAttempted.current = true;
+            
             try {
                 const success = await loadSessionFromUrlParam();
                 console.log('[SessionLoader] Session load result:', success);
+                
+                if (!success) {
+                    setIsInvalidSession(true);
+                    // Remove session_id from URL
+                    navigate(window.location.pathname, { replace: true });
+                }
+                
                 console.log('[SessionLoader] Final session state:', {
                     selectedEdition: session.selectedEdition,
                     currentStep: session.currentStep,
@@ -68,51 +58,67 @@ export default function SessionLoader({ children }: { children: React.ReactNode 
                 });
             } catch (error) {
                 console.error('[SessionLoader] Error loading session:', error);
+                setIsInvalidSession(true);
+                navigate(window.location.pathname, { replace: true });
             }
         };
 
-        if (location.search) {
+        if (location.search && !loadAttempted.current) {
             loadSession();
         }
-    }, [location.search, loadSessionFromUrlParam, session]);
+    }, [location.search, loadSessionFromUrlParam, session, navigate]);
 
-    // Clear timeout when loading completes
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            if (!isHydrated) {
+                setHydrated(true);
+            }
+        }, 500);
+
+        setLoadingTimeout(timeout);
+        return () => clearTimeout(timeout);
+    }, []);
+
     useEffect(() => {
         if (isHydrated && !isLoading && loadingTimeout) {
-            console.log('[SessionLoader] Loading completed, clearing timeout');
             clearTimeout(loadingTimeout);
             setLoadingTimeout(null);
         }
     }, [isHydrated, isLoading, loadingTimeout]);
 
-    if (isLoading || !isHydrated) {
+    if ((isLoading || !isHydrated) && location.search) {
         return (
-            <div className="flex items-center justify-center min-h-screen">
-                <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-gray-900"></div>
-                <span className="ml-2">Loading your session...</span>
+            <div className="fixed top-4 right-4 flex items-center bg-white/80 backdrop-blur-sm shadow-lg rounded-lg px-4 py-2 text-sm text-gray-600">
+                <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-legacy-green mr-2"></div>
+                <span>Loading session...</span>
             </div>
         );
     }
 
-    if (loadError) {
+    if (isInvalidSession || loadError) {
         return (
-          <div className="flex flex-col items-center justify-center min-h-screen text-center p-10">
-            <h1 className="text-2xl font-bold text-legacy-red">Session Load Error</h1>
-            <p className="mt-2 mb-4 text-muted-foreground">
-              {loadError.message || "We couldn't find your session. Your link may have expired or is invalid."}
-            </p>
+          <div className="fixed top-4 right-4 flex items-center bg-white shadow-lg rounded-lg px-6 py-4 text-sm text-gray-600 max-w-md">
+            <div className="flex-1">
+              <p className="font-medium text-legacy-green mb-1">Session Expired</p>
+              <p className="text-gray-500 text-xs">
+                This saved session has expired or is no longer valid. Please start a new session.
+              </p>
+            </div>
             <Button 
               variant="outline"
+              size="sm"
               onClick={() => {
-                console.log('[SessionLoader] User clicked Start Over from error screen.');
                 resetSessionAndState();
+                setIsInvalidSession(false);
+                navigate('/', { replace: true });
               }}
+              className="ml-4 whitespace-nowrap"
             >
               Start Over
             </Button>
           </div>
         );
-      }
+    }
 
     return <>{children}</>;
 } 

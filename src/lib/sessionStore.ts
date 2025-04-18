@@ -633,18 +633,18 @@ export const isValidSession = (session: SessionData | null | undefined): session
 
   // --- Conditional Checks based on progress --- 
   
-  // Only check recipientType if we're past step 1
-  if (session.currentStep > 1) {
+  // Only check recipientType if we're past step 2 (after edition selection)
+  if (session.currentStep > 2) {
     if (!session.recipientType) return false;
   }
   
-  // Only check purchaser info if we're past step 2
-  if (session.currentStep > 2) {
+  // Only check purchaser info if we're past step 3
+  if (session.currentStep > 3) {
     if (!session.purchaser || !session.purchaser.fullName || !session.purchaser.email) return false;
   }
 
-  // Only check recipient info if we're past step 3
-  if (session.currentStep > 3) {
+  // Only check recipient info if we're past step 4
+  if (session.currentStep > 4) {
     if (!session.recipient) return false;
     // Check for either individual or couple recipient data
     const hasIndividualData = session.recipient.firstName;
@@ -652,8 +652,8 @@ export const isValidSession = (session: SessionData | null | undefined): session
     if (!hasIndividualData && !hasCoupleData) return false;
   }
 
-  // Only check selectedEdition if we're past step 5 (WELCOME_CARD)
-  if (session.currentStep > 5) {
+  // Only check selectedEdition if we're past step 2
+  if (session.currentStep > 2) {
     if (!session.selectedEdition) return false;
   }
 
