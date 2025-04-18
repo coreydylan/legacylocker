@@ -120,6 +120,9 @@ const ReviewCheckout: React.FC = () => {
     } catch (err) {
       console.error('[ReviewCheckout] processOrder failed after payment success:', err);
       setPaymentError('Your payment went through but we could not finalize the order. Please contact support.');
+    } finally {
+      // Always reset submitting state so UI can update
+      setIsSubmitting(false);
     }
   };
 

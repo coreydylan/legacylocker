@@ -113,26 +113,7 @@ const CustomMonthAccordion: React.FC = () => {
     }
   }, [isHydrated, initializeCustomDataDates]);
 
-  if (isLoading || !isHydrated) {
-    return (
-      <div className="max-w-3xl mx-auto space-y-4">
-        {Array.from({ length: 12 }).map((_, index) => (
-          <div 
-            key={index} 
-            className="bg-legacy-green/5 rounded-xl p-6 flex items-center justify-between animate-pulse"
-          >
-            <div className="text-2xl font-medium text-legacy-green/20">
-              {orderedMonths[index]?.month} {orderedMonths[index]?.year}
-            </div>
-            <div className="w-12 h-6 bg-legacy-green/10 rounded-full"></div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (customDataMap.size !== 12 && isHydrated) {
-    console.error("[CustomMonthAccordion]: Custom data size mismatch after hydration.");
+  if (isLoading || !isHydrated || customDataMap.size !== 12) {
     return (
       <div className="max-w-3xl mx-auto space-y-4">
         {Array.from({ length: 12 }).map((_, index) => (
