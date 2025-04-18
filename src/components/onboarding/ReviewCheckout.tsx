@@ -8,6 +8,7 @@ import { formatShipToName } from '@/lib/utils/formatShipToName';
 import { calculateSessionPrice } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
 import { processOrder } from '@/lib/processOrderLogic';
+import { useSessionManager } from '@/hooks/useSessionManager';
 
 // Stripe Imports
 import { loadStripe } from '@stripe/stripe-js';
@@ -48,6 +49,7 @@ const defaultPurchaser: Purchaser = {};
 
 const ReviewCheckout: React.FC = () => {
   const { session, setCurrentStep, prevStep, submitTriggerCount } = useSessionStore();
+  const { setSessionStatus } = useSessionManager();
   const navigate = useNavigate();
   const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -116,11 +118,15 @@ const ReviewCheckout: React.FC = () => {
     }
     
     setIsSubmitting(true);
+    setSessionStatus('processing');
 
     try {
       // 1. Persist order data to Supabase
       await processOrder(useSessionStore.getState().session as SessionData);
       console.log('[ReviewCheckout] Order data written, proceeding to payment');
+
+      // Mark session as completed (order processed)
+      setSessionStatus('completed');
 
       // 2. Continue existing payment flow
       const paymentForm = document.getElementById('payment-form') as HTMLFormElement | null;

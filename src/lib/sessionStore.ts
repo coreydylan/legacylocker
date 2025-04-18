@@ -212,6 +212,8 @@ interface SessionStore {
   isHydrated: boolean;
   isCurrentStepValid: boolean; // <<< Add validation state
   submitTriggerCount: number; // <<< Add submit trigger state
+  sessionComplete: boolean;
+  setSessionComplete: (value: boolean) => void;
   initialize: () => void;
   updateSession: (path: string, value: any) => void;
   setCurrentStep: (step: number) => void;
@@ -697,6 +699,7 @@ export const useSessionStore = create<SessionStore>()(
       isHydrated: false,
       isCurrentStepValid: false, // <<< Initialize validation state
       submitTriggerCount: 0, // <<< Initialize trigger state
+      sessionComplete: false,
   
   initialize: () => {
         console.log("[StoreAction initialize]: Running...");
@@ -1155,6 +1158,11 @@ export const useSessionStore = create<SessionStore>()(
         if (value) {
           set({ isLoading: false });
         }
+      },
+
+      setSessionComplete: (value: boolean) => {
+        console.log(`[StoreAction setSessionComplete]: Setting sessionComplete to ${value}`);
+        set({ sessionComplete: value });
       },
 
     }),

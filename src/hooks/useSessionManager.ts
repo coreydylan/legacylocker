@@ -21,6 +21,8 @@ export function useSessionManager() {
   const location = useLocation();
   const { toast } = useToast();
   const [loadError, setLoadError] = useState<LoadError | null>(null);
+  // Track overall status of the checkout/order flow so the UI can react (e.g., show confirmation)
+  const [sessionStatus, setSessionStatus] = useState<'idle' | 'processing' | 'completed'>('idle');
   // const { openConfirmationModal } = useModalStore(); // Example if using modal store
 
   const {
@@ -316,5 +318,8 @@ export function useSessionManager() {
     resetSessionAndState,
     handleModalClose,
     isStartOverConfirmationRequired,
+    // Order/checkout status helpers
+    sessionStatus,
+    setSessionStatus,
   };
 }

@@ -18,6 +18,7 @@ import useMediaQuery from '@/hooks/useMediaQuery';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from './ui/alert-dialog';
 import SaveAndCloseButton from './onboarding/SaveAndCloseButton';
 import { EditionType } from '@/lib/sessionStore';
+import OrderConfirmationScreen from '@/components/onboarding/OrderConfirmationScreen';
 
 export type { FormData } from '@/types/onboarding';
 
@@ -50,6 +51,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
   resumeToken 
 }) => {
   const sessionManager = useSessionManager();
+  const { sessionStatus } = sessionManager;
 
   const { 
     session, 
@@ -260,7 +262,11 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
                     "pb-24 md:pb-0",
                     "bg-white/20 backdrop-blur-sm"
                   )}>
-                    <OnboardingFlow />
+                    {sessionStatus === 'completed' ? (
+                      <OrderConfirmationScreen />
+                    ) : (
+                      <OnboardingFlow />
+                    )}
                   </div>
                    
                 </>
