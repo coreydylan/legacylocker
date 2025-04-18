@@ -2,12 +2,12 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, useSearchParams } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { SessionBug } from "@/components/SessionBug";
-import Index from "./pages/Index";
+import Index from "./pages/index";
 import NotFound from "./pages/NotFound";
 import PersonalizePage from "./pages/personalize/[edition]";
-import OnboardingModal from "@/components/OnboardingModal";
+import { OnboardingModal } from '@/components/onboarding/OnboardingModal';
 import { useModalStore } from "@/lib/modalStore";
 import { useSessionStore } from "@/lib/sessionStore";
 import { useEffect } from "react";
@@ -21,7 +21,16 @@ import AdminAuth from "@/components/AdminAuth";
 import FontExamplesPage from "./pages/font-examples";
 import CardBuilderDemo from "./pages/card-builder-demo";
 import StoryPreviewDemo from "./pages/story-preview-demo";
-import OnboardingDesktopSaveButton from '@/components/OnboardingDesktopSaveButton';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '@/hooks/useAuth';
+import { useOnboarding } from '@/hooks/useOnboarding';
+import { usePersonalization } from '@/hooks/usePersonalization';
+import { useSession } from '@/hooks/useSession';
+import { useUser } from '@/hooks/useUser';
+import { useWindowSize } from '@/hooks/useWindowSize';
+import { useStore } from '@/store';
+import { AppRoutes } from '@/routes';
+import { PersonalizationModal } from '@/components/personalization/PersonalizationModal';
 
 const queryClient = new QueryClient();
 
@@ -31,13 +40,14 @@ const AppContent = () => {
 
   return (
     <>
-      <SessionBug />
-      <OnboardingDesktopSaveButton />
+      <AppRoutes />
       <OnboardingModal 
         isOpen={isOnboardingOpen}
         onClose={closeOnboarding}
         selectedSeries={session?.selectedEdition}
       />
+      <PersonalizationModal />
+      <SessionBug />
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/personalize/:edition" element={<PersonalizePage />} />
@@ -77,11 +87,11 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <Router>
           <SessionLoader>
             <AppContent />
           </SessionLoader>
-        </BrowserRouter>
+        </Router>
       </TooltipProvider>
     </QueryClientProvider>
   );
