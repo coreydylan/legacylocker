@@ -27,17 +27,25 @@ module.exports = async (req, res) => {
   }
 
   try {
-    const emailHtml = render(
-      OrderConfirmationEmail({
-        purchaserName,
-        recipientName,
-        editionName,
-        shippingAddress,
-        firstShipDate,
-        editionType,
-        firstMonth,
-      })
-    );
+    const emailProps = {
+      purchaserName,
+      recipientName,
+      editionName,
+      shippingAddress,
+      firstShipDate,
+      editionType,
+      firstMonth,
+    };
+
+    // Render HTML version
+    const emailHtml = render(OrderConfirmationEmail(emailProps));
+
+    // Render plain-text version for improved deliverability / accessibility
+    const emailText = render(OrderConfirmationEmail(emailProps), {
+      plainText: true,
+    });
+
+    console.log(`[send-order-confirmation] Rendered plain-text length: ${emailText.length}`);
 
     console.log(`[send-order-confirmation] Rendered HTML length: ${emailHtml.length}`);
     // console.log(`[send-order-confirmation] Rendered HTML (sample): ${emailHtml.substring(0, 500)}...`);
@@ -49,6 +57,7 @@ module.exports = async (req, res) => {
       to: purchaserEmail,
       subject: 'Your Legacy Locker order is confirmed! 🎉',
       html: emailHtml,
+      text: emailText,
     })
 
     if (error) {

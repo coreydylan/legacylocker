@@ -169,8 +169,7 @@ Legacy Locker • A year of stories, one card at a time.
          {/* Commenting out @import as it's poorly supported. Inline styles handle the font-family. */}
       </Head>
       <Preview>{previewText}</Preview>
-      {/* You can uncomment this if you prefer explicit PlainText over auto-generation */}
-      {/* <PlainText>{plainText}</PlainText> */}
+      {/* Plain text is rendered separately in the API handler */}
       <Body style={main}>
         <Container style={container}>
           <Section style={header}>
