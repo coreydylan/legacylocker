@@ -161,10 +161,16 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
-      console.log('[OnboardingModal] Modal close triggered – flushing session state.');
-      flushAndResetSession()
+      // User clicked 'X' or outside modal - discard current state without saving
+      console.log('[OnboardingModal] Modal close triggered via UI (X or overlay) – resetting state.');
+      storeResetSession(); // Use the reset action directly from the store
+      onClose(); // Call the original onClose to hide the modal UI
+      
+      // Original flush logic moved to post-submit effect and SaveAndCloseButton
+      /* flushAndResetSession()
         .catch(err => console.error('[OnboardingModal] Error during flushAndResetSession:', err))
         .finally(() => onClose());
+      */
     }
   };
 
@@ -262,7 +268,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <MobileNavFooter triggerModalClose={() => handleModalCloseTrigger(false)} />
             {!isMobile && sessionMetadata.isActive && (
               <div className="fixed bottom-6 right-6 z-[100]">
-                <SaveAndCloseButton onClose={() => handleModalCloseTrigger(false)} />
+                <SaveAndCloseButton onClose={closeOnboarding} />
               </div>
             )}
           </DialogPrimitive.Content>
