@@ -297,7 +297,7 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
                 {monthData.storyLocked ? <Lock size={14} /> : <Unlock size={14} />}
               </button>
               {/* Tab Text */}
-              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline">Story</span>
+              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline text-[10px] sm:text-xs md:text-sm">Story</span>
             </div>
 
             {/* Artwork Tab/Indicator */}
@@ -329,7 +329,7 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
               >
                 {monthData.artworkLocked ? <Lock size={14} /> : <Unlock size={14} />}
               </button>
-              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline">Artwork</span>
+              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline text-[10px] sm:text-xs md:text-sm">Artwork</span>
             </div>
 
             {/* Notes Tab/Indicator */}
@@ -357,11 +357,11 @@ const CustomMonthCard: React.FC<CustomMonthCardProps> = ({
                   getLockClass(sectionLockStatus.notes), // Apply color based on status
                   monthData.notesLocked ? 'bg-green-50' : 'bg-gray-50' // Optional: subtle bg based on lock state
                 )}
-                aria-label={`Custom Notes section is ${sectionLockStatus.notes}. Click to ${monthData.notesLocked ? 'unlock' : 'lock'}.`}
+                aria-label={`Notes section is ${sectionLockStatus.notes}. Click to ${monthData.notesLocked ? 'unlock' : 'lock'}.`}
               >
                 {monthData.notesLocked ? <Lock size={14} /> : <Unlock size={14} />}
               </button>
-              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline">Custom Notes</span>
+              <span className="manrope-header-6 text-gray-700 no-underline hover:no-underline text-[10px] sm:text-xs md:text-sm">Custom Notes</span>
             </div>
           </div>
         </div>

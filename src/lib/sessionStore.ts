@@ -228,6 +228,8 @@ interface SessionStore {
   updateCustomMonth: (month: string, year: number, data: Partial<CustomMonthData>) => void;
   updateValidationStatus: (isValid: boolean) => void; // <<< Add validation action
   triggerSubmit: () => void; // <<< Add submit trigger action
+  // New helper to save (if active) & fully reset session
+  flushAndResetSession: () => Promise<void>;
   // Added sessionMetadata actions
   startSession: (edition: EditionType) => void;
   endSession: () => void;
@@ -980,10 +982,32 @@ export const useSessionStore = create<SessionStore>()(
         set(state => ({ submitTriggerCount: state.submitTriggerCount + 1 }));
       },
 
+      // --------------------------------------------------
+      // flushAndResetSession: Save to DB (if active) then wipe
+      // --------------------------------------------------
+      flushAndResetSession: async () => {
+        const { sessionMetadata: meta, saveSessionToDb } = get();
+        try {
+          if (meta.isActive && meta.sessionId) {
+            console.log('[flushAndResetSession] Active session detected. Saving before reset…');
+            await saveSessionToDb();
+          } else {
+            console.log('[flushAndResetSession] No active session – skipping save.');
+          }
+        } catch (err) {
+          console.error('[flushAndResetSession] Error while saving session during flush:', err);
+          // We still proceed to resetting; this is non-fatal for cleanup.
+        } finally {
+          console.log('[flushAndResetSession] Performing hard reset.');
+          get().resetSession();
+        }
+      },
+
       startSession: (edition) => set((state) => {
         const now = new Date();
         console.log("['sessionStore']: startSession called with edition:", edition);
-        const newSessionId = state.sessionMetadata.sessionId || uuidv4();
+        // Always generate a fresh ID to avoid reusing stale/phantom IDs
+        const newSessionId = uuidv4();
         return {
           session: {
             ...state.session,
@@ -1011,6 +1035,12 @@ export const useSessionStore = create<SessionStore>()(
         };
       }),
       endSession: () => {
+          // Remove persisted key immediately to avoid ghost sessions
+          try {
+            localStorage.removeItem('legacyLockerSession');
+          } catch (e) {
+            /* ignore */
+          }
           set((state) => ({
               sessionMetadata: {
                   sessionId: null,
@@ -1204,6 +1234,11 @@ export const useSessionStore = create<SessionStore>()(
           }
         } else if (_finalState) {
             console.log("[onRehydrateStorage] Metadata hydration successful.", _finalState.sessionMetadata);
+            // Defensive: If metadata says active but fresh session lacks edition, treat as stale ➜ reset metadata
+            if (_finalState.sessionMetadata?.isActive && !_finalState.session?.selectedEdition) {
+              console.warn('[onRehydrateStorage] Active metadata without session data detected. Cleaning up.');
+              _finalState.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
+            }
         }
 
         return (_finalState, _finalError) => {

@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { debugGoogleMapsLoading, getGoogleMapsApiUrl } from '@/lib/utils/googleMapsDebug';
 import { Loader2 } from 'lucide-react';
+import AddressForm from './AddressForm';
 
 // Define the type for the structured address expected by the parent component
 export interface StructuredAddress {
@@ -44,6 +45,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
   const [sessionToken, setSessionToken] = useState<google.maps.places.AutocompleteSessionToken | undefined>(undefined);
   const [isLoadingDetails, setIsLoadingDetails] = useState(false);
   const [scriptError, setScriptError] = useState<string | null>(null);
+  const [selectedAddress, setSelectedAddress] = useState<StructuredAddress | null>(null);
   // Track if the last interaction was a selection
   const wasJustSelected = useRef(false);
 
@@ -157,6 +159,7 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         if (status === window.google.maps.places.PlacesServiceStatus.OK && place) {
           console.log('AddressAutocomplete: Place details received', place);
           const address = parseAddress(place);
+          setSelectedAddress(address);
           onSelect(address); // Pass structured address to parent
           onChange(address.full || prediction.description); // Update input with full address
         } else {
@@ -168,6 +171,13 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
         setIsLoadingDetails(false); 
       }
     );
+  };
+
+  // Handle address form changes
+  const handleAddressFormChange = (newAddress: StructuredAddress) => {
+    setSelectedAddress(newAddress);
+    onSelect(newAddress);
+    onChange(newAddress.full || value);
   };
 
   // Handle user typing: reset the selection flag
@@ -276,25 +286,29 @@ const AddressAutocomplete: React.FC<AddressAutocompleteProps> = ({
       {error && <div className="mt-1 text-sm text-red-500">{error}</div>}
 
       {showPredictions && !isLoadingDetails && predictions.length > 0 && (
-        <ul 
-          id="address-predictions"
-          className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto"
-          role="listbox"
-        >
-          {predictions.map((prediction) => (
-            <li
-              key={prediction.place_id}
-              onClick={() => handleSelectPrediction(prediction)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleSelectPrediction(prediction); }}
-              className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
-              role="option"
-              aria-selected={false} // Basic implementation, could add keyboard navigation state
-              tabIndex={0} // Make it focusable
-            >
-              {prediction.description}
-            </li>
-          ))}
-        </ul>
+        <div className="absolute z-10 w-full mt-1 bg-white rounded-md shadow-lg">
+          <ul className="py-1">
+            {predictions.map((prediction) => (
+              <li
+                key={prediction.place_id}
+                className="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm"
+                onClick={() => handleSelectPrediction(prediction)}
+              >
+                {prediction.description}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {selectedAddress && (
+        <div className="mt-4">
+          <AddressForm
+            address={selectedAddress}
+            onChange={handleAddressFormChange}
+            error={error}
+          />
+        </div>
       )}
     </div>
   );
