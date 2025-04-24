@@ -118,6 +118,7 @@ export function useSessionManager() {
     const recipientFirstName = currentSessionState.session.recipient?.firstName || currentSessionState.session.recipient?.recipient1FirstName;
     const purchaserName = currentSessionState.session.purchaser?.fullName;
     const editionTitle = currentSessionState.session.selectedEdition?.label;
+    const editionType = currentSessionState.session.selectedEdition?.type;
     console.log(`[activateAndPersistSession] Sending resume email to ${purchaserEmail} for session ${newSessionId}`);
 
     try {
@@ -129,7 +130,8 @@ export function useSessionManager() {
           sessionId: newSessionId, 
           recipientFirstName,
           purchaserName,
-          editionTitle
+          editionTitle,
+          editionType
         }),
       });
 

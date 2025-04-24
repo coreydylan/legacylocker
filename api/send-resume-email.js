@@ -8,13 +8,18 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { email, sessionId, recipientFirstName, purchaserName, editionTitle } = req.body
+  const { email, sessionId, recipientFirstName, purchaserName, editionTitle, editionType } = req.body
 
   if (!email || !sessionId) {
     return res.status(400).json({ error: 'Missing email or sessionId' })
   }
 
   const resumeLink = `https://legacylockerco.com/?session_id=${sessionId}`
+
+  // Format the edition name based on type
+  const formattedEditionName = editionType 
+    ? `${editionType.charAt(0).toUpperCase() + editionType.slice(1)} Edition`
+    : 'Legacy Locker';
 
   try {
     const { error } = await resend.emails.send({
@@ -40,7 +45,7 @@ module.exports = async (req, res) => {
     <!-- Body -->
     <p>Hi <strong>${purchaserName || 'there'}</strong>,</p>
 
-    <p>You recently began setting up a Legacy Locker gift ${recipientFirstName ? `for ${recipientFirstName}` : ''} — a one-year subscription to the <strong>${editionTitle || 'Legacy Locker'}</strong> series.</p>
+    <p>You recently began setting up a Legacy Locker gift ${recipientFirstName ? `for ${recipientFirstName}` : ''} — a one-year subscription to the <strong>${formattedEditionName}</strong> series.</p>
 
     <p>This edition is a tribute to the stories that shape us — delivered one card at a time. You've already made a meaningful start.</p>
 
