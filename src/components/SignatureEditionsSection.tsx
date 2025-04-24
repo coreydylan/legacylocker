@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from '@/lib/supabaseClient';
 import { StoryPreview } from '@/components/StoryPreview';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
 import { useRegionalStories } from "@/hooks/useRegionalStories";
 
 // IDs of the specific story series we want to show
@@ -35,6 +35,7 @@ export const SignatureEditionsSection = () => {
   const [samples, setSamples] = useState<StorySample[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
   const { stories } = useRegionalStories();
 
   useEffect(() => {
@@ -87,6 +88,10 @@ export const SignatureEditionsSection = () => {
     }
   }, [stories]);
 
+  const toggleTextExpanded = () => {
+    setIsTextExpanded(!isTextExpanded);
+  };
+
   return (
     <section id="signature-editions" className="bg-white py-24">
       <div className="container mx-auto px-6 md:px-6">
@@ -99,12 +104,46 @@ export const SignatureEditionsSection = () => {
               transition={{ duration: 0.7 }}
               className="mb-8 md:pl-0"
             >
-              <div className="text-[clamp(24px,2.4vw,32px)]">
+              <button 
+                onClick={toggleTextExpanded}
+                className="text-[clamp(24px,2.4vw,32px)] flex items-center gap-2 group"
+              >
                 <span className="font-bold bg-legacy-green/10 px-3 py-1 rounded-md text-legacy-green">
                   signature editions
                 </span>
-              </div>
+                <ChevronDown 
+                  className={`h-5 w-5 text-legacy-green transition-transform duration-300 ${isTextExpanded ? 'rotate-180' : ''}`} 
+                />
+              </button>
             </motion.div>
+
+            {/* Collapsible Text Content */}
+            {isTextExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-8"
+              >
+                <div className="bg-legacy-green/5 p-6 rounded-lg max-w-[1200px]">
+                  <div className="space-y-4 text-[clamp(14px,1.4vw,18px)] leading-relaxed text-[#444]">
+                    <p>
+                      Our lives are shaped by the places we love, the teams we root for, the music that moves us, and the moments that made history. Signature Editions bring those stories to life — with beautifully illustrated cards that trace the cultural threads that connect us.
+                    </p>
+                    <p>
+                      Whether it's San Diego baseball, New Orleans jazz, or San Francisco's roots, each edition is locally contextualized and thoughtfully crafted. You'll receive 12 stories throughout the year, each one tied to a real moment in history from the month it arrives — creating a rhythm of discovery that unfolds over time.
+                    </p>
+                    <p>
+                      We cover themes across sports, history, music, art, and more — so it's easy to find one that fits anyone.
+                    </p>
+                    <p>
+                      And the best part? They're ready to go. You can personalize each card with custom milestone footers — birthdays, anniversaries, or just because — and be done in under 5 minutes. You pick the story. We handle the magic.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Preview Block */}
             <motion.div

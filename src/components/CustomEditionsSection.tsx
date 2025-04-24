@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { supabase } from '@/lib/supabaseClient';
 import { CustomPreview } from '@/components/CustomPreview';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ChevronDown } from 'lucide-react';
 import { useRegionalStories } from "@/hooks/useRegionalStories";
 
 // IDs of the specific story series we want to show for custom editions
@@ -35,6 +35,7 @@ export const CustomEditionsSection = () => {
   const [samples, setSamples] = useState<StorySample[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isTextExpanded, setIsTextExpanded] = useState(false);
   const { stories } = useRegionalStories();
 
   useEffect(() => {
@@ -87,6 +88,10 @@ export const CustomEditionsSection = () => {
     }
   }, [stories]);
 
+  const toggleTextExpanded = () => {
+    setIsTextExpanded(!isTextExpanded);
+  };
+
   return (
     <section id="custom-editions" className="bg-white py-24">
       <div className="container mx-auto px-6 md:px-6">
@@ -99,12 +104,46 @@ export const CustomEditionsSection = () => {
               transition={{ duration: 0.7 }}
               className="mb-8 md:pl-0"
             >
-              <div className="text-[clamp(24px,2.4vw,32px)]">
+              <button 
+                onClick={toggleTextExpanded}
+                className="text-[clamp(24px,2.4vw,32px)] flex items-center gap-2 group"
+              >
                 <span className="font-bold bg-legacy-gold/10 px-3 py-1 rounded-md text-legacy-gold">
                   custom editions
                 </span>
-              </div>
+                <ChevronDown 
+                  className={`h-5 w-5 text-legacy-gold transition-transform duration-300 ${isTextExpanded ? 'rotate-180' : ''}`} 
+                />
+              </button>
             </motion.div>
+
+            {/* Collapsible Text Content */}
+            {isTextExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.3 }}
+                className="mb-8"
+              >
+                <div className="bg-legacy-gold/5 p-6 rounded-lg max-w-[1200px]">
+                  <div className="space-y-4 text-[clamp(14px,1.4vw,18px)] leading-relaxed text-[#444]">
+                    <p>
+                      Some stories aren't in the history books — they're in your camera roll, your group chats, or the kind of memories that resurface on long drives. Custom Editions turn those stories into something you can hold.
+                    </p>
+                    <p>
+                      Whether it's the story of your relationship, your childhood, or your family history, we'll help you turn it into a yearlong series of illustrated cards — one story for each month, delivered right when it matters.
+                    </p>
+                    <p>
+                      You can upload photos, add milestone messages, or just jot down a few notes — and we'll take care of the rest. The result is 12 beautiful cards that feel like you wrote a book… without actually having to write a book.
+                    </p>
+                    <p>
+                      It's the kind of gift that says more than a text or a phone call ever could — and it only takes a few minutes to set up.
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
 
             {/* Preview Block */}
             <motion.div
