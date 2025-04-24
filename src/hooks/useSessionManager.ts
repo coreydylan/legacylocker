@@ -116,13 +116,21 @@ export function useSessionManager() {
 
     // --- Email Magic Link ---
     const recipientFirstName = currentSessionState.session.recipient?.firstName || currentSessionState.session.recipient?.recipient1FirstName;
+    const purchaserName = currentSessionState.session.purchaser?.fullName;
+    const editionTitle = currentSessionState.session.selectedEdition?.label;
     console.log(`[activateAndPersistSession] Sending resume email to ${purchaserEmail} for session ${newSessionId}`);
 
     try {
       const response = await fetch('/api/send-resume-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: purchaserEmail, sessionId: newSessionId, recipientFirstName }),
+        body: JSON.stringify({ 
+          email: purchaserEmail, 
+          sessionId: newSessionId, 
+          recipientFirstName,
+          purchaserName,
+          editionTitle
+        }),
       });
 
       if (!response.ok) {

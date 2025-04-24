@@ -1,9 +1,10 @@
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNextHoliday } from "@/hooks/useNextHoliday";
 import { useRegionalStories } from "@/hooks/useRegionalStories";
 import { FadeContent } from "@/components/FadeContent";
 import { FadeSection } from "@/components/FadeSection";
+import { differenceInDays } from "date-fns";
 
 interface NarrativeExplainerSectionProps {
   onThemeSelect?: (theme: string) => void;
@@ -13,6 +14,21 @@ export const NarrativeExplainerSection = ({ onThemeSelect }: NarrativeExplainerS
   const [selectedTheme, setSelectedTheme] = useState<string>("");
   const { displayText, nextHoliday } = useNextHoliday();
   const { stories, isLoading } = useRegionalStories();
+  const [daysUntilMotherDay, setDaysUntilMotherDay] = useState<number>(0);
+
+  useEffect(() => {
+    // Calculate days until May 2nd (deadline for Mother's Day orders)
+    const now = new Date();
+    const motherDayDeadline = new Date(now.getFullYear(), 4, 2); // May 2nd
+    
+    // If May 2nd has already passed this year, calculate for next year
+    if (now > motherDayDeadline) {
+      motherDayDeadline.setFullYear(now.getFullYear() + 1);
+    }
+    
+    const daysLeft = differenceInDays(motherDayDeadline, now);
+    setDaysUntilMotherDay(daysLeft);
+  }, []);
 
   const handleThemeSelect = (theme: string) => {
     setSelectedTheme(theme);
@@ -98,6 +114,23 @@ export const NarrativeExplainerSection = ({ onThemeSelect }: NarrativeExplainerS
               <span className="inline-block mr-2">🎁</span> 
               <span className="bg-legacy-gold/20 px-1 rounded-sm">{displayText}</span>—now is the perfect moment to kick off their year of stories. We'll celebrate {nextHoliday?.name} and every other milestone that matters in the year ahead.
             </motion.p>
+            
+            {nextHoliday?.name === "Mother's Day" && (
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="text-[clamp(20px,2.2vw,28px)] leading-relaxed text-[#444] text-center"
+              >
+                You have {daysUntilMotherDay <= 8 ? (
+                  <span className="bg-rose-100 text-red-800 font-medium px-1 rounded-sm">
+                    {daysUntilMotherDay} days left
+                  </span>
+                ) : (
+                  <span>{daysUntilMotherDay} days left</span>
+                )} to order in time for the first card to arrive by Mother's Day!
+              </motion.p>
+            )}
           </div>
 
           {/* Step 1 Block */}

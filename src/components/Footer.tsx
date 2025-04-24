@@ -1,6 +1,5 @@
-
 import React from 'react';
-import { Mail, Phone, Instagram, Twitter, Facebook, Linkedin } from "lucide-react";
+import { Mail, Instagram, Twitter, Facebook, Linkedin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const Footer = () => {
@@ -47,12 +46,6 @@ const Footer = () => {
                 <Mail className="h-4 w-4 mr-2 text-legacy-gold" />
                 <a href="mailto:hello@legacylockerco.com" className="text-legacy-dark/70 hover:text-legacy-green">
                   hello@legacylockerco.com
-                </a>
-              </li>
-              <li className="flex items-center">
-                <Phone className="h-4 w-4 mr-2 text-legacy-gold" />
-                <a href="tel:+18005551234" className="text-legacy-dark/70 hover:text-legacy-green">
-                  (800) 555-1234
                 </a>
               </li>
             </ul>
