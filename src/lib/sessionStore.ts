@@ -1140,7 +1140,7 @@ export const useSessionStore = create<SessionStore>()(
           try {
               const { data, error } = await supabase
                   .from('sessions')
-                  .select('email, expires_at')
+                  .select('session_data, expires_at')
                   .eq('id', sessionId) 
                   .single();
 
@@ -1150,7 +1150,7 @@ export const useSessionStore = create<SessionStore>()(
                   return false;
               }
 
-              if (data) {
+              if (data && data.session_data) {
                   if (data.expires_at && new Date() > new Date(data.expires_at)) {
                       console.warn(`[loadSessionFromDb] Session ${sessionId} has expired (${data.expires_at}). Not loading.`);
                       set({ isLoading: false, isHydrated: true });
@@ -1158,11 +1158,34 @@ export const useSessionStore = create<SessionStore>()(
                   }
 
                   console.log(`[loadSessionFromDb] Session ${sessionId} loaded successfully.`);
-                  // <<< TEMPORARY: We can't validate or set the session without session_data
-                  // For this test, just return true if the SELECT succeeded, even though the session isn't loaded
-                  console.warn('[loadSessionFromDb] TEMPORARY TEST: SELECT succeeded, but session_data was not loaded. Returning true for test purposes.');
-                  set({ isLoading: false, isHydrated: true });
-                  return true; 
+                  // <<< REVERTED: Process the loaded session data
+                  const loadedSession = data.session_data as SessionData;
+                  
+                  if (isValidSession(loadedSession)) {
+                      // Force the internal sessionId to match the DB row ID used for lookup
+                      loadedSession.sessionId = sessionId; 
+                      console.log(`[loadSessionFromDb] Aligning internal session ID to DB ID: ${sessionId}`);
+                      
+                      set({
+                          session: loadedSession, // Use the modified loadedSession
+                          sessionMetadata: {
+                             // Use the aligned sessionId for metadata as well
+                             sessionId: sessionId, 
+                             isActive: true,
+                             editionType: loadedSession.selectedEdition?.type || null,
+                             lastSaved: loadedSession.updatedAt ? new Date(loadedSession.updatedAt) : new Date(),
+                          },
+                          isLoading: false,
+                          isHydrated: true,
+                          isCurrentStepValid: true // Assume valid on load, components will re-validate
+                      });
+                      return true;
+                  } else {
+                      console.warn(`[loadSessionFromDb] Loaded session ${sessionId} is invalid according to isValidSession check. Resetting.`);
+                      get().resetSession(); // Reset if loaded data is corrupt/invalid
+                      set({ isLoading: false, isHydrated: true });
+                      return false;
+                  }
               } else {
                   console.warn(`[loadSessionFromDb] No session data found for ID ${sessionId}.`);
                   set({ isLoading: false, isHydrated: true });
@@ -1212,11 +1235,8 @@ export const useSessionStore = create<SessionStore>()(
           }
         } else if (_finalState) {
             console.log("[onRehydrateStorage] Metadata hydration successful.", _finalState.sessionMetadata);
-            // Defensive: If metadata says active but fresh session lacks edition, treat as stale ➜ reset metadata
-            if (_finalState.sessionMetadata?.isActive && !_finalState.session?.selectedEdition) {
-              console.warn('[onRehydrateStorage] Active metadata without session data detected. Cleaning up.');
-              _finalState.sessionMetadata = { sessionId: null, isActive: false, editionType: null, lastSaved: null };
-            }
+            // REMOVED: Defensive cleanup logic was interfering with showing the Resume button.
+            // Resuming is now handled explicitly by reloadSessionFromDbAndInitialize.
         }
 
         return (_finalState, _finalError) => {
