@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, Instagram, Twitter, Facebook, Linkedin } from "lucide-react";
+import { Mail, Instagram } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 
 const Footer = () => {
@@ -13,17 +13,8 @@ const Footer = () => {
               We transform meaningful stories into collectible works of art, delivered when they matter most.
             </p>
             <div className="flex space-x-4">
-              <a href="#" className="text-legacy-green hover:text-legacy-gold transition-colors">
+              <a href="https://www.instagram.com/legacylockerco" target="_blank" rel="noopener noreferrer" className="text-legacy-green hover:text-legacy-gold transition-colors">
                 <Instagram className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-legacy-green hover:text-legacy-gold transition-colors">
-                <Twitter className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-legacy-green hover:text-legacy-gold transition-colors">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="#" className="text-legacy-green hover:text-legacy-gold transition-colors">
-                <Linkedin className="h-5 w-5" />
               </a>
             </div>
           </div>
