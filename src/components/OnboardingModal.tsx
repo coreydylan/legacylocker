@@ -87,6 +87,15 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const { closeOnboarding } = useModalStore();
   
+  // Ref to track if the next close event should skip resetting the session (e.g., Save & Finish Later)
+  const skipResetOnCloseRef = useRef(false);
+
+  // Helper to close the modal **without** resetting the session (used by SaveAndCloseButton)
+  const closeWithoutReset = () => {
+    skipResetOnCloseRef.current = true; // Tell the close handler to skip reset once
+    closeOnboarding(); // Trigger the Radix Dialog to close
+  };
+
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [lastSavedTime, setLastSavedTime] = useState<Date | null>(null);
 
@@ -161,16 +170,18 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
 
   const handleModalCloseTrigger = (open: boolean) => {
     if (!open) {
+      if (skipResetOnCloseRef.current) {
+        // This close was initiated by SaveAndCloseButton – skip resetting once
+        console.log('[OnboardingModal] Modal closed after save – preserving session state.');
+        skipResetOnCloseRef.current = false; // Reset flag for future closes
+        onClose();
+        return;
+      }
+
       // User clicked 'X' or outside modal - discard current state without saving
       console.log('[OnboardingModal] Modal close triggered via UI (X or overlay) – resetting state.');
-      storeResetSession(); // Use the reset action directly from the store
-      onClose(); // Call the original onClose to hide the modal UI
-      
-      // Original flush logic moved to post-submit effect and SaveAndCloseButton
-      /* flushAndResetSession()
-        .catch(err => console.error('[OnboardingModal] Error during flushAndResetSession:', err))
-        .finally(() => onClose());
-      */
+      storeResetSession(); // Reset session completely
+      onClose(); // Hide the modal UI
     }
   };
 
@@ -268,7 +279,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
             <MobileNavFooter triggerModalClose={() => handleModalCloseTrigger(false)} />
             {!isMobile && sessionMetadata.isActive && (
               <div className="fixed bottom-6 right-6 z-[100]">
-                <SaveAndCloseButton onClose={closeOnboarding} />
+                <SaveAndCloseButton onClose={closeWithoutReset} />
               </div>
             )}
           </DialogPrimitive.Content>
