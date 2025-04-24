@@ -179,6 +179,28 @@ const AdminDashboard = () => {
             </Button>
           </CardFooter>
         </Card>
+        
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Settings className="h-5 w-5 mr-2" />
+              Promo Codes
+            </CardTitle>
+            <CardDescription>
+              Create and manage discount codes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-500">
+              Add, edit, enable or disable promotional codes.
+            </p>
+          </CardContent>
+          <CardFooter>
+            <Button asChild className="w-full">
+              <Link to="/admin/promo-codes">Manage Promo Codes</Link>
+            </Button>
+          </CardFooter>
+        </Card>
       </div>
     </div>
   );

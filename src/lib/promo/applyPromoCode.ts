@@ -63,10 +63,19 @@ export async function applyPromoCode(
   }
 
   const now = new Date();
-  if (data.starts_at && new Date(data.starts_at) > now) {
+
+  // Helper to parse timestamp strings (from Supabase) as UTC
+  const parseAsUTC = (ts: string) => {
+    // If the string already has a timezone offset, just use Date()
+    if (/Z|[+-]\d{2}:?\d{2}$/.test(ts)) return new Date(ts);
+    // Otherwise treat it as UTC by appending Z
+    return new Date(ts + 'Z');
+  };
+
+  if (data.starts_at && parseAsUTC(data.starts_at) > now) {
     return { valid: false, errorMessage: 'This promo code is not yet valid.' };
   }
-  if (data.expires_at && new Date(data.expires_at) < now) {
+  if (data.expires_at && parseAsUTC(data.expires_at) < now) {
     return { valid: false, errorMessage: 'This promo code has expired.' };
   }
 

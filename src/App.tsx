@@ -22,6 +22,7 @@ import FontExamplesPage from "./pages/font-examples";
 import CardBuilderDemo from "./pages/card-builder-demo";
 import StoryPreviewDemo from "./pages/story-preview-demo";
 import DevOverlayEditor from "@/components/DevOverlayEditor";
+import AdminPromoCodesPage from "./pages/admin/promo-codes";
 
 const queryClient = new QueryClient();
 
@@ -59,6 +60,11 @@ const AppContent = () => {
         <Route path="/admin/series/:id" element={
           <AdminAuth>
             <AdminSeriesDetailPage />
+          </AdminAuth>
+        } />
+        <Route path="/admin/promo-codes" element={
+          <AdminAuth>
+            <AdminPromoCodesPage />
           </AdminAuth>
         } />
         <Route path="/font-examples" element={<FontExamplesPage />} />
