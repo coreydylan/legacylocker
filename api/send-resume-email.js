@@ -43,7 +43,7 @@ module.exports = async (req, res) => {
     <p style="font-size:16px; color:#777; margin-top:0;">Legacy Locker</p>
 
     <!-- Body -->
-    <p>Hi <strong>${purchaserName || 'there'}</strong>,</p>
+    <p>Hi ${purchaserName ? purchaserName + ',' : 'there,'}</p>
 
     <p>You recently began setting up a Legacy Locker gift ${recipientFirstName ? `for ${recipientFirstName}` : ''} — a one-year subscription to the <strong>${formattedEditionName}</strong> series.</p>
 

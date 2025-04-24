@@ -116,7 +116,8 @@ export function useSessionManager() {
 
     // --- Email Magic Link ---
     const recipientFirstName = currentSessionState.session.recipient?.firstName || currentSessionState.session.recipient?.recipient1FirstName;
-    const purchaserName = currentSessionState.session.purchaser?.fullName;
+    const purchaserFullName = currentSessionState.session.purchaser?.fullName;
+    const purchaserFirstName = purchaserFullName ? purchaserFullName.split(' ')[0] : null;
     const editionTitle = currentSessionState.session.selectedEdition?.label;
     const editionType = currentSessionState.session.selectedEdition?.type;
     console.log(`[activateAndPersistSession] Sending resume email to ${purchaserEmail} for session ${newSessionId}`);
@@ -129,7 +130,7 @@ export function useSessionManager() {
           email: purchaserEmail, 
           sessionId: newSessionId, 
           recipientFirstName,
-          purchaserName,
+          purchaserName: purchaserFirstName,
           editionTitle,
           editionType
         }),
