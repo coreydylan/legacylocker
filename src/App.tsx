@@ -21,6 +21,7 @@ import AdminAuth from "@/components/AdminAuth";
 import FontExamplesPage from "./pages/font-examples";
 import CardBuilderDemo from "./pages/card-builder-demo";
 import StoryPreviewDemo from "./pages/story-preview-demo";
+import DevOverlayEditor from "@/components/DevOverlayEditor";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,10 @@ const AppContent = () => {
 }
 
 const App = () => {
+  const isDev = import.meta.env.DEV;
+  const params = new URLSearchParams(window.location.search);
+  const editMode = params.get('editMode') === 'true';
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -77,7 +82,13 @@ const App = () => {
         <Sonner />
         <BrowserRouter>
           <SessionLoader>
-            <AppContent />
+            {isDev && editMode ? (
+              <DevOverlayEditor>
+                <AppContent />
+              </DevOverlayEditor>
+            ) : (
+              <AppContent />
+            )}
           </SessionLoader>
         </BrowserRouter>
       </TooltipProvider>

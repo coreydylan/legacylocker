@@ -3,14 +3,17 @@ import { CheckCircle, Package } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useSessionStore } from '@/lib/sessionStore';
+import { useModalStore } from '@/lib/modalStore';
 
 const OrderConfirmation: React.FC = () => {
   const navigate = useNavigate();
   const { resetSession } = useSessionStore();
+  const { closeOnboarding } = useModalStore();
 
   const handleFinish = () => {
     resetSession();
-    navigate('/'); // Navigate to homepage or dashboard
+    closeOnboarding();
+    navigate('/'); // Optional: Navigate to homepage
   };
 
   return (
@@ -22,9 +25,6 @@ const OrderConfirmation: React.FC = () => {
       <p className="text-lg text-gray-600 mb-8">
         Thank you for your purchase. Your Legacy Locker is being prepared.
         You will receive an email confirmation shortly.
-      </p>
-      <p className="text-sm text-gray-500 mb-8">
-        (Order details would normally be displayed here)
       </p>
       <Button 
         size="lg" 

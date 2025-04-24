@@ -86,7 +86,7 @@ export const NarrativeExplainerSection = ({ onThemeSelect }: NarrativeExplainerS
               <span className="bg-legacy-gold/30 px-1 rounded-sm">personalized</span>, 
               <span className="bg-legacy-gold/30 px-1 rounded-sm">illustrated</span>, 
               and <span className="bg-legacy-gold/30 px-1 rounded-sm">unforgettable</span>.
-              Give it any time of year to offer celebration, connection, and reflection—month after month.
+              Gift a story series any time of year to offer celebration, connection, and reflection—month after month.
             </motion.p>
 
             <motion.p
