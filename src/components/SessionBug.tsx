@@ -83,20 +83,23 @@ export function SessionBug() {
   };
 
   const handleResume = async () => {
-    if (!sessionMetadata.sessionId) {
+    // Get the *latest* sessionId directly from the store state at click time
+    const currentSessionId = useSessionStore.getState().sessionMetadata.sessionId;
+
+    if (!currentSessionId) {
       console.error('SessionBug: Cannot resume, no active session ID found.');
       toast({ title: 'Error', description: 'Could not find session to resume.', variant: 'destructive' });
       return;
     }
 
-    console.log(`SessionBug: Attempting to reload session ${sessionMetadata.sessionId}...`);
-    const success = await sessionManager.reloadSessionFromDbAndInitialize(sessionMetadata.sessionId);
+    console.log(`SessionBug: Attempting to reload session ${currentSessionId}...`);
+    const success = await sessionManager.reloadSessionFromDbAndInitialize(currentSessionId);
 
     if (success) {
-      console.log(`SessionBug: Session ${sessionMetadata.sessionId} reloaded successfully, opening modal.`);
+      console.log(`SessionBug: Session ${currentSessionId} reloaded successfully, opening modal.`);
       openOnboarding();
     } else {
-      console.error(`SessionBug: Failed to reload session ${sessionMetadata.sessionId}.`);
+      console.error(`SessionBug: Failed to reload session ${currentSessionId}.`);
       // Toast is handled by the reload function on failure
     }
   };
