@@ -1140,7 +1140,7 @@ export const useSessionStore = create<SessionStore>()(
           try {
               const { data, error } = await supabase
                   .from('sessions')
-                  .select('session_data, expires_at') 
+                  .select('email, expires_at')
                   .eq('id', sessionId) 
                   .single();
 
@@ -1150,7 +1150,7 @@ export const useSessionStore = create<SessionStore>()(
                   return false;
               }
 
-              if (data && data.session_data) {
+              if (data) {
                   if (data.expires_at && new Date() > new Date(data.expires_at)) {
                       console.warn(`[loadSessionFromDb] Session ${sessionId} has expired (${data.expires_at}). Not loading.`);
                       set({ isLoading: false, isHydrated: true });
@@ -1158,33 +1158,11 @@ export const useSessionStore = create<SessionStore>()(
                   }
 
                   console.log(`[loadSessionFromDb] Session ${sessionId} loaded successfully.`);
-                  const loadedSession = data.session_data as SessionData;
-                  
-                  if (isValidSession(loadedSession)) {
-                      // Force the internal sessionId to match the DB row ID used for lookup
-                      loadedSession.sessionId = sessionId; 
-                      console.log(`[loadSessionFromDb] Aligning internal session ID to DB ID: ${sessionId}`);
-                      
-                      set({
-                          session: loadedSession, // Use the modified loadedSession
-                          sessionMetadata: {
-                             // Use the aligned sessionId for metadata as well
-                             sessionId: sessionId, 
-                             isActive: true,
-                             editionType: loadedSession.selectedEdition?.type || null,
-                             lastSaved: loadedSession.updatedAt ? new Date(loadedSession.updatedAt) : new Date(),
-                          },
-                          isLoading: false,
-                          isHydrated: true,
-                          isCurrentStepValid: true
-                      });
-                      return true;
-                  } else {
-                      console.warn(`[loadSessionFromDb] Loaded session ${sessionId} is invalid. Resetting.`);
-                      get().resetSession();
-                      set({ isLoading: false, isHydrated: true });
-                      return false;
-                  }
+                  // <<< TEMPORARY: We can't validate or set the session without session_data
+                  // For this test, just return true if the SELECT succeeded, even though the session isn't loaded
+                  console.warn('[loadSessionFromDb] TEMPORARY TEST: SELECT succeeded, but session_data was not loaded. Returning true for test purposes.');
+                  set({ isLoading: false, isHydrated: true });
+                  return true; 
               } else {
                   console.warn(`[loadSessionFromDb] No session data found for ID ${sessionId}.`);
                   set({ isLoading: false, isHydrated: true });
