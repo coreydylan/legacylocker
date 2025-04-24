@@ -9,6 +9,7 @@ import { createServiceRoleClient, createJsonResponse } from '../_shared/supabase
 // Define an interface for the expected request body
 interface ProcessOrderPayload {
   session: any; // Use 'any' for now, or ideally import/define SessionData type
+  promoCode?: string; // Newly added optional promo code string
 }
 
 console.log(`Function "process-order" up and running!`)
@@ -26,7 +27,7 @@ serve(async (req) => {
     }
 
     // Parse the request body
-    const { session } = (await req.json()) as ProcessOrderPayload;
+    const { session, promoCode } = (await req.json()) as ProcessOrderPayload;
 
     if (!session) {
       return createJsonResponse({ error: 'Missing session data in request body' }, 400, corsHeaders);
@@ -51,6 +52,27 @@ serve(async (req) => {
       throw new Error('No edition selected.');
     }
 
+    // Placeholder for promo code id (if any) and record
+    let promoCodeId: string | null = null;
+    let fetchedPromo: any | null = null;
+    // If a promo code was passed, look it up and set promoCodeId
+    if (promoCode) {
+      const { data: promoData, error: promoErr } = await supabaseAdmin
+        .from('promo_codes')
+        .select('*')
+        .ilike('code', promoCode)
+        .maybeSingle();
+
+      if (promoErr) {
+        console.error('[process-order] Failed to fetch promo code:', promoErr);
+        throw promoErr;
+      }
+      if (promoData) {
+        promoCodeId = promoData.id as string;
+        fetchedPromo = promoData;
+      }
+    }
+
     // Build order payload (Aligned with DB Schema)
     const orderPayload = {
       purchaser_name: purchaser?.fullName || null,
@@ -73,6 +95,7 @@ serve(async (req) => {
       shipping_country: shipping?.country || recipientInfo?.shippingAddress?.country || null,
       gift_occasion: recipientInfo?.relationship || null, 
       order_date: new Date().toISOString(),
+      promo_code_id: promoCodeId,
     };
 
     // Insert order

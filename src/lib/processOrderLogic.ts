@@ -1,15 +1,25 @@
 import { supabase } from '@/lib/supabaseClient';
 import { SessionData } from '@/lib/sessionStore';
 
+// New: allow optional promo code parameter
+export interface ProcessOrderOptions {
+  promoCode?: string;
+}
+
 /**
  * Invokes the 'process-order' Supabase Edge Function to securely process the order.
  */
-export const processOrder = async (session: SessionData) => {
+export const processOrder = async (
+  session: SessionData,
+  options: ProcessOrderOptions = {}
+) => {
   console.log('[processOrder] Invoking Edge Function with session:', session);
   try {
+    const { promoCode } = options;
+
     // Invoke the Edge Function, passing the session data in the body
     const { data, error } = await supabase.functions.invoke('process-order', {
-      body: { session }, // Pass the session object nested under 'session' key
+      body: { session, promoCode }, // Include promo code if provided
     });
 
     if (error) {

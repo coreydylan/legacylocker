@@ -9,6 +9,8 @@ import { calculateSessionPrice } from '@/lib/pricing';
 import { cn } from '@/lib/utils';
 import { processOrder } from '@/lib/processOrderLogic';
 import { useSessionManager } from '@/hooks/useSessionManager';
+import { applyPromoCode, PromoResult } from '@/lib/promo';
+import type { AppliesToType } from '@/lib/promo/applyPromoCode';
 
 // Stripe Imports
 import { loadStripe } from '@stripe/stripe-js';
@@ -58,6 +60,11 @@ const ReviewCheckout: React.FC = () => {
   const [isLoadingPaymentIntent, setIsLoadingPaymentIntent] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const [promoInput, setPromoInput] = useState('');
+  const [promoResult, setPromoResult] = useState<PromoResult | null>(null);
+  const [promoApplying, setPromoApplying] = useState(false);
+  const [promoError, setPromoError] = useState<string | null>(null);
+
   const typedSession = session as SessionData;
   const recipientType = typedSession.recipientType || 'individual'; 
   const recipient: Recipient = typedSession.recipient || defaultRecipient;
@@ -69,8 +76,15 @@ const ReviewCheckout: React.FC = () => {
     (card: any) => card?.title?.trim() !== '' && card?.story?.trim() !== ''
   ).length;
   
-  const totalPrice = calculateSessionPrice(typedSession);
-  const totalPriceInCents = 1; // Always send 1 cent to Stripe
+  const basePrice = calculateSessionPrice(typedSession);
+
+  // Helper to determine current payable total after promo
+  const discountedTotal = promoResult?.valid ? promoResult.newTotal : basePrice;
+
+  // Fallback to test amount (1 cent) if null
+  const totalPriceInCents = discountedTotal !== null ? Math.round(discountedTotal * 100) : 1;
+
+  const totalPrice = discountedTotal; // used for display later
   const isPayable = totalPrice !== null;
   const isConcierge = typedSession.selectedEdition?.type === 'concierge';
 
@@ -114,7 +128,9 @@ const ReviewCheckout: React.FC = () => {
   // Handler called once Stripe confirms payment succeeded
   const handlePaymentSuccess = async () => {
     try {
-      await processOrder(useSessionStore.getState().session as SessionData);
+      await processOrder(useSessionStore.getState().session as SessionData, {
+        promoCode: promoResult?.valid ? promoResult.promoCode : undefined,
+      });
       console.log('[ReviewCheckout] processOrder completed after successful payment');
       // Navigate to the next step (confirmation screen)
       useSessionStore.getState().nextStep(); 
@@ -182,6 +198,38 @@ const ReviewCheckout: React.FC = () => {
     appearance: { theme: 'stripe' as const },
   } : undefined;
   
+  // --- Promo code apply handler ---
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim() || promoApplying) return;
+    setPromoApplying(true);
+    setPromoError(null);
+
+    try {
+      const editionType = (typedSession.selectedEdition?.type || 'signature') as AppliesToType;
+      const result = await applyPromoCode(promoInput, {
+        orderTotal: basePrice || 0,
+        editionType,
+      });
+      setPromoResult(result);
+      if (result.valid) {
+        setPromoError(null);
+      } else if ('errorMessage' in result) {
+        setPromoError(result.errorMessage);
+      }
+    } catch (err) {
+      console.error('Failed to apply promo code', err);
+      setPromoError('Unable to apply promo code. Please try again.');
+    } finally {
+      setPromoApplying(false);
+    }
+  };
+
+  const handleRemovePromo = () => {
+    setPromoResult(null);
+    setPromoInput('');
+    setPromoError(null);
+  };
+
   return (
     <div className="max-w-2xl mx-auto py-4 md:py-8 px-4 md:px-0 space-y-6">
       <div className="mb-6 md:mb-8 text-left">
@@ -296,15 +344,52 @@ const ReviewCheckout: React.FC = () => {
           </div>
       )}
       
+      {/* Promo Code Input Section */}
+      {isPayable && (
+        <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
+          <h2 className="text-xl font-manrope text-legacy-green mb-2">Promo Code</h2>
+          {promoResult?.valid ? (
+            <div className="flex items-center justify-between">
+              <span className="text-gray-700">Applied: <strong>{promoResult.promoCode.toUpperCase()}</strong> ( -${promoResult.discountAmount.toFixed(2)} )</span>
+              <Button size="sm" variant="ghost" className="text-red-600" onClick={handleRemovePromo}>Remove</Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={promoInput}
+                  onChange={(e) => setPromoInput(e.target.value)}
+                  placeholder="Enter promo code"
+                  className="flex-1 border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-legacy-green focus:border-legacy-green"
+                />
+                <Button
+                  size="sm"
+                  onClick={handleApplyPromo}
+                  disabled={promoApplying || !promoInput.trim()}
+                  className="bg-legacy-green text-white hover:bg-legacy-green/90"
+                >
+                  {promoApplying ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Apply'}
+                </Button>
+              </div>
+              {promoError && <p className="text-sm text-red-600">{promoError}</p>}
+            </div>
+          )}
+        </div>
+      )}
+      
       <div className="bg-legacy-green/10 p-4 md:p-6 rounded-lg">
          <div className="flex justify-between items-center">
            <span className="text-lg font-semibold text-gray-700">Total Price</span>
            <span className="text-xl font-bold text-legacy-green">
              {totalPrice !== null 
-               ? `$${totalPrice}` 
+               ? `$${totalPrice.toFixed(2)}` 
                : (isConcierge ? 'Price determined offline' : 'Calculating...')}
            </span>
          </div>
+         {promoResult?.valid && (
+           <p className="text-sm text-gray-600 mt-1">Discount applied: -${promoResult.discountAmount.toFixed(2)}</p>
+         )}
        </div>
       
       {!isMobile && (
