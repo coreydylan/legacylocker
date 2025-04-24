@@ -69,14 +69,19 @@ serve(async (req) => {
       const existingEmailLower = existingEmail ? existingEmail.toLowerCase() : null;
       const newEmailLower = newEmail ? newEmail.toLowerCase() : null;
 
-      if (existingEmailLower && newEmailLower && existingEmailLower !== newEmailLower) {
-          console.warn(`Potential session hijack attempt: Session ${id} exists with email ${existingEmail}, but request provides ${newEmail}.`);
-          // Optionally: Allow update if existingEmail was null/undefined? Depends on desired logic.
-          // For now, strict check: If existing email exists, new one must match.
-         return new Response(JSON.stringify({ error: 'Email mismatch for existing session.' }), {
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 403, // Forbidden
-          })
+      // Allow update if:
+      // - Existing email is null/empty (new user adding email)
+      // - New email matches existing email
+      // - Existing email is a suspected placeholder like "c" (allowing correction)
+      const isPlaceholderEmail = existingEmailLower && existingEmailLower.length <= 2; // Adjust length check as needed
+
+      if (existingEmailLower && newEmailLower && existingEmailLower !== newEmailLower && !isPlaceholderEmail) {
+          // Only block if emails mismatch AND existing email is NOT a placeholder
+          console.warn(`Potential session hijack attempt: Session ${id} exists with email ${existingEmail}, but request provides ${newEmail}. Blocking update.`);
+          return new Response(JSON.stringify({ error: 'Email mismatch for existing session.' }), {
+             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+             status: 403, // Forbidden
+           })
       }
        console.log(`Email check passed for existing session ${id}. Proceeding with upsert.`);
     } else {
