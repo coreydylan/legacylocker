@@ -30,6 +30,30 @@ export const processOrder = async (session: SessionData) => {
     }
 
     console.log('✅ Order processed successfully via Edge Function. Response:', data);
+
+    // After successful order processing, trigger confirmation email via internal API route
+    try {
+      const emailRes = await fetch('/api/send-order-confirmation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          purchaserEmail: session?.purchaser?.email,
+          purchaserName: session?.purchaser?.fullName,
+          recipientName: session?.recipient?.firstName || session?.recipient?.recipient1FirstName || '',
+          editionName: session?.selectedEdition?.display || session?.selectedEdition?.name || '',
+          shippingAddress: session?.shipping?.address1 || session?.recipient?.shippingAddress?.full || '',
+          firstShipDate: (session?.signatureData && session.signatureData[0]?.shipDate) || (session?.customData && session.customData[0]?.shipDate) || '',
+          editionType: session?.selectedEdition?.type || 'signature',
+          firstMonth: (session?.signatureData && session.signatureData[0]?.month) || (session?.customData && session.customData[0]?.month) || '',
+        }),
+      });
+      if (!emailRes.ok) {
+        console.error('[processOrder] Failed to send order confirmation email:', await emailRes.text());
+      }
+    } catch (emailErr) {
+      console.error('[processOrder] Error sending order confirmation email:', emailErr);
+    }
+
     // Optionally return data if needed by the calling component
     return data; 
 
