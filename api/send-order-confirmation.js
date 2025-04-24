@@ -1,6 +1,6 @@
 const { Resend } = require('resend')
-// const { render } = require('@react-email/render') // REMOVED - Potential edge runtime issue
-// const OrderConfirmationEmail = require('../emails/OrderConfirmationEmail') // REMOVED
+const { render } = require('@react-email/render')
+const OrderConfirmationEmail = require('../emails/OrderConfirmationEmail')
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
@@ -34,8 +34,8 @@ module.exports = async (req, res) => {
   console.log(`[send-order-confirmation] RESEND_API_KEY present: ${!!process.env.RESEND_API_KEY}`)
 
   try {
-    // Render HTML email using React Email component
-    /* const emailHtml = render(
+    // --- Render HTML from React Email component --- 
+    const emailHtml = render(
       OrderConfirmationEmail({
         purchaserName,
         recipientName,
@@ -45,11 +45,8 @@ module.exports = async (req, res) => {
         editionType,
         firstMonth,
       })
-    ) */
-    
-    // --- TESTING: Use simple HTML string like the working magic link email ---
-    const emailHtml = `<!DOCTYPE html><html><head><title>Order Test</title></head><body><h1>Test Order Confirmation</h1><p>For: ${purchaserName}</p><p>Email: ${purchaserEmail}</p></body></html>`;
-    // --- END TESTING ---
+    );
+    // --- End Rendering ---
 
     console.log(`[send-order-confirmation] Attempting to send email to: ${purchaserEmail}`);
     const { data, error } = await resend.emails.send({
