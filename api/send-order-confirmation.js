@@ -26,7 +26,7 @@ module.exports = async (req, res) => {
 
   try {
     // Render HTML email using React Email component
-    const emailHtml = render(
+    /* const emailHtml = render(
       OrderConfirmationEmail({
         purchaserName,
         recipientName,
@@ -36,9 +36,14 @@ module.exports = async (req, res) => {
         editionType,
         firstMonth,
       })
-    )
+    ) */
+    
+    // --- TESTING: Use simple HTML string like the working magic link email ---
+    const emailHtml = `<!DOCTYPE html><html><head><title>Order Test</title></head><body><h1>Test Order Confirmation</h1><p>For: ${purchaserName}</p><p>Email: ${purchaserEmail}</p></body></html>`;
+    // --- END TESTING ---
 
-    const { error } = await resend.emails.send({
+    console.log('Attempting to send email to:', purchaserEmail);
+    const { data, error } = await resend.emails.send({
       from: 'Legacy Locker <corey@legacylockerco.com>',
       to: purchaserEmail,
       subject: 'Your Legacy Locker order is confirmed! 🎉',
