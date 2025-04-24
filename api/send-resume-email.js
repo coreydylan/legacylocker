@@ -33,123 +33,11 @@ module.exports = async (req, res) => {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Legacy Locker</title>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=Source+Sans+Pro:wght@300;400;600&display=swap');
-        
-        body, html {
-            margin: 0;
-            padding: 0;
-            font-family: 'Source Sans Pro', sans-serif;
-            color: #333;
-            line-height: 1.6;
-            background-color: #f9f7f4;
-        }
-        
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #ffffff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.05);
-        }
-        
-        .header {
-            text-align: center;
-            padding: 20px 0;
-            border-bottom: 1px solid #e0ddd7;
-            margin-bottom: 30px;
-        }
-        
-        .logo {
-            max-width: 180px;
-            height: auto;
-            margin: 0 auto;
-        }
-        
-        .content {
-            padding: 0 30px;
-        }
-        
-        h2 {
-            font-family: 'Playfair Display', serif;
-            color: #2C5530;
-            font-size: 22px;
-            margin-top: 0;
-        }
-        
-        p {
-            margin-bottom: 20px;
-            font-size: 16px;
-        }
-        
-        .highlight {
-            font-weight: 600;
-            color: #2C5530;
-        }
-        
-        .btn {
-            display: block;
-            width: 100%;
-            max-width: 280px;
-            margin: 30px auto;
-            padding: 14px 20px;
-            background-color: #2C5530;
-            color: white;
-            text-align: center;
-            text-decoration: none;
-            font-weight: 600;
-            border-radius: 6px;
-            transition: background-color 0.3s;
-            font-size: 16px;
-        }
-        
-        .btn:hover {
-            background-color: #203f25;
-        }
-        
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 1px solid #e0ddd7;
-            text-align: center;
-            font-size: 14px;
-            color: #8a8070;
-        }
-        
-        .footer p {
-            margin: 5px 0;
-        }
-        
-        .icon {
-            width: 60px;
-            height: auto;
-            margin-bottom: 15px;
-        }
-        
-        @media only screen and (max-width: 480px) {
-            .container {
-                padding: 15px;
-            }
-            
-            .content {
-                padding: 0 15px;
-            }
-            
-            .header h1 {
-                font-size: 24px;
-            }
-            
-            h2 {
-                font-size: 20px;
-            }
-        }
-    </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <svg class="logo" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1000" width="180" height="94">
+<body style="margin: 0; padding: 0; font-family: 'Source Sans Pro', 'Helvetica', 'Arial', sans-serif; color: #333; line-height: 1.6; background-color: #f9f7f4;">
+    <div style="max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.05);">
+        <div style="text-align: center; padding: 20px 0; border-bottom: 1px solid #e0ddd7; margin-bottom: 30px;">
+            <svg style="max-width: 180px; height: auto; margin: 0 auto;" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1000" width="180" height="94">
   <path fill="#000" d="M330.86,438.53v-136.47h-48.62v205.1l4.77,3.81,62.91-27.64v-6.67c-11.92-5.24-19.06-10.01-19.06-38.13Z"/>
   <path fill="#000" d="M282.25,162.29v151.08h48.62V93.66l-4.77-3.81-62.91,27.64v6.67c11.92,5.24,19.06,10.01,19.06,38.13Z"/>
   <path fill="#000" d="M380.9,365.33c0-81.03,63.39-131.55,125.35-131.55s98.66,44.33,98.66,85.79h-180.64l-.95,15.25c0,62.44,38.13,106.76,98.66,106.76,35.27,0,62.44-15.25,82.46-37.65l4.29,4.77c-21.92,33.36-59.58,71.49-114.87,71.49s-112.96-37.65-112.96-114.87ZM556.78,312.9c-6.2-39.08-32.41-70.06-65.3-70.54-40.51-.48-61.01,33.36-66.73,70.54h132.03Z"/>
@@ -166,24 +54,24 @@ module.exports = async (req, res) => {
             </svg>
         </div>
         
-        <div class="content">
-            <h2>Continue crafting your gift</h2>
+        <div style="padding: 0 30px;">
+            <h2 style="font-family: 'Playfair Display', 'Georgia', serif; color: #2C5530; font-size: 22px; margin-top: 0;">Continue crafting your gift</h2>
             
-            <p>Hi <span class="highlight">${purchaserName ? purchaserName : 'there'}</span>,</p>
+            <p style="margin-bottom: 20px; font-size: 16px;">Hi <span style="font-weight: 600; color: #2C5530;">${purchaserName ? purchaserName : 'there'}</span>,</p>
             
-            <p>You recently began setting up a Legacy Locker gift ${recipientFirstName ? `for ${recipientFirstName}` : ''} — a one-year subscription to the <span class="highlight">${formattedEditionName}</span> series.</p>
+            <p style="margin-bottom: 20px; font-size: 16px;">You recently began setting up a Legacy Locker gift ${recipientFirstName ? `for ${recipientFirstName}` : ''} — a one-year subscription to the <span style="font-weight: 600; color: #2C5530;">${formattedEditionName}</span> series.</p>
             
-            <p>This edition is a tribute to the stories that shape us — delivered one card at a time. You've already made a meaningful start.</p>
+            <p style="margin-bottom: 20px; font-size: 16px;">This edition is a tribute to the stories that shape us — delivered one card at a time. You've already made a meaningful start.</p>
             
-            <p>When you're ready, just click below to pick up where you left off:</p>
+            <p style="margin-bottom: 20px; font-size: 16px;">When you're ready, just click below to pick up where you left off:</p>
             
-            <a href="${resumeLink}" class="btn">Resume My Gift Setup</a>
+            <a href="${resumeLink}" style="display: block; width: 100%; max-width: 280px; margin: 30px auto; padding: 14px 20px; background-color: #2C5530; color: white; text-align: center; text-decoration: none; font-weight: 600; border-radius: 6px; font-size: 16px;">Resume My Gift Setup</a>
             
-            <p>If you didn't start this setup, you can safely ignore this message. Your link will expire in 30 days.</p>
+            <p style="margin-bottom: 20px; font-size: 16px;">If you didn't start this setup, you can safely ignore this message. Your link will expire in 30 days.</p>
         </div>
         
-        <div class="footer">
-            <p>Legacy Locker · A story in your mailbox every month</p>
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e0ddd7; text-align: center; font-size: 14px; color: #8a8070;">
+            <p style="margin: 5px 0;">Legacy Locker · A story in your mailbox every month</p>
         </div>
     </div>
 </body>
