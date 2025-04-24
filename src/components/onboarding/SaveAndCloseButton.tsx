@@ -38,7 +38,8 @@ const SaveAndCloseButton: React.FC<SaveAndCloseButtonProps> = ({ onClose }) => {
         // If session is not activated, activate it first
         if (!sessionMetadata.sessionId) {
           console.log('[SaveAndCloseButton] Session not activated, activating now');
-          await startSession('signature');
+          const fallbackEdition = session.selectedEdition || { id: 'signature', label: 'Signature', type: 'signature' }; 
+          await startSession(fallbackEdition);
         }
 
         console.log('[SaveAndCloseButton] Calling saveSession()...');
