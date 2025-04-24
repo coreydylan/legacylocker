@@ -6,6 +6,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button"; // Assuming you use Shadcn UI Button
 import { Loader2, AlertCircle } from 'lucide-react'; // Icons for loading and error states
+import { cn } from "@/lib/utils";
 
 interface CheckoutFormProps {
   onSuccessfulPayment?: () => void; // Optional callback for success
@@ -17,6 +18,8 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
   const elements = useElements();
 
   const [message, setMessage] = useState<string | null>(null);
+  // Track whether the current message is an error (red) or informational / processing (green)
+  const [messageType, setMessageType] = useState<'error' | 'processing' | 'success' | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -66,6 +69,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
       // Make sure to disable form submission until Stripe.js has loaded.
       console.log("Stripe.js has not loaded yet.");
       setMessage("Payment system is not ready. Please wait a moment and try again.");
+      setMessageType('error');
       return;
     }
 
@@ -92,8 +96,10 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
     if (error) {
         if (error.type === "card_error" || error.type === "validation_error") {
             setMessage(error.message || "An error occurred with your payment details.");
+            setMessageType('error');
         } else {
             setMessage("An unexpected error occurred. Please try again.");
+            setMessageType('error');
         }
         console.error("Stripe confirmation error:", error);
         console.error("Stripe error details:", { 
@@ -106,6 +112,7 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
     } else {
       // If no error but paymentIntent not succeeded yet, we can show processing message
       setMessage('Processing payment...');
+      setMessageType('processing');
     }
 
     // Reset internal loading state regardless of external trigger
@@ -148,9 +155,21 @@ const CheckoutForm: React.FC<CheckoutFormProps> = ({ onSuccessfulPayment, isExte
 
       {/* Show any error or success messages (important feedback) */}
       {message && (
-        <div id="payment-message" className="flex items-center p-3 text-sm text-red-700 bg-red-100 rounded-md border border-red-200">
+        <div
+          id="payment-message"
+          className={cn(
+            "flex items-center p-3 text-sm rounded-md border",
+            messageType === 'error'
+              ? 'text-red-700 bg-red-100 border-red-200'
+              : 'text-legacy-green/90 bg-legacy-green/10 border-legacy-green/20'
+          )}
+        >
+          {messageType === 'error' ? (
             <AlertCircle className="h-5 w-5 mr-2 text-red-500" />
-            {message}
+          ) : (
+            <Loader2 className="h-5 w-5 mr-2 animate-spin text-legacy-green" />
+          )}
+          {message}
         </div>
       )}
     </form>
