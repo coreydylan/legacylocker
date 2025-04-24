@@ -1,6 +1,5 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Heart, ArrowRight, Gift, PenTool } from "lucide-react";
 
 const ClosingCTASection = () => {
   // Function to scroll to story selector and open the dialog
@@ -37,31 +36,19 @@ const ClosingCTASection = () => {
             Become a legend among your family, friends, and everyone lucky enough to receive your gift. Legacy Locker makes it effortless to send something unforgettable — not just once, but all year long. You bring the heart. We'll handle the magic.
           </p>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button 
-              className="bg-white hover:bg-white/90 text-legacy-green py-6 flex items-center justify-center gap-2"
-              onClick={handleScrollToStorySelector}
-            >
-              <Heart className="h-5 w-5" />
-              Explore Story Themes
-            </Button>
-            
-            <Button 
-              className="bg-legacy-gold hover:bg-legacy-gold/90 text-white py-6 flex items-center justify-center gap-2"
-              onClick={handleScrollToStorySelector}
-            >
-              <Gift className="h-5 w-5" />
-              Tell A Custom Story
-            </Button>
-            
-            <Button 
-              className="border-2 border-white text-white hover:bg-white/10 py-6 flex items-center justify-center gap-2"
-              onClick={handleScrollToStorySelector}
-            >
-              <PenTool className="h-5 w-5" />
-              Connect with us
-            </Button>
-          </div>
+          <Button 
+            className="bg-white hover:bg-white/90 text-legacy-green py-6 px-8 rounded text-lg"
+            onClick={() => {
+              const openSelector = (window as any).openStorySelectorDialog;
+              if (typeof openSelector === 'function') {
+                openSelector();
+              } else {
+                handleScrollToStorySelector();
+              }
+            }}
+          >
+            start a story
+          </Button>
         </div>
       </div>
     </section>
