@@ -22,6 +22,7 @@ interface StorySample {
   custom_note: string | null;
   badge_off_or_on: boolean;
   footer_off_or_on: boolean;
+  website_description?: string | null;
 }
 
 interface CustomPreviewProps {
@@ -128,7 +129,7 @@ export const CustomPreview: React.FC<CustomPreviewProps> = ({
       <div className="hidden md:flex gap-0 justify-center">
         {/* Left side - Card preview */}
         <div 
-          className={cn("relative w-[400px]", className)}
+          className={cn("relative w-[460px]", className)}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
@@ -156,6 +157,11 @@ export const CustomPreview: React.FC<CustomPreviewProps> = ({
         {/* Right side - Story list */}
         <div className="w-[600px] flex items-center pl-12">
           <div className="space-y-4 w-[500px]">
+            {currentSample.website_description && (
+              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
+                {currentSample.website_description}
+              </p>
+            )}
             {samples.map((sample, index) => (
               <p key={sample.id} className="flex items-start">
                 {sample.icon && <span className="mr-3 mt-1 text-2xl">{sample.icon}</span>}

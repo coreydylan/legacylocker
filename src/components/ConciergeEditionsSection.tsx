@@ -28,6 +28,7 @@ interface StorySample {
   custom_note: string | null;
   badge_off_or_on: boolean;
   footer_off_or_on: boolean;
+  website_description: string | null;
 }
 
 export const ConciergeEditionsSection = () => {
@@ -42,7 +43,7 @@ export const ConciergeEditionsSection = () => {
         // Get all story_samples and filter client-side
         const { data: allSamples, error: samplesError } = await supabase
           .from('story_samples')
-          .select('*, story_series!inner(emoji, natural_language_name)')
+          .select('*, story_series!inner(emoji, natural_language_name, website_description)')
           .order('created_at', { ascending: true });
 
         if (samplesError) throw samplesError;
@@ -68,7 +69,8 @@ export const ConciergeEditionsSection = () => {
             image_url: sample.image_url,
             custom_note: sample.footer_note,
             badge_off_or_on: true,
-            footer_off_or_on: true
+            footer_off_or_on: true,
+            website_description: (sample.story_series as any).website_description || null
           }));
           setSamples(mappedSamples);
         }
@@ -88,75 +90,58 @@ export const ConciergeEditionsSection = () => {
   return (
     <section id="concierge-editions" className="bg-white py-24">
       <div className="container mx-auto px-6 md:px-6">
-        <div className="space-y-8">
-          {/* Title Block */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="text-[clamp(20px,2vw,26px)] leading-relaxed"
-          >
-            <div className="text-[clamp(24px,2.4vw,32px)]">
-              <span className="font-bold bg-orange-500/10 px-3 py-1 rounded-md text-orange-500">
-                concierge editions
-              </span>
-            </div>
-          </motion.div>
-
-          {/* Text Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="space-y-12"
-          >
-            <div className="space-y-6">
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                Some stories are too important to rush. They deserve time, care, and someone to help bring them to life.
-              </p>
-
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                Concierge Editions are our most hands-on offering — a fully guided process where our team works with you to uncover and preserve a meaningful story. Whether it's a legacy gift for a parent, a tribute to someone you love, or the untold history of your family, we help shape it into something extraordinary.
-              </p>
-
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                You'll work one-on-one with our researchers, writers, and illustrators to craft a 12-card story series — each card arriving throughout the year, beautifully written, illustrated, and timed to perfection.
-              </p>
-
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                It's for the stories that should never be forgotten — and the people who deserve to receive them.
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Preview Block */}
-          {/* Commented out temporarily
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="flex justify-center -mx-6 md:mx-0"
-          >
-            {isLoading ? (
-              <div className="flex justify-center items-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-legacy-slate" />
+        <div className="flex flex-col items-center">
+          <div className="w-full max-w-[1060px]">
+            {/* Title Block */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+              className="mb-12"
+            >
+              <div className="text-[clamp(24px,2.4vw,32px)]">
+                <span className="font-bold bg-orange-500/10 px-3 py-1 rounded-md text-orange-500">
+                  concierge editions
+                </span>
               </div>
-            ) : error ? (
-              <div className="text-center text-red-500 py-8">{error}</div>
-            ) : samples.length > 0 ? (
-              <div className="w-full">
-                <ConciergePreview
-                  samples={samples}
-                  className="[&_button]:bg-legacy-cream [&_button]:text-legacy-slate [&_button]:hover:bg-legacy-slate/10 [&_button]:px-6 [&_button]:py-4 [&_button]:rounded-lg [&_button]:font-medium [&_button.active]:bg-legacy-slate [&_button.active]:text-white"
-                />
+            </motion.div>
+
+            {/* Narrative Text Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.15 }}
+              className="max-w-[1200px]"
+            >
+              <div className="space-y-6">
+                <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
+                  Some stories are too important to rush. They deserve time, care, and someone to help bring them to life.
+                </p>
+
+                <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
+                  Concierge Editions are our most hands-on offering — a fully guided process where our team works with you to uncover and preserve a meaningful story. Whether it's a legacy gift for a parent, a tribute to someone you love, or the untold history of your family, we help shape it into something extraordinary.
+                </p>
+
+                <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
+                  You'll work one-on-one with our researchers, writers, and illustrators to craft a 12-card story series — each card arriving throughout the year, beautifully written, illustrated, and timed to perfection.
+                </p>
+
+                <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
+                  It's for the stories that should never be forgotten — and the people who deserve to receive them.
+                </p>
+
+                <div className="pt-6">
+                  <button
+                    onClick={() => (window as any).handleStoryEditionSelection('concierge')}
+                    className="group text-left px-3 py-1 rounded-sm transition-colors text-legacy-slate text-[clamp(20px,2vw,26px)] leading-relaxed flex items-center bg-orange-500/10 hover:bg-orange-500/20"
+                  >
+                    <span>Connect with a Concierge</span>
+                    <span className="ml-2 group-hover:translate-x-0.5 transition-transform">→</span>
+                  </button>
+                </div>
               </div>
-            ) : (
-              <div className="text-center text-legacy-slate/60 p-8">
-                No preview samples available
-              </div>
-            )}
-          </motion.div>
-          */}
+            </motion.div>
+          </div>
         </div>
       </div>
     </section>

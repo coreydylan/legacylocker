@@ -28,6 +28,7 @@ interface StorySample {
   custom_note: string | null;
   badge_off_or_on: boolean;
   footer_off_or_on: boolean;
+  website_description: string | null;
 }
 
 export const SignatureEditionsSection = () => {
@@ -42,7 +43,7 @@ export const SignatureEditionsSection = () => {
         // Get all story_samples and filter client-side
         const { data: allSamples, error: samplesError } = await supabase
           .from('story_samples')
-          .select('*, story_series!inner(emoji, natural_language_name)')
+          .select('*, story_series!inner(emoji, natural_language_name, website_description)')
           .order('created_at', { ascending: true });
 
         if (samplesError) throw samplesError;
@@ -68,7 +69,8 @@ export const SignatureEditionsSection = () => {
             image_url: sample.image_url,
             custom_note: sample.footer_note,
             badge_off_or_on: true,
-            footer_off_or_on: true
+            footer_off_or_on: true,
+            website_description: (sample.story_series as any).website_description || null
           }));
           setSamples(mappedSamples);
         }
@@ -88,73 +90,48 @@ export const SignatureEditionsSection = () => {
   return (
     <section id="signature-editions" className="bg-white py-24">
       <div className="container mx-auto px-6 md:px-6">
-        <div className="space-y-8">
-          {/* Title Block */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7 }}
-            className="text-[clamp(20px,2vw,26px)] leading-relaxed"
-          >
-            <div className="text-[clamp(24px,2.4vw,32px)]">
-              <span className="font-bold bg-legacy-green/10 px-3 py-1 rounded-md text-legacy-green">
-                signature editions
-              </span>
-            </div>
-          </motion.div>
-
-          {/* Text Content */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.15 }}
-            className="space-y-12"
-          >
-            <div className="space-y-6">
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                Our lives are shaped by the places we love, the teams we root for, the music that moves us, and the moments that made history. Signature Editions bring those stories to life — with beautifully illustrated cards that trace the cultural threads that connect us.
-              </p>
-
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                Whether it's San Diego baseball, New Orleans jazz, or San Francisco's roots, each edition is locally contextualized and thoughtfully crafted. You'll receive 12 stories throughout the year, each one tied to a real moment in history from the month it arrives — creating a rhythm of discovery that unfolds over time.
-              </p>
-
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                We cover themes across sports, history, music, art, and more — so it's easy to find one that fits anyone.
-              </p>
-
-              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
-                And the best part? They're ready to go. You can personalize each card with custom milestone footers — birthdays, anniversaries, or just because — and be done in under 5 minutes. You pick the story. We handle the magic.
-              </p>
-            </div>
-          </motion.div>
-
-          {/* Preview Block */}
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.3 }}
-            className="flex justify-center -mx-6 md:mx-0"
-          >
-            {isLoading ? (
-              <div className="flex justify-center items-center min-h-[400px]">
-                <Loader2 className="h-8 w-8 animate-spin text-legacy-slate" />
+        <div className="flex flex-col items-center">
+          <div className="w-full max-w-[1060px]">
+            {/* Title Block - Now positioned above card but aligned left */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7 }}
+              className="mb-8 md:pl-0"
+            >
+              <div className="text-[clamp(24px,2.4vw,32px)]">
+                <span className="font-bold bg-legacy-green/10 px-3 py-1 rounded-md text-legacy-green">
+                  signature editions
+                </span>
               </div>
-            ) : error ? (
-              <div className="text-center text-red-500 py-8">{error}</div>
-            ) : samples.length > 0 ? (
-              <div className="w-full">
-                <StoryPreview
-                  samples={samples}
-                  className="[&_button]:bg-legacy-cream [&_button]:text-legacy-slate [&_button]:hover:bg-legacy-slate/10 [&_button]:px-6 [&_button]:py-4 [&_button]:rounded-lg [&_button]:font-medium [&_button.active]:bg-legacy-slate [&_button.active]:text-white"
-                />
-              </div>
-            ) : (
-              <div className="text-center text-legacy-slate/60 p-8">
-                No preview samples available
-              </div>
-            )}
-          </motion.div>
+            </motion.div>
+
+            {/* Preview Block */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, delay: 0.3 }}
+            >
+              {isLoading ? (
+                <div className="flex justify-center items-center min-h-[400px]">
+                  <Loader2 className="h-8 w-8 animate-spin text-legacy-slate" />
+                </div>
+              ) : error ? (
+                <div className="text-center text-red-500 py-8">{error}</div>
+              ) : samples.length > 0 ? (
+                <div className="w-full">
+                  <StoryPreview
+                    samples={samples}
+                    className="[&_button]:bg-legacy-cream [&_button]:text-legacy-slate [&_button]:hover:bg-legacy-slate/10 [&_button]:px-6 [&_button]:py-4 [&_button]:rounded-lg [&_button]:font-medium [&_button.active]:bg-legacy-slate [&_button.active]:text-white"
+                  />
+                </div>
+              ) : (
+                <div className="text-center text-legacy-slate/60 p-8">
+                  No preview samples available
+                </div>
+              )}
+            </motion.div>
+          </div>
         </div>
       </div>
     </section>

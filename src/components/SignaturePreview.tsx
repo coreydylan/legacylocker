@@ -22,6 +22,7 @@ interface StorySample {
   custom_note: string | null;
   badge_off_or_on: boolean;
   footer_off_or_on: boolean;
+  website_description?: string | null;
 }
 
 interface SignaturePreviewProps {
@@ -128,7 +129,7 @@ export const SignaturePreview: React.FC<SignaturePreviewProps> = ({
       <div className="hidden md:flex gap-0 justify-center">
         {/* Left side - Card preview */}
         <div 
-          className={cn("relative w-[400px]", className)}
+          className={cn("relative w-[460px]", className)}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
@@ -171,6 +172,11 @@ export const SignaturePreview: React.FC<SignaturePreviewProps> = ({
                 </button>
               </p>
             ))}
+            {currentSample.website_description && (
+              <p className="text-[clamp(20px,2vw,26px)] leading-relaxed text-[#444]">
+                {currentSample.website_description}
+              </p>
+            )}
             <p className="flex items-start">
               <span className="mr-3 mt-1 text-2xl">✨</span>
               <button
