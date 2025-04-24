@@ -75,8 +75,14 @@ export async function applyPromoCode(
   if (data.starts_at && parseAsUTC(data.starts_at) > now) {
     return { valid: false, errorMessage: 'This promo code is not yet valid.' };
   }
-  if (data.expires_at && parseAsUTC(data.expires_at) < now) {
-    return { valid: false, errorMessage: 'This promo code has expired.' };
+  if (data.expires_at) {
+    const expiry = parseAsUTC(data.expires_at);
+    // Treat expires_at as inclusive (valid throughout that date) by adding 1 day at 00:00 UTC
+    const inclusiveExpiry = new Date(expiry.getTime());
+    inclusiveExpiry.setUTCDate(inclusiveExpiry.getUTCDate() + 1);
+    if (inclusiveExpiry <= now) {
+      return { valid: false, errorMessage: 'This promo code has expired.' };
+    }
   }
 
   if (
