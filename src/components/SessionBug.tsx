@@ -8,13 +8,15 @@ import { Clock, Save, ArrowRight } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import ClearSessionButton from './onboarding/ClearSessionButton';
 import ClearSessionDialog from './onboarding/ClearSessionDialog';
+import { useSessionManager } from '@/hooks/useSessionManager';
 
 export function SessionBug() {
-  const { sessionMetadata, saveSession, endSession, resetSession } = useSessionStore();
+  const { sessionMetadata, resetSession } = useSessionStore();
   const { isActive, editionType, lastSaved } = sessionMetadata;
   const { isOnboardingOpen, openOnboarding, closeOnboarding } = useModalStore();
   const navigate = useNavigate();
   const { toast } = useToast();
+  const sessionManager = useSessionManager();
 
   // State for confirmation dialog
   const [isClearDialogOpen, setIsClearDialogOpen] = useState(false);
@@ -60,7 +62,7 @@ export function SessionBug() {
 
   const handleSaveAndFinish = () => {
     // First save the session
-    saveSession();
+    resetSession();
     
     // Close the onboarding modal if it's open
     if (isOnboardingOpen) {
@@ -74,14 +76,29 @@ export function SessionBug() {
     });
     
     // End the session (this will hide the session bug)
-    endSession();
+    resetSession();
     
     // Navigate back to home page after saving
     navigate('/');
   };
 
-  const handleResume = () => {
-    openOnboarding();
+  const handleResume = async () => {
+    if (!sessionMetadata.sessionId) {
+      console.error('SessionBug: Cannot resume, no active session ID found.');
+      toast({ title: 'Error', description: 'Could not find session to resume.', variant: 'destructive' });
+      return;
+    }
+
+    console.log(`SessionBug: Attempting to reload session ${sessionMetadata.sessionId}...`);
+    const success = await sessionManager.reloadSessionFromDbAndInitialize(sessionMetadata.sessionId);
+
+    if (success) {
+      console.log(`SessionBug: Session ${sessionMetadata.sessionId} reloaded successfully, opening modal.`);
+      openOnboarding();
+    } else {
+      console.error(`SessionBug: Failed to reload session ${sessionMetadata.sessionId}.`);
+      // Toast is handled by the reload function on failure
+    }
   };
 
   // Function to handle confirmed clear action

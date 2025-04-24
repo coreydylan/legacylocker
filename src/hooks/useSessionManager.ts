@@ -228,6 +228,36 @@ export function useSessionManager() {
     isHydrated
   ]);
 
+  // --- NEW: Function to reload session from DB and run initializers --- 
+  const reloadSessionFromDbAndInitialize = useCallback(async (sessionId: string): Promise<boolean> => {
+    if (!sessionId) {
+      console.warn('[SessionManager] reloadSessionFromDbAndInitialize called without sessionId.');
+      return false;
+    }
+
+    console.log(`[SessionManager] Reloading session ${sessionId} from DB and initializing...`);
+    setLoadError(null);
+
+    const success = await loadSessionFromDb(sessionId);
+
+    if (success) {
+      console.log('[SessionManager] Session reloaded successfully.');
+      // Run initializers *after* loading
+      await Promise.all([
+        initializeSignatureData(),
+        initializeCustomDataDates()
+      ]);
+      toast({ title: "Session Resumed", description: "Your progress has been restored." });
+      return true;
+    } else {
+      console.warn('[SessionManager] Failed to reload session from DB or session was invalid.');
+      // Don't reset the session here, just indicate failure
+      setLoadError({ type: 'unknown', message: 'Could not reload session data.' });
+      toast({ title: "Resume Failed", description: "Could not reload your saved progress.", variant: "destructive" });
+      return false;
+    }
+  }, [loadSessionFromDb, initializeSignatureData, initializeCustomDataDates, toast]);
+
   const resetSessionAndState = useCallback(() => {
     console.log('[SessionManager] Resetting session state...');
     storeResetSession();
@@ -327,6 +357,7 @@ export function useSessionManager() {
     saveSessionData,
     loadSessionFromUrlParam,
     resetSessionAndState,
+    reloadSessionFromDbAndInitialize,
     handleModalClose,
     isStartOverConfirmationRequired,
     // Order/checkout status helpers
