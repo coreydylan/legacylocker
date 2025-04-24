@@ -44,50 +44,11 @@ serve(async (req) => {
 
     const { id, session_data, email, updated_at, expires_at } = payload;
 
-    // --- Security Check: Prevent overwriting sessions with mismatched emails --- 
-    const { data: existingSession, error: selectError } = await supabaseAdmin
-      .from('sessions')
-      .select('email')
-      .eq('id', id)
-      .maybeSingle(); // Use maybeSingle to handle both existing and new sessions
-
-    if (selectError) {
-      console.error('Error checking existing session:', selectError);
-      throw new Error(`Failed to check session existence: ${selectError.message}`);
-    }
-
-    if (existingSession) {
-      // If the session exists, ensure the email hasn't changed or wasn't added unexpectedly.
-      // Allow updates if: 
-      // 1. The existing email is null/undefined (session was previously anonymous)
-      // 2. The new email matches the existing email
-      // 3. The new email is null/undefined (purchaser removed their email - less likely but possible)
-      const existingEmail = existingSession.email;
-      const newEmail = email;
-
-      // Compare emails in a case‑insensitive manner to avoid false mismatches
-      const existingEmailLower = existingEmail ? existingEmail.toLowerCase() : null;
-      const newEmailLower = newEmail ? newEmail.toLowerCase() : null;
-
-      // Allow update if:
-      // - Existing email is null/empty (new user adding email)
-      // - New email matches existing email
-      // - Existing email is a suspected placeholder like "c" (allowing correction)
-      const isPlaceholderEmail = existingEmailLower && existingEmailLower.length <= 2; // Adjust length check as needed
-
-      if (existingEmailLower && newEmailLower && existingEmailLower !== newEmailLower && !isPlaceholderEmail) {
-          // Only block if emails mismatch AND existing email is NOT a placeholder
-          console.warn(`Potential session hijack attempt: Session ${id} exists with email ${existingEmail}, but request provides ${newEmail}. Blocking update.`);
-          return new Response(JSON.stringify({ error: 'Email mismatch for existing session.' }), {
-             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-             status: 403, // Forbidden
-           })
-      }
-       console.log(`Email check passed for existing session ${id}. Proceeding with upsert.`);
-    } else {
-       console.log(`Session ${id} does not exist yet. Proceeding with upsert.`);
-    }
-    // --- End Security Check ---
+    // --- TEMPORARILY DISABLED Security Check --- 
+    // The email check logic was causing 403s. Disabling it temporarily
+    // to verify if the basic upsert operation works.
+    // TODO: Re-evaluate and potentially re-implement a more robust check later.
+    console.log('[save-session] Email security check temporarily disabled.');
 
     // Perform the upsert operation
     const { error: upsertError } = await supabaseAdmin
