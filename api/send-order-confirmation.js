@@ -1,6 +1,6 @@
 const { Resend } = require('resend')
-const { render } = require('@react-email/render')
-const OrderConfirmationEmail = require('../emails/OrderConfirmationEmail')
+// const { render } = require('@react-email/render') // REMOVED - Potential edge runtime issue
+// const OrderConfirmationEmail = require('../emails/OrderConfirmationEmail') // REMOVED
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 
