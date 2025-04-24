@@ -27,50 +27,46 @@ const SaveAndCloseButton: React.FC<SaveAndCloseButtonProps> = ({ onClose }) => {
   const purchaserEmail = session.purchaser?.email;
   const [isSaving, setIsSaving] = useState(false);
 
-  const handleClick = () => {
-    console.log('[SaveAndCloseButton] handleClick started.');
+  const handleClick = async () => {
+    if (!sessionMetadata.isActive || !sessionMetadata.sessionId) {
+      console.warn('[SaveAndCloseButton] Cannot save, session is not active.');
+      toast({ title: 'Error', description: 'Cannot save, session not active.', variant: 'destructive'});
+      return;
+    }
+    
+    console.log(`[SaveAndCloseButton] Saving session ${sessionMetadata.sessionId}...`);
     setIsSaving(true);
 
-    // Run save in background
-    (async () => {
-      console.log('[SaveAndCloseButton] Async save process starting...');
-      try {
-        // If session is not activated, activate it first
-        if (!sessionMetadata.sessionId) {
-          console.log('[SaveAndCloseButton] Session not activated, activating now');
-          const fallbackEdition = session.selectedEdition || { id: 'signature', label: 'Signature', type: 'signature' }; 
-          await startSession(fallbackEdition);
-        }
+    try {
+      // 1. Update local session timestamp
+      saveSession(); 
+      
+      // 2. Persist to database
+      await saveSessionToDb();
+      console.log(`[SaveAndCloseButton] Session ${sessionMetadata.sessionId} saved successfully.`);
 
-        console.log('[SaveAndCloseButton] Calling saveSession()...');
-        saveSession();
-        console.log('[SaveAndCloseButton] Calling saveSessionToDb()...');
-        await saveSessionToDb();
-        console.log('[SaveAndCloseButton] saveSessionToDb() successful.');
-
-        if (purchaserEmail) {
-          toast({
-            title: 'Magic Link Sent',
-            description: `We sent a magic link to ${purchaserEmail} so you can come back to this order any time.`,
-          });
-        } else {
-          toast({
-            title: 'Order Saved',
-            description: 'You can resume your order later.',
-          });
-        }
-        console.log('[SaveAndCloseButton] Calling onClose()...');
-        onClose();
-        console.log('[SaveAndCloseButton] onClose() called.');
-      } catch (err) {
-        console.error('[SaveAndCloseButton] Error saving session', err);
-        toast({ title: 'Error', description: 'Failed to save your progress. Please try again.', variant: 'destructive' });
-      } finally {
-        console.log('[SaveAndCloseButton] Async save process finished (finally block).');
-        setIsSaving(false);
+      // 3. Show appropriate toast
+      if (purchaserEmail) {
+        toast({
+          title: 'Progress Saved & Magic Link Sent',
+          description: `We saved your progress and sent a resume link to ${purchaserEmail}.`,
+        });
+      } else {
+        toast({
+          title: 'Progress Saved',
+          description: 'Your progress has been saved. You can resume later from this device.',
+        });
       }
-    })();
-    console.log('[SaveAndCloseButton] handleClick finished (after async call initiated).');
+
+      // 4. Close the modal (without resetting the session state)
+      onClose();
+
+    } catch (err) {
+      console.error('[SaveAndCloseButton] Error saving session:', err);
+      toast({ title: 'Save Error', description: 'Failed to save your progress. Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

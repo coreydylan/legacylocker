@@ -115,7 +115,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
       selectedEdition: session.selectedEdition
     });
 
-    if (isHydrated && !isLoading && selectedSeries && !session.selectedEdition) {
+    if (isHydrated && !isLoading && selectedSeries && !sessionMetadata.sessionId && !session.selectedEdition) {
       console.log('[OnboardingModal] Initializing new session - guard passed');
       sessionManager.initializeNewLocalSession({
         id: selectedSeries.id,
@@ -123,7 +123,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({
         type: selectedSeries.type
       });
     }
-  }, [isHydrated, isLoading, selectedSeries, session.selectedEdition]);
+  }, [isHydrated, isLoading, selectedSeries, session.selectedEdition, sessionMetadata.sessionId, sessionManager]);
 
   // --- Effect to handle submission triggered by MobileNavFooter ---
   useEffect(() => {
