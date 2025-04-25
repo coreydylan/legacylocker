@@ -26,15 +26,10 @@ const toggleEditMode = () => {
 
 const AdminDashboard = () => {
   const isEditing = new URLSearchParams(window.location.search).get('editMode') === 'true';
+
   return (
-    <div className="p-8">
-      <div className="flex items-center justify-between mb-8">
-        <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-        <Button variant={isEditing ? "destructive" : "default"} onClick={toggleEditMode}>
-          {isEditing ? 'Exit Edit Mode' : 'Enter Edit Mode'}
-        </Button>
-      </div>
-      
+    <div className="p-4 md:p-8">
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card className="hover:shadow-md transition-shadow">
           <CardHeader>
@@ -198,6 +193,23 @@ const AdminDashboard = () => {
           <CardFooter>
             <Button asChild className="w-full">
               <Link to="/admin/promo-codes">Manage Promo Codes</Link>
+            </Button>
+          </CardFooter>
+        </Card>
+        
+        <Card className="hover:shadow-lg transition-shadow">
+          <CardHeader>
+            <CardTitle>Orders</CardTitle>
+            <CardDescription>Manage customer orders</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p>View, manage, and track the status of customer orders.</p>
+          </CardContent>
+          <CardFooter>
+            <Button asChild className="w-full">
+              <Link to="/admin/orders">
+                Manage Orders
+              </Link>
             </Button>
           </CardFooter>
         </Card>

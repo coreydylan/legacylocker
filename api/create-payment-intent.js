@@ -31,15 +31,19 @@ export default async function handler(req) {
       })
     }
 
-    // TEMPORARY OVERRIDE: Use 50 cents for testing (minimum allowed by Stripe)
-    const testAmount = 50
+    // Validate the amount coming from the client (must be a positive integer in cents)
+    if (typeof amount !== 'number' || !Number.isInteger(amount) || amount <= 0) {
+      return new Response(JSON.stringify({ error: 'Invalid amount value' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: testAmount,
+      amount, // Amount is already expected to be in the smallest currency unit (cents)
       currency: 'usd',
       metadata: {
         sessionId,
-        isTestPayment: 'true'
       },
     })
 

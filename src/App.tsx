@@ -23,6 +23,9 @@ import CardBuilderDemo from "./pages/card-builder-demo";
 import StoryPreviewDemo from "./pages/story-preview-demo";
 import DevOverlayEditor from "@/components/DevOverlayEditor";
 import AdminPromoCodesPage from "./pages/admin/promo-codes";
+import AdminOrdersListPage from "./pages/admin/orders/index";
+import AdminOrderDetailPage from "./pages/admin/orders/[id]";
+import AdminProductionQueuePage from "./pages/admin/orders/production";
 
 const queryClient = new QueryClient();
 
@@ -65,6 +68,21 @@ const AppContent = () => {
         <Route path="/admin/promo-codes" element={
           <AdminAuth>
             <AdminPromoCodesPage />
+          </AdminAuth>
+        } />
+        <Route path="/admin/orders" element={
+          <AdminAuth>
+            <AdminOrdersListPage />
+          </AdminAuth>
+        } />
+        <Route path="/admin/orders/:id" element={
+          <AdminAuth>
+            <AdminOrderDetailPage />
+          </AdminAuth>
+        } />
+        <Route path="/admin/orders/production" element={
+          <AdminAuth>
+            <AdminProductionQueuePage />
           </AdminAuth>
         } />
         <Route path="/font-examples" element={<FontExamplesPage />} />
