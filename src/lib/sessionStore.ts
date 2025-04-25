@@ -932,44 +932,54 @@ export const useSessionStore = create<SessionStore>()(
 
       updateCustomMonth: (month: string, year: number, data: Partial<CustomMonthData>) => {
            console.log(`[updateCustomMonth] Updating ${month} ${year} with:`, data);
-           if (data.footerMessage && typeof data.footerMessage === 'string') {
-               data.footerMessage = truncate(data.footerMessage, { length: 80, omission: '' });
+
+           // 1️⃣  Remove undefined values so we never overwrite existing state with undefined.
+           const cleanedData = Object.fromEntries(
+             Object.entries(data).filter(([, v]) => v !== undefined)
+           ) as Partial<CustomMonthData>;
+
+           // 2️⃣  Enforce the 80-character limit on the footer message.
+           if (typeof cleanedData.footerMessage === 'string') {
+               cleanedData.footerMessage = truncate(cleanedData.footerMessage, { length: 80, omission: '' });
            }
-           const updateData: Partial<CustomMonthData> = {
-               ...data,
-               enabled: data.enabled !== undefined ? data.enabled : undefined, 
-               shipDate: data.shipDate !== undefined ? data.shipDate : undefined, 
-           };
-            delete (updateData as any).footerEnabled;
 
+           // Legacy field that may sneak in from the UI; don't keep it.
+           delete (cleanedData as any).footerEnabled;
 
-          set(state => {
-              const updatedCustomData = state.session.customData.map(monthData => {
-                  if (monthData.month === month && monthData.year === year) {
-                      return { ...monthData, ...updateData };
-                  }
-                  return monthData;
-              });
-              const currentChronologicalMonths = getChronologicalMonths();
-              const finalCustomData = currentChronologicalMonths.map(chronoMonth => {
-                  const existingData = updatedCustomData.find(cd => cd.month === chronoMonth.month && cd.year === chronoMonth.year);
-                  return existingData || {
-                      month: chronoMonth.month, year: chronoMonth.year,
-                      title: '', useExactTitle: false, story: '', useExactStory: false,
-                      artworkOption: null, photoUrl: undefined,
-                      enabled: false, footerMessage: '', shipDate: '' 
-                  };
-              });
+           set(state => {
+               // --- Merge the update into the targeted month ---
+               const merged = state.session.customData.map(m =>
+                   m.month === month && m.year === year ? { ...m, ...cleanedData } : m
+               );
 
-              return {
-                  session: {
-                      ...state.session,
-                      customData: finalCustomData,
-                      updatedAt: new Date().toISOString(),
-                  },
-                  isCurrentStepValid: false
-              };
-          });
+               // --- Ensure we still have the full 12-month chronological list ---
+               const chronological = getChronologicalMonths();
+               const finalCustomData = chronological.map(cm => {
+                   const found = merged.find(md => md.month === cm.month && md.year === cm.year);
+                   return found ?? {
+                       month: cm.month,
+                       year: cm.year,
+                       title: '',
+                       useExactTitle: false,
+                       story: '',
+                       useExactStory: false,
+                       artworkOption: null,
+                       photoUrl: undefined,
+                       enabled: false,
+                       footerMessage: '',
+                       shipDate: '',
+                   };
+               });
+
+               return {
+                   session: {
+                       ...state.session,
+                       customData: finalCustomData,
+                       updatedAt: new Date().toISOString(),
+                   },
+                   isCurrentStepValid: false,
+               };
+           });
       },
 
       updateValidationStatus: (isValid: boolean) => {
