@@ -325,33 +325,6 @@ const ReviewCheckout: React.FC = () => {
       */}
       
       {isPayable && (
-          <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
-             <h2 className="text-xl font-manrope text-legacy-green mb-4 pb-3 border-b border-legacy-green/10">Payment Details</h2>
-            {isLoadingPaymentIntent && (
-              <div className="flex items-center justify-center p-8 text-gray-600">
-                <Loader2 className="mr-3 h-6 w-6 animate-spin text-legacy-green" />
-                <span>Initializing secure payment form...</span>
-              </div>
-            )}
-            {paymentError && !isLoadingPaymentIntent && (
-              <div className="flex items-center p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg border border-red-200">
-                 <AlertCircle className="h-5 w-5 mr-3 text-red-500" />
-                 <span>Error: {paymentError}</span>
-              </div>
-            )}
-            {clientSecret && stripeElementsOptions && !paymentError && !isLoadingPaymentIntent && (
-              <Elements options={stripeElementsOptions} stripe={stripePromise}>
-                <CheckoutForm 
-                  isExternallySubmitting={isSubmitting} 
-                  onSuccessfulPayment={handlePaymentSuccess} 
-                /> 
-              </Elements>
-            )}
-          </div>
-      )}
-      
-      {/* Promo Code Input Section */}
-      {isPayable && (
         <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
           <h2 className="text-xl font-manrope text-legacy-green mb-2">Promo Code</h2>
           {promoResult?.valid ? (
@@ -382,6 +355,32 @@ const ReviewCheckout: React.FC = () => {
             </div>
           )}
         </div>
+      )}
+      
+      {isPayable && (
+          <div className="bg-legacy-green/5 p-4 md:p-6 rounded-lg space-y-4">
+             <h2 className="text-xl font-manrope text-legacy-green mb-4 pb-3 border-b border-legacy-green/10">Payment Details</h2>
+            {isLoadingPaymentIntent && (
+              <div className="flex items-center justify-center p-8 text-gray-600">
+                <Loader2 className="mr-3 h-6 w-6 animate-spin text-legacy-green" />
+                <span>Initializing secure payment form...</span>
+              </div>
+            )}
+            {paymentError && !isLoadingPaymentIntent && (
+              <div className="flex items-center p-4 mb-4 text-sm text-red-700 bg-red-100 rounded-lg border border-red-200">
+                 <AlertCircle className="h-5 w-5 mr-3 text-red-500" />
+                 <span>Error: {paymentError}</span>
+              </div>
+            )}
+            {clientSecret && stripeElementsOptions && !paymentError && !isLoadingPaymentIntent && (
+              <Elements options={stripeElementsOptions} stripe={stripePromise}>
+                <CheckoutForm 
+                  isExternallySubmitting={isSubmitting} 
+                  onSuccessfulPayment={handlePaymentSuccess} 
+                /> 
+              </Elements>
+            )}
+          </div>
       )}
       
       <div className="bg-legacy-green/10 p-4 md:p-6 rounded-lg">
