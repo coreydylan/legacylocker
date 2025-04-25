@@ -13,7 +13,6 @@ import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/components/ui/use-toast";
 import { Input } from "@/components/ui/input";
 import RecipientGrid from '@/components/admin/orders/RecipientGrid';
-import MonthlySettingsTable from '@/components/admin/orders/MonthlySettingsTable';
 
 // Re-use or define the Order type (ensure it includes all needed fields eventually)
 interface Order {
@@ -426,9 +425,10 @@ const AdminOrderDetailPage = () => {
           </div>
         </TabsContent>
          <TabsContent value="monthly">
-           <div className="p-6 border rounded-lg bg-card shadow-sm">
+           <div className="p-4 border rounded-lg bg-card">
             <h2 className="text-xl font-semibold mb-4">Monthly Card Settings</h2>
-            <MonthlySettingsTable orderId={order.id} />
+            <p>Table for monthly card settings (overrides, artwork) will go here.</p>
+            {/* TODO: Implement MonthlySettingsTable component */}
           </div>
         </TabsContent>
          <TabsContent value="production">
