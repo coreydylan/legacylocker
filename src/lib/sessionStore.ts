@@ -213,6 +213,7 @@ interface SessionStore {
   isCurrentStepValid: boolean; // <<< Add validation state
   submitTriggerCount: number; // <<< Add submit trigger state
   sessionComplete: boolean;
+  customDataDatesInitialized: boolean;
   setSessionComplete: (value: boolean) => void;
   initialize: () => void;
   updateSession: (path: string, value: any) => void;
@@ -702,6 +703,7 @@ export const useSessionStore = create<SessionStore>()(
       isCurrentStepValid: false, // <<< Initialize validation state
       submitTriggerCount: 0, // <<< Initialize trigger state
       sessionComplete: false,
+      customDataDatesInitialized: false,
   
   initialize: () => {
         console.log("[StoreAction initialize]: Running...");
@@ -849,6 +851,12 @@ export const useSessionStore = create<SessionStore>()(
     },
 
       initializeCustomDataDates: async () => {
+          const { customDataDatesInitialized } = get();
+          if (customDataDatesInitialized) {
+            console.log("['initializeCustomDataDates']: Already initialized – skipping.");
+            return;
+          }
+
           console.log("['initializeCustomDataDates']: Running...");
           const { recipient, purchaser, recipientType } = get().session;
           const chronologicalMonths = getChronologicalMonths();
@@ -901,9 +909,11 @@ export const useSessionStore = create<SessionStore>()(
                      customData: updatedCustomData,
                      updatedAt: new Date().toISOString(),
                    },
+                   customDataDatesInitialized: true,
                  };
                }
-               return {};
+               // Even if data unchanged mark as initialized
+               return { customDataDatesInitialized: true };
            });
       },
 
