@@ -16,7 +16,9 @@ console.log(`Function "process-order" up and running!`)
 
 // Helper to convert artworkOption values from UI (with dashes) to DB enum format (with underscores)
 const convertArtworkOption = (option: string | null | undefined): string | null => {
-  return option ?? null;
+  if (!option) return null;
+  // Convert from kebab-case to snake_case
+  return option.replace(/-/g, '_');
 };
 
 serve(async (req) => {
