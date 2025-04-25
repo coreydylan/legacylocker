@@ -14,6 +14,21 @@ interface ProcessOrderPayload {
 
 console.log(`Function "process-order" up and running!`)
 
+// Helper to convert artworkOption values from UI (with dashes) to DB enum format (with underscores)
+const convertArtworkOption = (option: string | null | undefined): string | null => {
+  if (!option) return null;
+  switch (option) {
+    case 'from-story':
+      return 'from_story';
+    case 'use-photo':
+      return 'use_photo';
+    case 'from-photo':
+      return 'from_photo';
+    default:
+      return null; // Fallback to null for unrecognized values
+  }
+};
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -201,7 +216,7 @@ serve(async (req) => {
           footer_message: card.footerMessage || null,
           occasion: card.occasions || [],
           recipients: card.recipients || [],
-          artwork_option: card.artworkOption || null,
+          artwork_option: convertArtworkOption(card.artworkOption),
           photo_url: card.photoUrl || null,
           story_locked: card.storyLocked ?? false,
           artwork_locked: card.artworkLocked ?? false,
