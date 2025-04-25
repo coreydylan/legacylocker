@@ -270,19 +270,19 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
               }
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-auto p-0 pointer-events-auto z-50" align="start">
+          <PopoverContent className="w-auto p-0" align="start">
             <div className="p-3">
-              <Label className="mb-2 block">Choose when this card should arrive</Label>
+              <Label className="mb-2 block font-manrope">Choose when this card should arrive</Label>
               
-              <div className="border rounded-md overflow-hidden space-y-3 p-3">
+              <div className="space-y-3">
                 <div className="space-y-2">
                   <Button
                     variant="outline"
                     className="w-full justify-start text-left font-normal"
                     onClick={() => {
                       const today = new Date();
-                      handleMonthDataChange('customDate', today);
-                      handleCalendarToggle(selectedMonth, false);
+                      handleMonthDataChange('customDate', today.toISOString());
+                      setTimeout(() => handleCalendarToggle(selectedMonth, false), 0);
                     }}
                   >
                     Use today's date
@@ -294,8 +294,8 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
                     onClick={() => {
                       const nextMonth = new Date();
                       nextMonth.setMonth(nextMonth.getMonth() + 1);
-                      handleMonthDataChange('customDate', nextMonth);
-                      handleCalendarToggle(selectedMonth, false);
+                      handleMonthDataChange('customDate', nextMonth.toISOString());
+                      setTimeout(() => handleCalendarToggle(selectedMonth, false), 0);
                     }}
                   >
                     Use next month
@@ -304,14 +304,11 @@ const MonthPersonalizationForm: React.FC<MonthPersonalizationFormProps> = ({
                 
                 <div className="pt-3 border-t">
                   <Calendar
-                    mode="single"
                     selected={selectedDateForCalendar}
-                    onSelect={(date: Date | undefined) => {
-                      const dateStringToStore: string | undefined = date ? date.toISOString() : undefined;
-                      handleMonthDataChange('customDate', dateStringToStore);
-                      handleCalendarToggle(selectedMonth, false);
+                    onSelect={(date) => {
+                      handleMonthDataChange('customDate', date.toISOString());
+                      setTimeout(() => handleCalendarToggle(selectedMonth, false), 0);
                     }}
-                    className="p-3 pointer-events-auto"
                   />
                 </div>
               </div>
