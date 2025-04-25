@@ -128,7 +128,13 @@ const ReviewCheckout: React.FC = () => {
   // Handler called once Stripe confirms payment succeeded
   const handlePaymentSuccess = async () => {
     try {
-      await processOrder(useSessionStore.getState().session as SessionData, {
+      // *** ADDED FOR DEBUGGING ***
+      const currentSession = useSessionStore.getState().session as SessionData;
+      console.log('*** DEBUG: Session data before processOrder:', JSON.stringify(currentSession, null, 2));
+      console.log('*** DEBUG: Custom Data:', JSON.stringify(currentSession.customData, null, 2));
+      // **************************
+
+      await processOrder(currentSession, {
         promoCode: promoResult?.valid ? promoResult.promoCode : undefined,
       });
       console.log('[ReviewCheckout] processOrder completed after successful payment');
