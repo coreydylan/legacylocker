@@ -14,11 +14,26 @@ interface ProcessOrderPayload {
 
 console.log(`Function "process-order" up and running!`)
 
-// Helper to convert artworkOption values from UI (with dashes) to DB enum format (with underscores)
+// Helper to convert artworkOption values from UI to the allowed DB text values
 const convertArtworkOption = (option: string | null | undefined): string | null => {
   if (!option) return null;
-  // Convert from kebab-case to snake_case
-  return option.replace(/-/g, '_');
+
+  switch (option) {
+    case 'use-photo':
+      return 'upload'; // Map frontend 'use-photo' to DB 'upload'
+    case 'from-story':
+      return 'from-story'; // Keep 'from-story' as is (it's allowed)
+    // Add mappings for 'ai' or 'none' if they come from the frontend with different names
+    // case 'some-frontend-ai-value':
+    //   return 'ai';
+    // case 'some-frontend-none-value':
+    //   return 'none';
+    default:
+      // Handle unexpected values - return null or throw an error?
+      // Returning null might be safer if unexpected values can occur.
+      console.warn(`[convertArtworkOption] Received unexpected artwork option: ${option}. Returning null.`);
+      return null; 
+  }
 };
 
 serve(async (req) => {
@@ -209,7 +224,35 @@ serve(async (req) => {
 
     for (const card of customData) {
       const monthNum = monthNameToNumber(card.month);
+      
+      // *** DEBUG LOGGING START ***
+      const cardDebug = { 
+        month: card.month, 
+        year: card.year,
+        enabled_in: card.enabled, 
+        title: card.title, 
+        story: card.story, 
+        footer: card.footerMessage, 
+        shipDate: card.shipDate, 
+        artworkOption_in: card.artworkOption, 
+        photoUrl_in: card.photoUrl
+      };
+      const hasContent = Boolean(
+        card.title || card.story || card.footerMessage || card.shipDate || card.artworkOption || card.photoUrl ||
+        (Array.isArray(card.occasions) && card.occasions.length) || (Array.isArray(card.recipients) && card.recipients.length)
+      );
       const enabledFlag = computeEnabled(card);
+      const finalArtworkOption = enabledFlag ? convertArtworkOption(card.artworkOption) : null;
+      const finalPhotoUrl = enabledFlag ? (card.photoUrl || null) : null;
+
+      console.log(`*** DEBUG: Processing card ${card.month} ${card.year} ***`);
+      console.log(`   - Input Card Data: ${JSON.stringify(cardDebug)}`);
+      console.log(`   - Calculated hasContent: ${hasContent}`);
+      console.log(`   - Calculated enabledFlag (computeEnabled result): ${enabledFlag}`);
+      console.log(`   - Final artwork_option being pushed: ${finalArtworkOption}`);
+      console.log(`   - Final photo_url being pushed: ${finalPhotoUrl}`);
+      console.log(`   - Final enabled being pushed: ${enabledFlag}`);
+      // *** DEBUG LOGGING END ***
 
       monthlySettingsRows.push({
         order_id: orderId,
@@ -222,8 +265,8 @@ serve(async (req) => {
         footer_message: enabledFlag ? (card.footerMessage || null) : null,
         occasion: card.occasions || [],
         recipients: card.recipients || [],
-        artwork_option: enabledFlag ? convertArtworkOption(card.artworkOption) : null,
-        photo_url: enabledFlag ? (card.photoUrl || null) : null,
+        artwork_option: finalArtworkOption,
+        photo_url: finalPhotoUrl,
         story_locked: card.storyLocked ?? false,
         artwork_locked: card.artworkLocked ?? false,
       });
