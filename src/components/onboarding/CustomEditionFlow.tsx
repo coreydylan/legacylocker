@@ -94,7 +94,7 @@ const CustomEditionFlow: React.FC = () => {
   // --- End Initialization Effect --- 
 
   // Validation using helper and current customData structure
-  const canContinue = checkAllMonthsComplete(session.customData || []);
+  const canContinue = true; // Temporarily allow proceeding without validation
 
   // --- Update store validation status based on form validity ---
   useEffect(() => {
@@ -108,7 +108,8 @@ const CustomEditionFlow: React.FC = () => {
          console.log("[CustomEditionFlow]: Continue clicked");
          nextStep();
       } else {
-          alert("Please ensure all 12 months are marked as 'Complete' before continuing.");
+          console.log("[CustomEditionFlow]: Attempted to continue but step is not valid");
+          nextStep(); // Temporarily allow proceeding even if not valid
       }
   };
 

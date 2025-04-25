@@ -68,7 +68,7 @@ const isStepDataValid = (session: SessionData | null | undefined, step: number):
           }
         };
       }
-      return { isValid: !!session.recipient?.cardAddresseeName }; 
+      return { isValid: !!session.recipient?.cardAddresseeName };
     case STEPS.MONTHLY_CUSTOMIZATION:
       if (!session.selectedEdition) {
         return { 
@@ -88,6 +88,10 @@ const isStepDataValid = (session: SessionData | null | undefined, step: number):
           }
         };
       }
+      // For custom edition, allow proceeding even if not all months are complete
+      if (session.selectedEdition.type === 'custom') {
+        return { isValid: true };
+      }
       const prevStepValid = isStepDataValid(session, STEPS.WELCOME_CARD).isValid;
       return { isValid: prevStepValid }; 
     case STEPS.REVIEW_CHECKOUT:
@@ -99,6 +103,10 @@ const isStepDataValid = (session: SessionData | null | undefined, step: number):
             description: "Please select an edition type before proceeding to review."
           }
         };
+      }
+      // For custom edition, allow proceeding to review
+      if (session.selectedEdition.type === 'custom') {
+        return { isValid: true };
       }
       const prevStepValid2 = isStepDataValid(session, STEPS.MONTHLY_CUSTOMIZATION).isValid;
       return { isValid: prevStepValid2 }; 
