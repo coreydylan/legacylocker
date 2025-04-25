@@ -16,17 +16,7 @@ console.log(`Function "process-order" up and running!`)
 
 // Helper to convert artworkOption values from UI (with dashes) to DB enum format (with underscores)
 const convertArtworkOption = (option: string | null | undefined): string | null => {
-  if (!option) return null;
-  switch (option) {
-    case 'from-story':
-      return 'from_story';
-    case 'use-photo':
-      return 'use_photo';
-    case 'from-photo':
-      return 'from_photo';
-    default:
-      return null; // Fallback to null for unrecognized values
-  }
+  return option ?? null;
 };
 
 serve(async (req) => {
@@ -202,26 +192,38 @@ serve(async (req) => {
         });
       }
     }
-    if (selectedEdition.type !== 'signature' && Array.isArray(customData)) {
-      for (const card of customData) {
-        const monthNum = monthNameToNumber(card.month);
-        monthlySettingsRows.push({
-          order_id: orderId,
-          month: monthNum,
-          year: card.year,
-          enabled: card.enabled,
-          ship_date: card.shipDate || null,
-          title: card.title || null,
-          story: card.story || null,
-          footer_message: card.footerMessage || null,
-          occasion: card.occasions || [],
-          recipients: card.recipients || [],
-          artwork_option: convertArtworkOption(card.artworkOption),
-          photo_url: card.photoUrl || null,
-          story_locked: card.storyLocked ?? false,
-          artwork_locked: card.artworkLocked ?? false,
-        });
-      }
+    const computeEnabled = (c: any): boolean => {
+      const hasContent = Boolean(
+        c.title || c.story || c.footerMessage || c.shipDate || c.artworkOption || c.photoUrl ||
+        (Array.isArray(c.occasions) && c.occasions.length) || (Array.isArray(c.recipients) && c.recipients.length)
+      );
+      // If enabled explicitly true, respect it
+      if (c.enabled === true) return true;
+      // If enabled explicitly false but there is content, treat as true (needed for DB constraint)
+      if (c.enabled === false && hasContent) return true;
+      // Otherwise rely on presence of content
+      return hasContent;
+    };
+
+    for (const card of customData) {
+      const monthNum = monthNameToNumber(card.month);
+      const enabledFlag = computeEnabled(card);
+      monthlySettingsRows.push({
+        order_id: orderId,
+        month: monthNum,
+        year: card.year,
+        enabled: enabledFlag,
+        ship_date: card.shipDate || null,
+        title: card.title || null,
+        story: card.story || null,
+        footer_message: card.footerMessage || null,
+        occasion: card.occasions || [],
+        recipients: card.recipients || [],
+        artwork_option: enabledFlag ? convertArtworkOption(card.artworkOption) : null,
+        photo_url: enabledFlag ? (card.photoUrl || null) : null,
+        story_locked: card.storyLocked ?? false,
+        artwork_locked: card.artworkLocked ?? false,
+      });
     }
     if (monthlySettingsRows.length) {
       const { error: monthlySettingsError } = await supabaseAdmin
