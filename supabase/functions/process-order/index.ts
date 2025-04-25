@@ -210,15 +210,16 @@ serve(async (req) => {
     for (const card of customData) {
       const monthNum = monthNameToNumber(card.month);
       const enabledFlag = computeEnabled(card);
+
       monthlySettingsRows.push({
         order_id: orderId,
         month: monthNum,
         year: card.year,
         enabled: enabledFlag,
-        ship_date: card.shipDate || null,
-        title: card.title || null,
-        story: card.story || null,
-        footer_message: card.footerMessage || null,
+        ship_date: enabledFlag ? (card.shipDate || null) : null,
+        title: enabledFlag ? (card.title || null) : null,
+        story: enabledFlag ? (card.story || null) : null,
+        footer_message: enabledFlag ? (card.footerMessage || null) : null,
         occasion: card.occasions || [],
         recipients: card.recipients || [],
         artwork_option: enabledFlag ? convertArtworkOption(card.artworkOption) : null,
