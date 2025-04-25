@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Star } from 'lucide-react';
+import { Star, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   Carousel,
   CarouselContent,
@@ -97,7 +97,7 @@ const TestimonialsSection = () => {
           >
             <CarouselContent className="-ml-4">
               {testimonials.map((testimonial, index) => (
-                <CarouselItem key={index} className="pl-4 basis-1/3">
+                <CarouselItem key={index} className="pl-4 basis-full md:basis-1/3">
                   <div className="bg-white p-6 rounded-lg shadow-md h-full">
                     <p className="text-lg italic mb-4 text-legacy-dark/80">"{testimonial.quote}"</p>
                     <div className="flex items-center">
@@ -113,8 +113,14 @@ const TestimonialsSection = () => {
                 </CarouselItem>
               ))}
             </CarouselContent>
-            <CarouselPrevious className="-left-12" />
-            <CarouselNext className="-right-12" />
+            <CarouselPrevious className="-left-12 hidden md:flex" />
+            <CarouselNext className="-right-12 hidden md:flex" />
+            
+            {/* Mobile swipe indicators */}
+            <div className="flex items-center justify-between absolute bottom-4 left-1/2 -translate-x-1/2 w-24 md:hidden">
+              <ChevronLeft className="h-4 w-4 text-legacy-dark/40 animate-pulse" />
+              <ChevronRight className="h-4 w-4 text-legacy-dark/40 animate-pulse" />
+            </div>
           </Carousel>
         </div>
       </div>

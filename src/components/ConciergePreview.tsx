@@ -223,6 +223,15 @@ export const ConciergePreview: React.FC<ConciergePreviewProps> = ({
           </div>
         </div>
 
+        {/* Website description (mobile) */}
+        {currentSample.website_description && (
+          <div className="mt-6 px-6">
+            <p className="text-base leading-relaxed text-[#444]">
+              {currentSample.website_description}
+            </p>
+          </div>
+        )}
+
         {/* Mobile Navigation */}
         <div className="mt-8 px-6 space-y-6">
           <div className="flex items-center justify-between">
