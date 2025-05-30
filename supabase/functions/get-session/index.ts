@@ -18,9 +18,37 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'Missing id field' }), { headers: corsHeaders, status: 400 })
     }
 
+    let supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+    
+    // Clean up the Supabase URL to remove any role parameters that might cause issues
+    // This fixes the "role 'ops' does not exist" error
+    if (supabaseUrl && supabaseUrl.includes('?')) {
+      const url = new URL(supabaseUrl);
+      const params = new URLSearchParams(url.search);
+      
+      // Remove any 'options' parameter that might contain role settings
+      if (params.has('options')) {
+        params.delete('options');
+      }
+      
+      // Reconstruct the URL without the problematic parameters
+      url.search = params.toString();
+      supabaseUrl = url.toString();
+    }
+
     const supabaseAdmin = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+      supabaseUrl,
+      serviceRoleKey,
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+        db: {
+          schema: 'public'
+        }
+      }
     )
 
     const { data, error } = await supabaseAdmin

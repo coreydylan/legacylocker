@@ -2,8 +2,27 @@ import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
 // Read environment variables
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
+let supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+
+// Clean up the Supabase URL to remove any role parameters that might cause issues
+// This fixes the "role 'ops' does not exist" error
+if (supabaseUrl && supabaseUrl.includes('?')) {
+  // Parse the URL and clean up problematic parameters
+  const url = new URL(supabaseUrl);
+  const params = new URLSearchParams(url.search);
+  
+  // Remove any 'options' parameter that might contain role settings
+  if (params.has('options')) {
+    params.delete('options');
+  }
+  
+  // Reconstruct the URL without the problematic parameters
+  url.search = params.toString();
+  supabaseUrl = url.toString();
+  
+  console.log('[Supabase] Cleaned URL to remove role parameters');
+}
 
 // Configuration shared by every Supabase client that might be instantiated.
 const supabaseOptions = {
@@ -12,6 +31,16 @@ const supabaseOptions = {
     persistSession: true,
     detectSessionInUrl: true,
   },
+  // Explicitly set the database schema to public
+  db: {
+    schema: 'public'
+  },
+  // Ensure we're using the correct auth headers
+  global: {
+    headers: {
+      'x-my-custom-header': 'legacylocker'
+    }
+  }
 } as const;
 
 // ----------------------------------------------------------------------------------
